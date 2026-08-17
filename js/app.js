@@ -13,7 +13,16 @@
     origem: "massa",
     entradaBruta: "4,00",
     elementoAberto: null,
+    telaAtual: "tela-massa",
+    degrau: 1,
+    exercicio: null,
+    tipoAnterior: null,
+    usouDica: false,
+    respondido: false,
+    sessao: { certas: 0, total: 0, xp: 0 },
   };
+
+  let progresso = null;
 
   const EXEMPLOS = ["NaOH", "H2SO4", "Ca(OH)2", "C6H12O6", "CuSO4·5H2O", "KMnO4", "Al2(SO4)3", "K3[Fe(CN)6]"];
 
@@ -51,14 +60,45 @@
 
   /* ---------------- navegação ---------------- */
 
+  const TITULOS = {
+    "tela-massa": "Massa molar",
+    "tela-ponte": "Ponte do mol",
+    "tela-treino": "Treino",
+    "tela-progresso": "Progresso",
+    "tela-tabela": "Tabela periódica",
+  };
+
+  function estreita() {
+    if (typeof window.matchMedia === "function") return window.matchMedia("(max-width: 899px)").matches;
+    return window.innerWidth < 900; // reserva para WebViews antigas
+  }
+
+  function abrirMenu() {
+    $("#sidebar").classList.add("aberta");
+    $("#cortina").hidden = false;
+    $("#menuBtn").setAttribute("aria-expanded", "true");
+  }
+
+  function fecharMenu() {
+    $("#sidebar").classList.remove("aberta");
+    $("#cortina").hidden = true;
+    $("#menuBtn").setAttribute("aria-expanded", "false");
+  }
+
   function mostrarTela(id) {
+    estado.telaAtual = id;
     for (const s of document.querySelectorAll("main > section")) s.hidden = (s.id !== id);
-    for (const b of document.querySelectorAll(".nav button")) {
+    for (const b of document.querySelectorAll(".menu .item")) {
       if (b.dataset.tela === id) b.setAttribute("aria-current", "page");
       else b.removeAttribute("aria-current");
     }
+    $("#tituloPagina").textContent = TITULOS[id] || "MOLBOX";
     if (typeof window.scrollTo === "function") { try { window.scrollTo(0, 0); } catch (e) {} }
+    if (estreita()) fecharMenu();
+
     if (id === "tela-ponte") desenharPonte();
+    if (id === "tela-treino") entrarNoTreino();
+    if (id === "tela-progresso") desenharProgresso();
   }
 
   /* ---------------- tela: massa molar ---------------- */
@@ -314,6 +354,270 @@
     alvo.appendChild(nota);
   }
 
+
+  /* ---------------- tela: treino ---------------- */
+
+  function entrarNoTreino() {
+    progresso = registrarDia(progresso);
+    salvarProgresso(progresso);
+    if (estado.degrau > progresso.desbloqueado) estado.degrau = progresso.desbloqueado;
+    desenharDegraus();
+    desenharPlacar();
+    if (!estado.exercicio) proximoExercicio();
+    else desenharExercicio();
+    atualizarResumoLateral();
+  }
+
+  function desenharDegraus() {
+    const caixa = $("#degraus");
+    caixa.innerHTML = "";
+
+    for (const d of DEGRAUS) {
+      const liberado = d.n <= progresso.desbloqueado;
+      const acertos = progresso.porDegrau[d.n].acertos;
+      const b = criar("button", { type: "button", className: "degrau" });
+      b.setAttribute("aria-pressed", String(d.n === estado.degrau));
+      if (!liberado) b.disabled = true;
+
+      const faltam = Math.max(0, ACERTOS_PARA_LIBERAR - progresso.porDegrau[d.n - 1>0 ? d.n - 1 : 1].acertos);
+      const sub = liberado
+        ? `${acertos} acerto${acertos === 1 ? "" : "s"} · ${d.resumo}`
+        : `Faltam ${faltam} acerto${faltam === 1 ? "" : "s"} no degrau ${d.n - 1}`;
+
+      b.innerHTML = `<span class="cabeca">${liberado ? "" : "🔒 "}Degrau ${d.n} — ${d.nome}</span><span class="sub">${sub}</span>`;
+      b.addEventListener("click", () => {
+        if (!liberado) return;
+        estado.degrau = d.n;
+        estado.tipoAnterior = null;
+        desenharDegraus();
+        proximoExercicio();
+      });
+      caixa.appendChild(b);
+    }
+  }
+
+  function desenharPlacar() {
+    const s = estado.sessao;
+    const proporcao = s.total ? Math.round((s.certas / s.total) * 100) : 0;
+    $("#placar").innerHTML =
+      `<div><strong>${s.certas}/${s.total}</strong>nesta sessão${s.total ? " · " + proporcao + "%" : ""}</div>` +
+      `<div><strong>${progresso.sequencia}</strong>acertos seguidos</div>` +
+      `<div><strong>${progresso.ofensiva}</strong>dia${progresso.ofensiva === 1 ? "" : "s"} seguidos</div>` +
+      `<div><strong>${progresso.xp}</strong>XP total</div>`;
+  }
+
+  function proximoExercicio() {
+    estado.exercicio = gerarExercicio(estado.degrau, { volumeMolar: volumeMolarAtual().valor }, estado.tipoAnterior);
+    estado.tipoAnterior = estado.exercicio.tipo;
+    estado.usouDica = false;
+    estado.respondido = false;
+    desenharExercicio();
+  }
+
+  function desenharExercicio() {
+    const q = estado.exercicio;
+    const alvo = $("#exercicio");
+    alvo.innerHTML = "";
+
+    alvo.appendChild(criar("p", { className: "ajuda", textContent: NOME_TIPO[q.tipo], style: "margin:0 0 var(--mb-e2)" }));
+
+    const enunciado = criar("p", { className: "enunciado" });
+    enunciado.innerHTML = q.enunciado;
+    alvo.appendChild(enunciado);
+
+    if (q.contexto) alvo.appendChild(criar("p", { className: "contexto", textContent: q.contexto }));
+
+    const linha = criar("div", { className: "resposta-linha" });
+    const campo = criar("input", {
+      type: "text", id: "resposta", inputMode: "decimal",
+      autocomplete: "off", spellcheck: false, placeholder: "sua resposta",
+    });
+    campo.setAttribute("aria-label", "Sua resposta em " + q.unidade);
+    if (estado.respondido) campo.readOnly = true;
+    linha.appendChild(campo);
+    linha.appendChild(criar("span", { className: "unidade", textContent: q.unidade }));
+    alvo.appendChild(linha);
+
+    const acoes = criar("div", { className: "acoes" });
+
+    if (!estado.respondido) {
+      const verificar = criar("button", { className: "botao", type: "button", textContent: "Verificar" });
+      verificar.addEventListener("click", () => responder(campo.value));
+      acoes.appendChild(verificar);
+
+      const dica = criar("button", { className: "botao secundario", type: "button", textContent: "Ver dica" });
+      dica.addEventListener("click", () => {
+        estado.usouDica = true;
+        dica.disabled = true;
+        const caixa = criar("div", { className: "dica-caixa", textContent: q.dica });
+        alvo.insertBefore(caixa, acoes.nextSibling);
+      });
+      acoes.appendChild(dica);
+
+      const pular = criar("button", { className: "botao secundario", type: "button", textContent: "Trocar exercício" });
+      pular.addEventListener("click", proximoExercicio);
+      acoes.appendChild(pular);
+
+      campo.addEventListener("keydown", (ev) => { if (ev.key === "Enter") responder(campo.value); });
+    } else {
+      const seguinte = criar("button", { className: "botao", type: "button", textContent: "Próximo exercício" });
+      seguinte.addEventListener("click", proximoExercicio);
+      acoes.appendChild(seguinte);
+    }
+
+    alvo.appendChild(acoes);
+    if (!estado.respondido) campo.focus();
+  }
+
+  function responder(bruto) {
+    const q = estado.exercicio;
+    const veredito = corrigir(q, bruto);
+
+    if (veredito.situacao === "invalido") {
+      const aviso = criar("div", { className: "veredito errado" });
+      aviso.innerHTML = `<span class="selo">NÃO ENTENDI O NÚMERO</span><p>${veredito.mensagem}</p>`;
+      const antigo = $("#exercicio .veredito");
+      if (antigo) antigo.remove();
+      $("#exercicio").appendChild(aviso);
+      return;
+    }
+
+    estado.respondido = true;
+    const acertou = veredito.situacao === "certo";
+    estado.sessao.total += 1;
+    if (acertou) estado.sessao.certas += 1;
+
+    const efeito = registrarResposta(progresso, q, acertou, estado.usouDica);
+    estado.sessao.xp += efeito.ganho;
+
+    desenharExercicio();
+    document.getElementById("resposta").value = bruto;
+
+    const caixa = criar("div", { className: "veredito " + veredito.situacao });
+    const selo = acertou ? "CERTO"
+      : veredito.erroReconhecido ? "SEI O QUE ACONTECEU" : "NÃO É ESSE VALOR";
+    caixa.innerHTML = `<span class="selo">${selo}</span><p>${veredito.mensagem}</p>`;
+
+    if (acertou && efeito.ganho) {
+      caixa.appendChild(criar("span", { className: "ganho", textContent: `+${efeito.ganho} XP` }));
+    }
+    if (efeito.subiuDegrau) {
+      caixa.appendChild(criar("p", {
+        style: "margin-top:var(--mb-e2);font-weight:500",
+        textContent: `Degrau ${efeito.subiuDegrau} liberado: ${DEGRAUS[efeito.subiuDegrau - 1].nome}.`
+      }));
+    }
+    for (const m of efeito.medalhasNovas) {
+      caixa.appendChild(criar("p", { style: "margin-top:4px", textContent: `Medalha conquistada: ${m.nome}.` }));
+    }
+
+    const alvo = $("#exercicio");
+    alvo.insertBefore(caixa, alvo.querySelector(".acoes"));
+
+    const resolucao = criar("div", { className: "resolucao" });
+    resolucao.innerHTML = `<strong style="font-family:var(--mb-fonte-texto)">Resposta: ${formatarNumero(q.resposta, q.sig)} ${q.unidade}</strong><br>${q.resolucao}`;
+    alvo.insertBefore(resolucao, alvo.querySelector(".acoes"));
+
+    desenharDegraus();
+    desenharPlacar();
+    atualizarResumoLateral();
+  }
+
+  /* ---------------- tela: progresso ---------------- */
+
+  function desenharProgresso() {
+    const alvo = $("#painel-progresso");
+    alvo.innerHTML = "";
+    const nv = xpParaProximoNivel(progresso.xp);
+    const taxa = progresso.totalTentativas
+      ? Math.round((progresso.totalAcertos / progresso.totalTentativas) * 100) : 0;
+
+    const cartaoNivel = criar("div", { className: "cartao" });
+    cartaoNivel.innerHTML =
+      `<div class="nivel-caixa"><span class="nivel-numero">Nível ${nv.nivel}</span>` +
+      `<span class="ajuda" style="margin:0">${progresso.xp} XP acumulados</span></div>` +
+      `<div class="xp-trilho"><div class="xp-barra" style="width:${Math.round(nv.atual / nv.necessario * 100)}%"></div></div>` +
+      `<p class="ajuda">Faltam ${nv.necessario - nv.atual} XP para o nível ${nv.nivel + 1}.</p>`;
+    alvo.appendChild(cartaoNivel);
+
+    const numeros = criar("div", { className: "cartao" });
+    numeros.innerHTML =
+      `<div class="numeros">` +
+      `<div><p class="n">${progresso.totalAcertos}</p><p class="r">acertos</p></div>` +
+      `<div><p class="n">${taxa}%</p><p class="r">aproveitamento</p></div>` +
+      `<div><p class="n">${progresso.melhorSequencia}</p><p class="r">melhor sequência</p></div>` +
+      `<div><p class="n">${progresso.ofensiva}</p><p class="r">dias seguidos</p></div>` +
+      `</div>`;
+    alvo.appendChild(numeros);
+
+    const escada = criar("div", { className: "cartao" });
+    escada.innerHTML = `<h2 style="margin-top:0">A escada</h2>`;
+    for (const d of DEGRAUS) {
+      const liberado = d.n <= progresso.desbloqueado;
+      const g = progresso.porDegrau[d.n];
+      const total = g.acertos + g.erros;
+      const linha = criar("div", { style: "margin-bottom:var(--mb-e3)" });
+      linha.innerHTML =
+        `<p style="margin:0 0 4px"><strong>Degrau ${d.n} — ${d.nome}</strong>` +
+        `${liberado ? "" : ' <span class="ajuda">(bloqueado)</span>'}</p>` +
+        `<p class="ajuda" style="margin:0 0 6px">${d.resumo}</p>` +
+        `<div class="barra-trilho"><div class="barra" style="width:${total ? Math.round(g.acertos / total * 100) : 0}%"></div></div>` +
+        `<p class="ajuda" style="margin:4px 0 0">${g.acertos} acertos e ${g.erros} erros</p>`;
+      escada.appendChild(linha);
+    }
+    alvo.appendChild(escada);
+
+    const fracos = pontosFracos(progresso, 2);
+    const mapa = criar("div", { className: "cartao" });
+    mapa.innerHTML = `<h2 style="margin-top:0">Onde você tropeça</h2>`;
+    if (!fracos.length) {
+      mapa.appendChild(criar("p", { className: "ajuda", textContent: "Ainda não há exercícios suficientes para apontar um padrão. Faça algumas rodadas no treino e este mapa se preenche." }));
+    } else {
+      for (const f of fracos.slice(0, 6)) {
+        const linha = criar("div", { className: "fraqueza" });
+        linha.innerHTML =
+          `<span class="rot">${NOME_TIPO[f.tipo] || f.tipo}<br>` +
+          `<span class="ajuda">${f.total} tentativa${f.total === 1 ? "" : "s"}</span></span>` +
+          `<span class="taxa">${Math.round(f.taxa * 100)}% de erro</span>`;
+        mapa.appendChild(linha);
+      }
+      mapa.appendChild(criar("p", { className: "ajuda", textContent: "Este é o dado mais útil da tela: ele diz exatamente qual conta merece a próxima meia hora de estudo." }));
+    }
+    alvo.appendChild(mapa);
+
+    const medalhas = criar("div", { className: "cartao" });
+    medalhas.innerHTML = `<h2 style="margin-top:0">Medalhas</h2>`;
+    const grade = criar("div", { className: "medalhas" });
+    for (const m of MEDALHAS) {
+      const tem = progresso.medalhas.includes(m.id);
+      const item = criar("div", { className: "medalha " + (tem ? "conquistada" : "pendente") });
+      item.innerHTML = `<strong>${m.nome}</strong>${m.descricao}`;
+      grade.appendChild(item);
+    }
+    medalhas.appendChild(grade);
+    alvo.appendChild(medalhas);
+
+    const zerar = criar("div", { className: "cartao" });
+    zerar.innerHTML = `<h2 style="margin-top:0">Recomeçar</h2><p class="ajuda">Apaga XP, medalhas, degraus liberados e o mapa de dificuldades deste aparelho. Não dá para desfazer.</p>`;
+    const botaoZerar = criar("button", { className: "botao secundario", type: "button", textContent: "Zerar meu progresso" });
+    botaoZerar.addEventListener("click", () => {
+      if (!window.confirm("Apagar todo o progresso guardado neste aparelho?")) return;
+      progresso = zerarProgresso();
+      estado.degrau = 1;
+      estado.exercicio = null;
+      estado.sessao = { certas: 0, total: 0, xp: 0 };
+      desenharProgresso();
+      atualizarResumoLateral();
+    });
+    zerar.appendChild(botaoZerar);
+    alvo.appendChild(zerar);
+  }
+
+  function atualizarResumoLateral() {
+    const nv = xpParaProximoNivel(progresso.xp);
+    $("#resumo-lateral").textContent = `Nível ${nv.nivel} · ${progresso.xp} XP · ${progresso.totalAcertos} acertos`;
+  }
+
   /* ---------------- tela: tabela periódica ---------------- */
 
   const CORES_FAMILIA = {
@@ -429,20 +733,35 @@
 
   function iniciar() {
     recuperar();
+    progresso = carregarProgresso();
     $("#formula").value = estado.formula;
     montarExemplos();
     montarSeletorVolume();
     montarPeriodica();
     analisarAtual();
+    atualizarResumoLateral();
 
     $("#formula").addEventListener("input", analisarAtual);
     $("#busca").addEventListener("input", (ev) => filtrarTabela(ev.target.value));
-    for (const b of document.querySelectorAll(".nav button")) {
+    for (const b of document.querySelectorAll(".menu .item")) {
       b.addEventListener("click", () => mostrarTela(b.dataset.tela));
     }
+    $("#menuBtn").addEventListener("click", abrirMenu);
+    $("#fecharMenu").addEventListener("click", fecharMenu);
+    $("#cortina").addEventListener("click", fecharMenu);
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && estreita()) fecharMenu();
+    });
 
-    const destino = { "#massa-molar": "tela-massa", "#converter": "tela-ponte", "#tabela": "tela-tabela" }[location.hash];
+    const destino = {
+      "#massa-molar": "tela-massa", "#converter": "tela-ponte",
+      "#treino": "tela-treino", "#progresso": "tela-progresso", "#tabela": "tela-tabela",
+    }[location.hash];
     if (destino) mostrarTela(destino);
+
+    // no celular a gaveta começa aberta, para deixar claro que a navegação
+    // está ali — mesma escolha do sistema da Reviva
+    if (estreita()) abrirMenu();
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));

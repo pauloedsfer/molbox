@@ -1,7 +1,7 @@
 {
   "name": "MOLBOX — química de bolso",
   "short_name": "MOLBOX",
-  "description": "Do átomo ao mol, do mol à bancada. Calculadora, exercícios e consulta rápida de química.",
+  "description": "Do átomo ao mol, do mol à bancada. Massa molar, conversões, treino com diagnóstico de erro e tabela periódica.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "./index.html",
@@ -40,6 +40,11 @@
   ],
   "shortcuts": [
     {
+      "name": "Treino",
+      "short_name": "Treino",
+      "url": "./index.html#treino"
+    },
+    {
       "name": "Massa molar",
       "short_name": "Massa molar",
       "url": "./index.html#massa-molar"
@@ -48,11 +53,6 @@
       "name": "Ponte do mol",
       "short_name": "Converter",
       "url": "./index.html#converter"
-    },
-    {
-      "name": "Tabela periódica",
-      "short_name": "Tabela",
-      "url": "./index.html#tabela"
     }
   ]
 }

@@ -2,12 +2,13 @@
    O app é um conjunto pequeno e estável de arquivos; a rede só entra
    quando falta algo no cache ou quando a versão muda. */
 
-const VERSAO = "molbox-v0.1.0";
+const VERSAO = "molbox-v0.2.0";
 const ARQUIVOS = [
   "./", "./index.html", "./app.css", "./tokens.css", "./fontes.css",
   "./manifest.webmanifest",
-  "./js/elementos.js", "./js/parser.js", "./js/converter.js", "./js/app.js",
-  "./marca/molbox-principal.svg",
+  "./js/elementos.js", "./js/parser.js", "./js/converter.js",
+  "./js/exercicios.js", "./js/progresso.js", "./js/app.js",
+  "./marca/molbox-principal.svg", "./marca/molbox-negativo.svg",
   "./icones/favicon.svg", "./icones/icone-180.png", "./icones/icone-192.png", "./icones/icone-512.png",
   "./fontes/exo-2-latin-600-italic.woff2",
   "./fontes/exo-2-latin-500-italic.woff2",
