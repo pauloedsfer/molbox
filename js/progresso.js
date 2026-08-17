@@ -19,6 +19,7 @@ const MEDALHAS = [
   { id: "sequencia15", nome: "Quinze em sequência", condicao: (p) => p.melhorSequencia >= 15, descricao: "Quinze acertos seguidos" },
   { id: "degrau2",     nome: "Contador",            condicao: (p) => p.desbloqueado >= 2, descricao: "Liberar o degrau da contagem" },
   { id: "degrau3",     nome: "Atravessou a ponte",  condicao: (p) => p.desbloqueado >= 3, descricao: "Liberar o degrau do mol" },
+  { id: "degrau4",     nome: "Química de verdade",  condicao: (p) => p.desbloqueado >= 4, descricao: "Liberar o degrau da reação" },
   { id: "ofensiva3",   nome: "Três dias seguidos",  condicao: (p) => p.melhorOfensiva >= 3, descricao: "Treinar em três dias consecutivos" },
   { id: "ofensiva7",   nome: "Semana inteira",      condicao: (p) => p.melhorOfensiva >= 7, descricao: "Treinar em sete dias consecutivos" },
   { id: "semDica",     nome: "Sem colinha",         condicao: (p) => p.acertosSemDica >= 20, descricao: "Vinte acertos sem abrir a dica" },
@@ -33,7 +34,7 @@ function progressoVazio() {
     sequencia: 0,
     melhorSequencia: 0,
     desbloqueado: 1,
-    porDegrau: { 1: { acertos: 0, erros: 0 }, 2: { acertos: 0, erros: 0 }, 3: { acertos: 0, erros: 0 } },
+    porDegrau: { 1: { acertos: 0, erros: 0 }, 2: { acertos: 0, erros: 0 }, 3: { acertos: 0, erros: 0 }, 4: { acertos: 0, erros: 0 } },
     porTipo: {},          // { tipo: { acertos, erros } }
     ofensiva: 0,
     melhorOfensiva: 0,
@@ -59,7 +60,7 @@ function carregarProgresso() {
     if (!bruto) return progressoVazio();
     const p = Object.assign(progressoVazio(), JSON.parse(bruto));
     // garante a forma esperada mesmo se o dado guardado for de uma versão anterior
-    for (const d of [1, 2, 3]) if (!p.porDegrau[d]) p.porDegrau[d] = { acertos: 0, erros: 0 };
+    for (const d of DEGRAUS) if (!p.porDegrau[d.n]) p.porDegrau[d.n] = { acertos: 0, erros: 0 };
     if (!p.porTipo) p.porTipo = {};
     if (!Array.isArray(p.medalhas)) p.medalhas = [];
     return p;
@@ -121,7 +122,7 @@ function registrarResposta(p, exercicio, acertou, usouDica) {
   }
 
   // libera o próximo degrau quando o atual acumula acertos suficientes
-  while (p.desbloqueado < 3 && p.porDegrau[p.desbloqueado].acertos >= ACERTOS_PARA_LIBERAR) {
+  while (p.desbloqueado < DEGRAUS.length && p.porDegrau[p.desbloqueado].acertos >= ACERTOS_PARA_LIBERAR) {
     p.desbloqueado += 1;
   }
 

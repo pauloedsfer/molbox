@@ -14,6 +14,9 @@
     entradaBruta: "4,00",
     elementoAberto: null,
     telaAtual: "tela-massa",
+    equacao: "CH4 + O2 -> CO2 + H2O",
+    balanceada: null,
+    esteq: { unidade: "g", quantidades: {}, purezas: {}, produtoRendimento: 0, massaObtida: "" },
     degrau: 1,
     exercicio: null,
     tipoAnterior: null,
@@ -36,6 +39,7 @@
       localStorage.setItem(CHAVE, JSON.stringify({
         formula: estado.formula,
         volumeMolarId: estado.volumeMolarId,
+        equacao: estado.equacao,
         origem: estado.origem,
         entradaBruta: estado.entradaBruta,
       }));
@@ -48,6 +52,7 @@
       if (!bruto) return;
       const d = JSON.parse(bruto);
       if (d.formula) estado.formula = d.formula;
+      if (d.equacao) estado.equacao = d.equacao;
       if (d.volumeMolarId) estado.volumeMolarId = d.volumeMolarId;
       if (d.origem && GRANDEZAS[d.origem]) estado.origem = d.origem;
       if (d.entradaBruta) estado.entradaBruta = d.entradaBruta;
@@ -63,6 +68,8 @@
   const TITULOS = {
     "tela-massa": "Massa molar",
     "tela-ponte": "Ponte do mol",
+    "tela-balancear": "Balancear",
+    "tela-esteq": "Estequiometria",
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
     "tela-tabela": "Tabela periódica",
@@ -97,6 +104,7 @@
     if (estreita()) fecharMenu();
 
     if (id === "tela-ponte") desenharPonte();
+    if (id === "tela-esteq") desenharEstequiometria();
     if (id === "tela-treino") entrarNoTreino();
     if (id === "tela-progresso") desenharProgresso();
   }
@@ -354,6 +362,317 @@
     alvo.appendChild(nota);
   }
 
+
+
+  /* ---------------- tela: balancear ---------------- */
+
+  const EXEMPLOS_EQ = [
+    "CH4 + O2 -> CO2 + H2O",
+    "C3H8 + O2 -> CO2 + H2O",
+    "Fe + O2 -> Fe2O3",
+    "Al + HCl -> AlCl3 + H2",
+    "KMnO4 + HCl -> KCl + MnCl2 + H2O + Cl2",
+    "MnO4- + Fe2+ + H+ -> Mn2+ + Fe3+ + H2O",
+  ];
+
+  function montarExemplosEquacao() {
+    const caixa = $("#exemplos-eq");
+    for (const eq of EXEMPLOS_EQ) {
+      const b = criar("button", { type: "button", className: "chip", textContent: eq });
+      b.addEventListener("click", () => {
+        $("#equacao").value = eq;
+        balancearAtual();
+      });
+      caixa.appendChild(b);
+    }
+  }
+
+  function balancearAtual() {
+    const entrada = $("#equacao").value;
+    $("#erro-equacao").innerHTML = "";
+    $("#equacao").setAttribute("aria-invalid", "false");
+
+    try {
+      estado.balanceada = balancear(entrada);
+      estado.equacao = entrada;
+      estado.esteq.quantidades = {};
+      estado.esteq.purezas = {};
+      estado.esteq.produtoRendimento = 0;
+      estado.esteq.massaObtida = "";
+      guardar();
+      desenharEquacao();
+    } catch (e) {
+      estado.balanceada = null;
+      $("#resultado-equacao").innerHTML = "";
+      $("#equacao").setAttribute("aria-invalid", "true");
+      const caixa = criar("div", { className: "erro" });
+      caixa.appendChild(criar("strong", { textContent: e.message }));
+      $("#erro-equacao").appendChild(caixa);
+    }
+  }
+
+  function desenharEquacao() {
+    const b = estado.balanceada;
+    const alvo = $("#resultado-equacao");
+    alvo.innerHTML = "";
+
+    const cartao = criar("div", { className: "cartao" });
+    const vista = criar("div", { className: "equacao-vista" });
+    vista.innerHTML = escreverEquacaoHTML(b);
+    cartao.appendChild(vista);
+    cartao.appendChild(criar("p", {
+      className: "ajuda",
+      style: "text-align:center;margin:0",
+      textContent: "Coeficientes em laranja. Os que valem 1 ficam subentendidos, como se escreve à mão.",
+    }));
+    alvo.appendChild(cartao);
+
+    const prova = criar("div", { className: "cartao" });
+    prova.innerHTML = "<h2 style=\"margin-top:0\">A prova: átomos contados dos dois lados</h2>";
+    const tabela = criar("table", { className: "conferencia" });
+    tabela.innerHTML = "<thead><tr><th>Elemento</th><th>Antes</th><th>Depois</th></tr></thead>";
+    const corpo = criar("tbody");
+    for (const c of b.conferencia) {
+      const tr = criar("tr");
+      const rotulo = c.elemento === "carga" ? "carga elétrica" : c.elemento;
+      tr.innerHTML = `<td>${rotulo}</td><td class="num ${c.fecha ? "fecha" : "falha"}">${c.antes}</td>` +
+                     `<td class="num ${c.fecha ? "fecha" : "falha"}">${c.depois}</td>`;
+      corpo.appendChild(tr);
+    }
+    tabela.appendChild(corpo);
+    prova.appendChild(tabela);
+    prova.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: b.usaCarga
+        ? "Numa equação iônica a carga também precisa fechar, e ela entra no sistema como se fosse mais um elemento."
+        : "É esta a conta que o balanceamento tem de satisfazer: nenhum átomo aparece nem desaparece.",
+    }));
+    alvo.appendChild(prova);
+
+    const acao = criar("div", { className: "cartao" });
+    acao.innerHTML = "<p style=\"margin:0 0 var(--mb-e3)\">Com a equação fechada, dá para descobrir quanto se forma a partir do que você tem na bancada.</p>";
+    const botao = criar("button", { className: "botao", type: "button", textContent: "Levar para a estequiometria" });
+    botao.addEventListener("click", () => mostrarTela("tela-esteq"));
+    acao.appendChild(botao);
+    alvo.appendChild(acao);
+  }
+
+  /* ---------------- tela: estequiometria ---------------- */
+
+  function desenharEstequiometria() {
+    const alvo = $("#painel-esteq");
+    alvo.innerHTML = "";
+    const b = estado.balanceada;
+
+    if (!b) {
+      alvo.innerHTML = `<div class="cartao"><p class="ajuda" style="margin:0">Balanceie uma equação primeiro. A estequiometria só faz sentido depois que a proporção entre as substâncias está definida.</p></div>`;
+      return;
+    }
+
+    const cabeca = criar("div", { className: "cartao" });
+    const vista = criar("div", { className: "equacao-vista", style: "font-size:var(--mb-t-titulo-3);padding:var(--mb-e2) 0" });
+    vista.innerHTML = escreverEquacaoHTML(b);
+    cabeca.appendChild(vista);
+    alvo.appendChild(cabeca);
+
+    const entrada = criar("div", { className: "cartao" });
+    entrada.innerHTML = "<h2 style=\"margin-top:0\">O que você tem</h2>";
+
+    const seletorUnidade = criar("select", { id: "unidade-esteq" });
+    seletorUnidade.appendChild(criar("option", { value: "g", textContent: "Informar em gramas" }));
+    seletorUnidade.appendChild(criar("option", { value: "mol", textContent: "Informar em mols" }));
+    seletorUnidade.value = estado.esteq.unidade;
+    seletorUnidade.addEventListener("change", () => {
+      estado.esteq.unidade = seletorUnidade.value;
+      desenharEstequiometria();
+    });
+    const rotuloUnidade = criar("label", { htmlFor: "unidade-esteq", textContent: "Unidade das quantidades" });
+    entrada.appendChild(rotuloUnidade);
+    entrada.appendChild(seletorUnidade);
+    entrada.appendChild(criar("div", { style: "height:var(--mb-e4)" }));
+
+    b.reagentes.forEach((r, i) => {
+      const bloco = criar("div", { className: "reagente-campo" });
+
+      const nome = criar("div");
+      nome.innerHTML = `<span class="nome-r">${r.vista}</span><br>` +
+        `<span class="ajuda">coef. ${r.coeficiente} · M = ${formatarNumero(r.analise.massaMolar, 5)} g/mol</span>`;
+      bloco.appendChild(nome);
+
+      const caixaQtd = criar("div");
+      const idQtd = "qtd-" + i;
+      caixaQtd.appendChild(criar("label", { htmlFor: idQtd, textContent: estado.esteq.unidade === "g" ? "Massa (g)" : "Quantidade (mol)" }));
+      const campoQtd = criar("input", { type: "text", id: idQtd, inputMode: "decimal", autocomplete: "off", placeholder: "opcional" });
+      campoQtd.value = estado.esteq.quantidades[i] || "";
+      campoQtd.addEventListener("input", () => {
+        estado.esteq.quantidades[i] = campoQtd.value;
+        recalcularEstequiometria();
+      });
+      caixaQtd.appendChild(campoQtd);
+      bloco.appendChild(caixaQtd);
+
+      const caixaPureza = criar("div");
+      if (estado.esteq.unidade === "g") {
+        const idPur = "pur-" + i;
+        caixaPureza.appendChild(criar("label", { htmlFor: idPur, textContent: "Pureza (%)" }));
+        const campoPur = criar("input", { type: "text", id: idPur, inputMode: "decimal", autocomplete: "off", placeholder: "100" });
+        campoPur.value = estado.esteq.purezas[i] || "";
+        campoPur.addEventListener("input", () => {
+          estado.esteq.purezas[i] = campoPur.value;
+          recalcularEstequiometria();
+        });
+        caixaPureza.appendChild(campoPur);
+      }
+      bloco.appendChild(caixaPureza);
+      entrada.appendChild(bloco);
+    });
+
+    entrada.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "Deixe em branco o reagente que estiver em excesso conhecido ou que não interessa controlar. Basta um valor para o cálculo sair.",
+    }));
+    alvo.appendChild(entrada);
+
+    alvo.appendChild(criar("div", { id: "saida-esteq" }));
+    recalcularEstequiometria();
+  }
+
+  function recalcularEstequiometria() {
+    const b = estado.balanceada;
+    const saida = $("#saida-esteq");
+    if (!saida) return;
+    saida.innerHTML = "";
+
+    const mols = {};
+    let algum = false;
+    b.reagentes.forEach((r, i) => {
+      const valor = lerNumero(estado.esteq.quantidades[i]);
+      if (!isFinite(valor) || valor <= 0) { mols[i] = null; return; }
+      const pureza = lerNumero(estado.esteq.purezas[i]);
+      mols[i] = entradaParaMols(valor, estado.esteq.unidade, r.analise.massaMolar, isFinite(pureza) ? pureza : 100);
+      algum = true;
+    });
+
+    if (!algum) {
+      saida.innerHTML = `<div class="cartao"><p class="ajuda" style="margin:0">Informe a quantidade de pelo menos um reagente para ver o resultado.</p></div>`;
+      return;
+    }
+
+    const r = calcularEstequiometria(b, mols);
+    if (r.situacao !== "ok") {
+      saida.innerHTML = `<div class="cartao"><p class="ajuda" style="margin:0">${r.mensagem}</p></div>`;
+      return;
+    }
+
+    const conhecidos = r.razoes.length;
+
+    const resumo = criar("div", { className: "cartao" });
+    if (conhecidos > 1) {
+      resumo.innerHTML =
+        `<h2 style="margin-top:0">Quem manda na reação</h2>` +
+        (r.proporcaoExata
+          ? `<p style="margin:0">Os reagentes estão na proporção exata da equação: nenhum sobra. Na prática de bancada isso quase nunca acontece por acaso.</p>`
+          : `<p style="margin:0">O reagente limitante é <strong>${r.limitante.formula}</strong>. Ele acaba primeiro, e por isso define tudo que se forma.</p>`);
+      const tabelaRazao = criar("table");
+      tabelaRazao.innerHTML = `<thead><tr><th>Reagente</th><th>mols</th><th>÷ coef.</th><th>razão</th></tr></thead>`;
+      const corpo = criar("tbody");
+      for (const item of r.razoes) {
+        const reg = b.reagentes[item.indice];
+        const tr = criar("tr");
+        if (item.indice === r.limitanteIndice) tr.className = "limitante";
+        tr.innerHTML = `<td>${reg.vista}${item.indice === r.limitanteIndice ? '<span class="selo-limitante">LIMITANTE</span>' : ""}</td>` +
+          `<td class="num">${formatarNumero(item.mols, 4)}</td><td class="num">${item.coeficiente}</td>` +
+          `<td class="num">${formatarNumero(item.razao, 4)}</td>`;
+        corpo.appendChild(tr);
+      }
+      tabelaRazao.appendChild(corpo);
+      resumo.appendChild(tabelaRazao);
+      resumo.appendChild(criar("p", {
+        className: "ajuda",
+        textContent: "Repare que quem manda é a menor razão, não a menor massa nem o menor número de mols. Um reagente que a equação consome de três em três acaba antes de outro que ela consome de um em um.",
+      }));
+    } else {
+      resumo.innerHTML = `<h2 style="margin-top:0">Com um reagente informado</h2>` +
+        `<p style="margin:0">Só <strong>${b.reagentes[r.razoes[0].indice].formula}</strong> foi informado, então a conta supõe que todos os outros estão em excesso.</p>`;
+    }
+    saida.appendChild(resumo);
+
+    const tabela = criar("div", { className: "cartao" });
+    tabela.innerHTML = `<h2 style="margin-top:0">O que acontece com cada substância</h2>`;
+    const t = criar("table");
+    t.innerHTML = `<thead><tr><th>Substância</th><th>mol</th><th>massa</th><th>situação</th></tr></thead>`;
+    const corpo = criar("tbody");
+
+    for (const l of r.linhas) {
+      const tr = criar("tr");
+      if (l.limitante) tr.className = "limitante";
+      if (l.papel === "reagente") {
+        const situacao = l.emFalta ? "suposto em excesso"
+          : l.limitante ? "consumido por inteiro"
+          : `sobram ${formatarNumero(l.restanteMols, 3)} mol (${formatarNumero(l.restanteMassa, 3)} g)`;
+        tr.innerHTML = `<td>${l.especie.vista}${l.limitante ? '<span class="selo-limitante">LIMITANTE</span>' : ""}</td>` +
+          `<td class="num">−${formatarNumero(l.consumidoMols, 4)}</td>` +
+          `<td class="num">−${formatarNumero(l.consumidoMassa, 4)} g</td>` +
+          `<td class="ajuda" style="text-align:left">${situacao}</td>`;
+      } else {
+        tr.innerHTML = `<td>${l.especie.vista}</td>` +
+          `<td class="num">+${formatarNumero(l.formadoMols, 4)}</td>` +
+          `<td class="num">+${formatarNumero(l.formadoMassa, 4)} g</td>` +
+          `<td class="ajuda" style="text-align:left">formado</td>`;
+      }
+      corpo.appendChild(tr);
+    }
+    t.appendChild(corpo);
+    tabela.appendChild(t);
+    tabela.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: `A reação acontece ${formatarNumero(r.extensao, 4)} vez${r.extensao === 1 ? "" : "es"} — é esse número, multiplicado pelo coeficiente de cada substância, que gera a coluna de mols.`,
+    }));
+    saida.appendChild(tabela);
+
+    // rendimento
+    const produtos = r.linhas.filter(l => l.papel === "produto");
+    const rendCartao = criar("div", { className: "cartao" });
+    rendCartao.innerHTML = `<h2 style="margin-top:0">Rendimento</h2>` +
+      `<p class="ajuda">A massa acima é a teórica, a que a equação promete. Pese o que realmente saiu da bancada e compare.</p>`;
+
+    const seletorProduto = criar("select", { id: "produto-rend" });
+    produtos.forEach((pr, i) => {
+      seletorProduto.appendChild(criar("option", { value: String(i), textContent: pr.especie.formula }));
+    });
+    seletorProduto.value = String(Math.min(estado.esteq.produtoRendimento, produtos.length - 1));
+    seletorProduto.addEventListener("change", () => {
+      estado.esteq.produtoRendimento = Number(seletorProduto.value);
+      recalcularEstequiometria();
+    });
+    rendCartao.appendChild(criar("label", { htmlFor: "produto-rend", textContent: "Produto isolado" }));
+    rendCartao.appendChild(seletorProduto);
+
+    const escolhido = produtos[Math.min(estado.esteq.produtoRendimento, produtos.length - 1)];
+    rendCartao.appendChild(criar("div", { style: "height:var(--mb-e3)" }));
+    rendCartao.appendChild(criar("label", { htmlFor: "massa-obtida", textContent: "Massa obtida (g)" }));
+    const campoObtida = criar("input", { type: "text", id: "massa-obtida", inputMode: "decimal", autocomplete: "off", placeholder: formatarNumero(escolhido.formadoMassa, 3) });
+    campoObtida.value = estado.esteq.massaObtida;
+    campoObtida.addEventListener("input", () => {
+      estado.esteq.massaObtida = campoObtida.value;
+      recalcularEstequiometria();
+      const nova = document.getElementById("massa-obtida");
+      if (nova) { nova.focus(); nova.setSelectionRange(nova.value.length, nova.value.length); }
+    });
+    rendCartao.appendChild(campoObtida);
+
+    const obtida = lerNumero(estado.esteq.massaObtida);
+    if (isFinite(obtida) && obtida > 0) {
+      const rend = calcularRendimento(obtida, escolhido.formadoMassa);
+      const caixa = criar("div", { className: "veredito " + (rend.percentual > 100 ? "diagnosticado" : "certo"), style: "margin-top:var(--mb-e3)" });
+      caixa.innerHTML = `<span class="selo">RENDIMENTO</span>` +
+        `<p><strong>${formatarNumero(rend.percentual, 3)}%</strong> — ${formatarNumero(obtida, 3)} g obtidos de ${formatarNumero(escolhido.formadoMassa, 3)} g teóricos.</p>`;
+      if (rend.observacao) caixa.appendChild(criar("p", { className: "ajuda", style: "margin-top:6px", textContent: rend.observacao }));
+      rendCartao.appendChild(caixa);
+    }
+
+    saida.appendChild(rendCartao);
+  }
 
   /* ---------------- tela: treino ---------------- */
 
@@ -736,12 +1055,16 @@
     progresso = carregarProgresso();
     $("#formula").value = estado.formula;
     montarExemplos();
+    montarExemplosEquacao();
+    $("#equacao").value = estado.equacao;
+    balancearAtual();
     montarSeletorVolume();
     montarPeriodica();
     analisarAtual();
     atualizarResumoLateral();
 
     $("#formula").addEventListener("input", analisarAtual);
+    $("#equacao").addEventListener("input", balancearAtual);
     $("#busca").addEventListener("input", (ev) => filtrarTabela(ev.target.value));
     for (const b of document.querySelectorAll(".menu .item")) {
       b.addEventListener("click", () => mostrarTela(b.dataset.tela));
@@ -755,6 +1078,7 @@
 
     const destino = {
       "#massa-molar": "tela-massa", "#converter": "tela-ponte",
+      "#balancear": "tela-balancear", "#estequiometria": "tela-esteq",
       "#treino": "tela-treino", "#progresso": "tela-progresso", "#tabela": "tela-tabela",
     }[location.hash];
     if (destino) mostrarTela(destino);

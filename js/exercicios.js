@@ -53,11 +53,58 @@ const DEGRAUS = [
   { n: 1, nome: "Átomo",    resumo: "massa atômica, símbolo e contagem de átomos numa fórmula" },
   { n: 2, nome: "Contagem", resumo: "a constante de Avogadro e o salto entre contar e medir" },
   { n: 3, nome: "Mol",      resumo: "a ponte completa: massa, mol, entidades e volume" },
+  { n: 4, nome: "Reação",   resumo: "coeficientes, proporção entre substâncias e reagente limitante" },
 ];
+
+/* Reações usadas nos exercícios do degrau 4. Ficam aqui sem coeficientes: o
+   próprio balanceador os calcula na hora, então não há número decorado no
+   código que possa divergir do que o aplicativo ensina. */
+const REACOES = [
+  "CH4 + O2 -> CO2 + H2O",
+  "H2 + O2 -> H2O",
+  "N2 + H2 -> NH3",
+  "Fe + O2 -> Fe2O3",
+  "C3H8 + O2 -> CO2 + H2O",
+  "Al + HCl -> AlCl3 + H2",
+  "CaCO3 -> CaO + CO2",
+  "NaOH + H2SO4 -> Na2SO4 + H2O",
+  "Zn + HCl -> ZnCl2 + H2",
+  "C2H5OH + O2 -> CO2 + H2O",
+  "KClO3 -> KCl + O2",
+  "Mg + O2 -> MgO",
+  "NH3 + O2 -> NO + H2O",
+  "Ca(OH)2 + HCl -> CaCl2 + H2O",
+  "C6H12O6 + O2 -> CO2 + H2O",
+  "Na + H2O -> NaOH + H2",
+];
+
+function sortearReacao(minimoReagentes) {
+  for (let tentativa = 0; tentativa < 30; tentativa++) {
+    const bruta = sortear(REACOES);
+    try {
+      const b = balancear(bruta);
+      if (minimoReagentes && b.reagentes.length < minimoReagentes) continue;
+      return b;
+    } catch (e) { /* passa para a próxima */ }
+  }
+  return balancear("H2 + O2 -> H2O");
+}
 
 const ACERTOS_PARA_LIBERAR = 5;
 
 function sortear(lista) { return lista[Math.floor(Math.random() * lista.length)]; }
+
+/* A equação sem coeficiente algum, para o enunciado de balanceamento. */
+function escreverEsqueleto(b) {
+  const lado = (l) => l.map(e => e.vista).join(" + ");
+  return `<span class="eq-linha">${lado(b.reagentes)} → ${lado(b.produtos)}</span>`;
+}
+
+/* A equação balanceada, em linha, para citar dentro de um enunciado. */
+function escreverEquacaoTextoCurto(b) {
+  const lado = (l) => l.map(e => (e.coeficiente === 1 ? "" : e.coeficiente + " ") + e.vista).join(" + ");
+  return `<span class="eq-linha">${lado(b.reagentes)} → ${lado(b.produtos)}</span>`;
+}
 
 function sortearSubstancia(apenasGas) {
   const universo = apenasGas ? SUBSTANCIAS.filter(s => s.gas) : SUBSTANCIAS;
@@ -293,6 +340,115 @@ const GERADORES = {
     };
   },
 
+
+  /* ----- degrau 4 ----- */
+
+  coeficienteNaEquacao(cfg) {
+    const b = sortearReacao();
+    const alvo = sortear(b.especies);
+    const outro = sortear(b.especies.filter(e => e !== alvo && e.coeficiente !== alvo.coeficiente)) || null;
+
+    const erros = [engano(1, "1 é o coeficiente de quem já está balanceado sozinho. Confira se todos os elementos fecham dos dois lados com esse valor.")];
+    if (outro) {
+      erros.push(engano(outro.coeficiente, `Esse é o coeficiente de ${outro.formula}, não o de ${alvo.formula}.`));
+    }
+
+    return {
+      degrau: 4, tipo: "coeficienteNaEquacao",
+      enunciado: `Balanceando com os menores números inteiros possíveis, qual o coeficiente de <strong>${alvo.vista}</strong> em<br>${escreverEsqueleto(b)}?`,
+      unidade: "", resposta: alvo.coeficiente, sig: 2,
+      erros,
+      dica: "Conte os átomos de cada elemento dos dois lados e ajuste os coeficientes até que todas as contagens fechem. Comece pelo elemento que aparece em menos substâncias.",
+      resolucao: `A equação balanceada é <strong>${b.equacaoTexto}</strong>.<br>` +
+        b.conferencia.map(c => `${c.elemento}: ${c.antes} de cada lado`).join(" · "),
+    };
+  },
+
+  molParaMolReacao(cfg) {
+    const b = sortearReacao();
+    const de = sortear(b.reagentes);
+    const para = sortear(b.produtos);
+    const n = sortear([0.2, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0]);
+    const certo = n * (para.coeficiente / de.coeficiente);
+
+    return {
+      degrau: 4, tipo: "molParaMolReacao",
+      enunciado: `Na reação ${escreverEquacaoTextoCurto(b)}, quantos mols de <strong>${para.vista}</strong> se formam a partir de <strong>${formatarNumero(n, 3)} mol</strong> de ${de.vista}?`,
+      unidade: "mol", resposta: certo, sig: 3,
+      contexto: `Proporção: ${de.coeficiente} ${de.formula} para ${para.coeficiente} ${para.formula}`,
+      erros: [
+        engano(n * (de.coeficiente / para.coeficiente), "A razão entrou de cabeça para baixo. O coeficiente da substância que você quer fica em cima; o da que você tem, embaixo."),
+        engano(n, "Você usou a mesma quantidade dos dois lados. A equação balanceada existe justamente porque essa proporção não é de um para um aqui."),
+      ],
+      dica: "Multiplique pelos coeficientes na forma de fração, com o da substância pedida no numerador.",
+      resolucao: `${formatarNumero(n, 3)} mol de ${de.formula} × (${para.coeficiente} mol ${para.formula} ⁄ ${de.coeficiente} mol ${de.formula}) = <strong>${formatarNumero(certo, 3)} mol</strong>`,
+    };
+  },
+
+  massaParaMassaReacao(cfg) {
+    const b = sortearReacao();
+    const de = sortear(b.reagentes);
+    const para = sortear(b.produtos);
+    const Md = de.analise.massaMolar, Mp = para.analise.massaMolar;
+    const m = sortear([5.0, 10.0, 20.0, 25.0, 50.0, 100.0, 8.0, 16.0]);
+    const mols = m / Md;
+    const molsProduto = mols * (para.coeficiente / de.coeficiente);
+    const certo = molsProduto * Mp;
+
+    return {
+      degrau: 4, tipo: "massaParaMassaReacao",
+      enunciado: `Na reação ${escreverEquacaoTextoCurto(b)}, que massa de <strong>${para.vista}</strong> se forma a partir de <strong>${formatarNumero(m, 3)} g</strong> de ${de.vista}?`,
+      unidade: "g", resposta: certo, sig: 3,
+      contexto: `M(${de.formula}) = ${formatarNumero(Md, 5)} g/mol · M(${para.formula}) = ${formatarNumero(Mp, 5)} g/mol`,
+      erros: [
+        engano(m * (para.coeficiente / de.coeficiente), "Você aplicou a proporção direto sobre a massa. Coeficiente é razão de mols, nunca de gramas: converta para mol antes."),
+        engano(molsProduto, "Você parou no mol do produto. Falta multiplicar pela massa molar dele para voltar a gramas."),
+        engano(mols * (de.coeficiente / para.coeficiente) * Mp, "A razão entre os coeficientes entrou invertida no meio do caminho."),
+        engano(mols * Mp, "Você converteu para mol e voltou para grama, mas esqueceu a proporção da reação no meio."),
+      ],
+      dica: "São três passos: grama para mol pela massa molar do reagente, mol para mol pelos coeficientes, mol para grama pela massa molar do produto.",
+      resolucao: `${formatarNumero(m, 3)} g ÷ ${formatarNumero(Md, 5)} = ${formatarNumero(mols, 3)} mol de ${de.formula}<br>` +
+        `${formatarNumero(mols, 3)} × (${para.coeficiente}⁄${de.coeficiente}) = ${formatarNumero(molsProduto, 3)} mol de ${para.formula}<br>` +
+        `${formatarNumero(molsProduto, 3)} × ${formatarNumero(Mp, 5)} = <strong>${formatarNumero(certo, 3)} g</strong>`,
+    };
+  },
+
+  produtoComLimitante(cfg) {
+    const b = sortearReacao(2);
+    const a1 = b.reagentes[0], a2 = b.reagentes[1];
+    const produto = sortear(b.produtos);
+
+    // sorteia massas que garantam um limitante claro, nunca proporção exata
+    const base = sortear([0.4, 0.6, 1.5, 2.0, 2.5]);
+    const mols1 = a1.coeficiente * sortear([1.0, 2.0, 0.5]);
+    const mols2 = a2.coeficiente * base;
+    const m1 = mols1 * a1.analise.massaMolar;
+    const m2 = mols2 * a2.analise.massaMolar;
+
+    const razao1 = mols1 / a1.coeficiente;
+    const razao2 = mols2 / a2.coeficiente;
+    const extensao = Math.min(razao1, razao2);
+    const certo = produto.coeficiente * extensao;
+    const pelaOutra = produto.coeficiente * Math.max(razao1, razao2);
+
+    return {
+      degrau: 4, tipo: "produtoComLimitante",
+      enunciado: `Misturam-se <strong>${formatarNumero(m1, 3)} g</strong> de ${a1.vista} com <strong>${formatarNumero(m2, 3)} g</strong> de ${a2.vista} segundo ${escreverEquacaoTextoCurto(b)}. Quantos mols de <strong>${produto.vista}</strong> se formam?`,
+      unidade: "mol", resposta: certo, sig: 3,
+      contexto: `M(${a1.formula}) = ${formatarNumero(a1.analise.massaMolar, 5)} · M(${a2.formula}) = ${formatarNumero(a2.analise.massaMolar, 5)} g/mol`,
+      erros: [
+        engano(pelaOutra, "Você usou o reagente em excesso para calcular. Quem manda é o limitante: aquele com a menor razão entre mols disponíveis e coeficiente — não o de menor massa."),
+        engano(certo + pelaOutra, "Você somou as duas contas. Só uma delas vale: a do reagente que acaba primeiro."),
+        engano(Math.min(mols1, mols2), "Você comparou os mols diretamente, sem dividir pelos coeficientes. O reagente que exige três mols por vez acaba antes de outro que exige um, mesmo tendo mais matéria."),
+      ],
+      dica: "Converta as duas massas em mols, divida cada uma pelo respectivo coeficiente e compare. A menor razão manda na reação inteira.",
+      resolucao: `${a1.formula}: ${formatarNumero(mols1, 3)} mol ÷ ${a1.coeficiente} = ${formatarNumero(razao1, 3)}<br>` +
+        `${a2.formula}: ${formatarNumero(mols2, 3)} mol ÷ ${a2.coeficiente} = ${formatarNumero(razao2, 3)}<br>` +
+        `Limitante: <strong>${razao1 <= razao2 ? a1.formula : a2.formula}</strong>, com extensão ${formatarNumero(extensao, 3)}.<br>` +
+        `${produto.formula}: ${produto.coeficiente} × ${formatarNumero(extensao, 3)} = <strong>${formatarNumero(certo, 3)} mol</strong>`,
+    };
+  },
+
   percentualEmMassa(cfg) {
     const s = comFormula(sortearSubstancia(false));
     const a = s.analise;
@@ -320,6 +476,7 @@ const TIPOS_POR_DEGRAU = {
   1: ["atomosNaFormula", "massaMolarSimples"],
   2: ["molParaParticulas", "particulasParaMol", "atomosTotais"],
   3: ["massaParaMol", "molParaMassa", "massaParaParticulas", "volumeParaMol", "massaParaVolume", "percentualEmMassa"],
+  4: ["coeficienteNaEquacao", "molParaMolReacao", "massaParaMassaReacao", "produtoComLimitante"],
 };
 
 const NOME_TIPO = {
@@ -334,6 +491,10 @@ const NOME_TIPO = {
   volumeParaMol: "Volume de gás para mol",
   massaParaVolume: "Massa para volume de gás",
   percentualEmMassa: "Porcentagem em massa",
+  coeficienteNaEquacao: "Coeficiente do balanceamento",
+  molParaMolReacao: "Proporção em mols entre substâncias",
+  massaParaMassaReacao: "Massa de reagente para massa de produto",
+  produtoComLimitante: "Produto formado com reagente limitante",
 };
 
 /* Gera um exercício do degrau pedido, evitando repetir o tipo anterior. */

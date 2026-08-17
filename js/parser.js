@@ -36,8 +36,29 @@ function normalizar(entrada) {
   return saida.replace(/\^\^/g, "^");
 }
 
+/* "Fe2+" e "NH4+" têm a mesma forma e sentidos opostos: no primeiro o 2 é a
+   carga, no segundo o 4 é índice e a carga vale +1. Três casos resolvem
+   praticamente tudo que se escreve à mão:
+
+     Fe2+   um símbolo só seguido de dígitos  → o dígito é a carga
+     SO42-  índice de duas casas antes do sinal → implausível como índice,
+            então o último dígito é a carga (SO4 com carga 2-)
+     NH4+   um dígito só num poliatômico → é índice, e a carga vale 1
+
+   Quem escrever o circunflexo escapa de toda essa adivinhação. */
+function resolverCargaImplicita(texto) {
+  if (texto.includes("^")) return texto;
+  const m = texto.match(/^(.*?)(\d+)([+-])$/);
+  if (!m) return texto;
+  const [, corpo, digitos, sinal] = m;
+
+  if (/^[A-Z][a-z]?$/.test(corpo)) return `${corpo}^${digitos}${sinal}`;
+  if (digitos.length >= 2) return `${corpo}${digitos.slice(0, -1)}^${digitos.slice(-1)}${sinal}`;
+  return `${corpo}${digitos}^${sinal}`;
+}
+
 function analisar(entradaBruta) {
-  const texto = normalizar(entradaBruta);
+  const texto = resolverCargaImplicita(normalizar(entradaBruta));
   if (!texto) throw new ErroDeFormula("Escreva uma fórmula para começar.", 0);
 
   let i = 0;
