@@ -22,6 +22,8 @@
     tipoAnterior: null,
     usouDica: false,
     respondido: false,
+    consultaAberta: false,
+    expressao: "",
     sessao: { certas: 0, total: 0, xp: 0 },
   };
 
@@ -194,6 +196,111 @@
       textContent: "A porcentagem em massa é o que a balança enxerga. Repare que o elemento mais numeroso quase nunca é o que mais pesa."
     }));
     alvo.appendChild(comp);
+
+    desenharEstruturaECargas(alvo, a);
+    desenharNucleo(alvo, a);
+  }
+
+  function desenharEstruturaECargas(alvo, a) {
+    const est = estruturaDe(a);
+    const cartao = criar("div", { className: "cartao" });
+    cartao.innerHTML = `<h2 style="margin-top:0">Como os átomos se ligam</h2>`;
+
+    if (est.tipo === "molecular") {
+      const quadro = criar("div", { className: "estrutura" });
+      quadro.innerHTML = desenharEstrutura(est.dados);
+      cartao.appendChild(quadro);
+      cartao.appendChild(criar("p", {
+        style: "margin:0;text-align:center",
+        textContent: `${est.dados.nome} — ${est.dados.geometria}.`,
+      }));
+      cartao.appendChild(criar("p", {
+        className: "ajuda",
+        style: "text-align:center",
+        textContent: "As bolinhas seguem o raio do núcleo, que cresce com a raiz cúbica do número de massa. O tamanho do átomo inteiro é outra coisa: depende da eletrosfera e não acompanha a massa.",
+      }));
+    } else if (est.tipo === "ionico") {
+      cartao.appendChild(criar("p", {
+        style: "margin:0",
+        innerHTML: `Não há molécula de ${est.chave} para desenhar. O ${est.nome} é um retículo iônico: um empilhamento de íons que se repete indefinidamente, sem unidade isolada. A fórmula diz a proporção entre os íons, não o conteúdo de uma partícula.`,
+      }));
+    } else {
+      cartao.appendChild(criar("p", {
+        style: "margin:0",
+        textContent: `Não tenho a estrutura desta substância — o acervo conferido tem ${quantasEstruturas()} moléculas e esta não está entre elas. Fórmula molecular não determina estrutura: C2H6O é etanol ou éter dimetílico, C4H10 é butano ou isobutano. Desenhar uma delas como se fosse a única seria ensinar errado, porque essa multiplicidade é a própria isomeria.`,
+      }));
+    }
+
+    const idh = indiceInsaturacao(a);
+    if (idh) {
+      const caixa = criar("div", { className: idh.situacao === "impossivel" ? "erro" : "dica-caixa" });
+      caixa.style.marginTop = "var(--mb-e4)";
+      caixa.innerHTML = `<strong>${idh.titulo}</strong><br>${idh.mensagem}`;
+      cartao.appendChild(caixa);
+    }
+
+    alvo.appendChild(cartao);
+  }
+
+  function desenharNucleo(alvo, a) {
+    const n = contarNucleo(a);
+    const cartao = criar("div", { className: "cartao" });
+    cartao.innerHTML = `<h2 style="margin-top:0">O que pesa dentro do átomo</h2>`;
+
+    const fila = criar("div", { className: "fila-nucleos" });
+    for (const item of n.itens) {
+      const r = raioNucleo(POR_SIMBOLO[item.simbolo].massa);
+      const lado = Math.ceil(r * 2) + 6;
+      const bolha = criar("div", { className: "bolha" });
+      bolha.innerHTML =
+        `<svg viewBox="0 0 ${lado} ${lado}" width="${lado}" height="${lado}" role="img" ` +
+        `aria-label="${item.nome}, ${item.z} prótons e ${item.neutrons} nêutrons">` +
+        `<circle cx="${lado / 2}" cy="${lado / 2}" r="${r.toFixed(1)}" class="atomo a-${item.simbolo}"/>` +
+        `<text x="${lado / 2}" y="${lado / 2}" class="rotulo-atomo" text-anchor="middle" ` +
+        `dominant-baseline="central" font-size="${Math.max(9, r * 0.9).toFixed(1)}">${item.simbolo}</text></svg>` +
+        `<span class="ajuda">${item.z}p + ${item.neutrons}n</span>`;
+      fila.appendChild(bolha);
+    }
+    cartao.appendChild(fila);
+
+    const tabela = criar("table");
+    tabela.innerHTML = `<thead><tr><th>Elemento</th><th>Átomos</th><th>Prótons</th><th>Nêutrons</th></tr></thead>`;
+    const corpo = criar("tbody");
+    for (const item of n.itens) {
+      const tr = criar("tr");
+      tr.innerHTML =
+        `<td><span style="font-family:var(--mb-fonte-dado);font-weight:500">${item.simbolo}</span> ` +
+        `<span class="ajuda">${item.isotopo}${item.simbolo}${item.incerta ? " *" : ""}</span></td>` +
+        `<td class="num">${item.quantidade}</td>` +
+        `<td class="num">${item.protonsTotal}</td>` +
+        `<td class="num">${item.neutronsTotal}</td>`;
+      corpo.appendChild(tr);
+    }
+    const total = criar("tr", { className: "linha-total" });
+    total.innerHTML = `<td><strong>Total</strong></td><td class="num">${a.totalAtomos}</td>` +
+      `<td class="num"><strong>${n.protons}</strong></td><td class="num"><strong>${n.neutrons}</strong></td>`;
+    corpo.appendChild(total);
+    tabela.appendChild(corpo);
+    cartao.appendChild(tabela);
+
+    const aviso = criar("div", { className: "dica-caixa", style: "margin-top:var(--mb-e4)" });
+    aviso.innerHTML =
+      `<strong>Por que a massa molar não é ${formatarNumero(n.somaNucleons, 6)} g/mol</strong><br>` +
+      `Somando os núcleons do isótopo mais comum de cada elemento dá ${n.somaNucleons}. ` +
+      `A massa molar é ${formatarNumero(a.massaMolar, 6)}, uma diferença de ${formatarNumero(Math.abs(n.diferenca), 3)}. ` +
+      `A massa que a tabela periódica traz não é a de um átomo: é a média ponderada de todos os isótopos ` +
+      `daquele elemento na natureza. É por isso que o cloro pesa 35,45 e não 35 — três quartos dele é ` +
+      `cloro-35 e um quarto é cloro-37.`;
+    cartao.appendChild(aviso);
+
+    const eletrons = criar("p", { className: "ajuda" });
+    eletrons.innerHTML =
+      `E a eletrosfera? São ${n.eletrons} elétrons, e juntos eles pesam ${formatarNumero(n.massaEletrons, 3)} u — ` +
+      `<strong>${formatarNumero(n.fracaoEletrons, 3)}%</strong> da massa. Um próton pesa 1836 vezes o que pesa um elétron, ` +
+      `então a balança praticamente só enxerga o núcleo. Os elétrons decidem toda a química e quase nada da massa.`;
+    cartao.appendChild(eletrons);
+
+    alvo.appendChild(cartao);
   }
 
   /* ---------------- tela: ponte do mol ---------------- */
@@ -730,6 +837,8 @@
     estado.tipoAnterior = estado.exercicio.tipo;
     estado.usouDica = false;
     estado.respondido = false;
+    estado.consultaAberta = false;
+    estado.expressao = "";
     desenharExercicio();
   }
 
@@ -756,6 +865,23 @@
     linha.appendChild(campo);
     linha.appendChild(criar("span", { className: "unidade", textContent: q.unidade }));
     alvo.appendChild(linha);
+
+    // eco do valor interpretado: quem escreve 6,02x10^23 precisa ver que o
+    // aplicativo entendeu 6,02×10²³, e não outra coisa
+    const eco = criar("p", { className: "eco", id: "eco-resposta" });
+    alvo.appendChild(eco);
+    const atualizarEco = () => {
+      const bruto = campo.value.trim();
+      if (!bruto) { eco.textContent = ""; return; }
+      const valor = lerNumero(bruto);
+      if (!isFinite(valor)) {
+        eco.innerHTML = `<span class="eco-erro">Não consegui ler esse número.</span>`;
+      } else {
+        eco.innerHTML = `entendi <strong>${formatarNumero(valor, 6)}</strong> ${q.unidade}`;
+      }
+    };
+    campo.addEventListener("input", atualizarEco);
+    atualizarEco();
 
     const acoes = criar("div", { className: "acoes" });
 
@@ -785,7 +911,148 @@
     }
 
     alvo.appendChild(acoes);
+
+    montarConsulta(alvo, q);
+    montarCalculadora(alvo, campo);
+
     if (!estado.respondido) campo.focus();
+  }
+
+  /* Consultar massa atômica não é colar: nenhum químico decora esses números,
+     eles ficam na parede do laboratório. O que se aprende é o método. Por isso
+     este painel não custa XP, ao contrário da dica. */
+  function montarConsulta(alvo, q) {
+    const caixa = criar("div", { className: "consulta" });
+    const botao = criar("button", {
+      type: "button", className: "chip",
+      textContent: estado.consultaAberta ? "Fechar a consulta" : "Consultar massas atômicas",
+    });
+    botao.setAttribute("aria-expanded", String(estado.consultaAberta));
+    botao.addEventListener("click", () => {
+      estado.consultaAberta = !estado.consultaAberta;
+      const respostaAtual = document.getElementById("resposta");
+      const guardado = respostaAtual ? respostaAtual.value : "";
+      desenharExercicio();
+      const novo = document.getElementById("resposta");
+      if (novo && guardado) novo.value = guardado;
+    });
+    caixa.appendChild(botao);
+
+    if (estado.consultaAberta) {
+      const elementos = [];
+      const substancias = [];
+      for (const f of q.formulas || []) {
+        let a;
+        try { a = analisar(f); } catch (e) { continue; }
+        substancias.push({ formula: f, vista: formatarFormula(a.normalizada), M: a.massaMolar });
+        for (const item of a.itens) {
+          if (!elementos.some(e => e.simbolo === item.simbolo)) {
+            elementos.push({ simbolo: item.simbolo, nome: item.nome, massa: item.massaAtomica });
+          }
+        }
+      }
+      elementos.sort((x, y) => x.simbolo.localeCompare(y.simbolo));
+
+      const painel = criar("div", { className: "painel-consulta" });
+      const tabela = criar("table");
+      tabela.innerHTML = `<thead><tr><th>Elemento</th><th>Massa atômica</th></tr></thead>`;
+      const corpo = criar("tbody");
+      for (const e of elementos) {
+        const tr = criar("tr");
+        tr.innerHTML = `<td><span style="font-family:var(--mb-fonte-dado);font-weight:500">${e.simbolo}</span> ` +
+          `<span class="ajuda">${e.nome}</span></td><td class="num">${formatarNumero(e.massa, 6)} u</td>`;
+        corpo.appendChild(tr);
+      }
+      tabela.appendChild(corpo);
+      painel.appendChild(tabela);
+
+      if (substancias.length && q.degrau >= 3) {
+        const lista = criar("p", { className: "ajuda" });
+        lista.innerHTML = "Massa molar: " + substancias
+          .map(x => `${x.vista} = ${formatarNumero(x.M, 5)} g/mol`).join(" · ");
+        painel.appendChild(lista);
+      }
+      painel.appendChild(criar("p", {
+        className: "ajuda",
+        textContent: "Consultar a tabela não conta como dica e não reduz o XP.",
+      }));
+      caixa.appendChild(painel);
+    }
+
+    alvo.appendChild(caixa);
+  }
+
+  function montarCalculadora(alvo, campoResposta) {
+    const caixa = criar("div", { className: "calculadora" });
+    caixa.innerHTML = `<p class="titulo-calc">Calculadora</p>`;
+
+    const linha = criar("div", { className: "linha-calc" });
+    const campo = criar("input", {
+      type: "text", id: "expressao", inputMode: "text", autocomplete: "off",
+      spellcheck: false, placeholder: "4 / 39,997 × NA",
+    });
+    campo.setAttribute("aria-label", "Expressão para calcular");
+    campo.value = estado.expressao;
+    linha.appendChild(campo);
+    caixa.appendChild(linha);
+
+    const atalhos = criar("div", { className: "atalhos" });
+    const inserir = (texto) => {
+      const inicio = campo.selectionStart ?? campo.value.length;
+      const fim = campo.selectionEnd ?? campo.value.length;
+      campo.value = campo.value.slice(0, inicio) + texto + campo.value.slice(fim);
+      const cursor = inicio + texto.length;
+      campo.focus();
+      campo.setSelectionRange(cursor, cursor);
+      estado.expressao = campo.value;
+      atualizar();
+    };
+    for (const [rotulo, texto] of [["×10ⁿ", "×10^"], ["×", "×"], ["÷", "/"], ["( )", "()"], ["N&thinsp;A", "NA"]]) {
+      const b = criar("button", { type: "button", className: "tecla" });
+      b.innerHTML = rotulo;
+      b.addEventListener("click", () => inserir(texto === "()" ? "(" : texto));
+      atalhos.appendChild(b);
+    }
+    caixa.appendChild(atalhos);
+
+    const saida = criar("div", { className: "saida-calc", id: "saida-calc" });
+    caixa.appendChild(saida);
+
+    const acoes = criar("div", { className: "acoes", style: "margin-top:var(--mb-e2)" });
+    const usar = criar("button", { className: "botao secundario", type: "button", textContent: "Usar como resposta" });
+    usar.addEventListener("click", () => {
+      let valor;
+      try { valor = calcular(campo.value); } catch (e) { return; }
+      if (valor === null || !isFinite(valor)) return;
+      const destino = document.getElementById("resposta");
+      if (!destino || destino.readOnly) return;
+      destino.value = formatarNumero(valor, 4);
+      destino.focus();
+    });
+    acoes.appendChild(usar);
+    const limpar = criar("button", { className: "botao secundario", type: "button", textContent: "Limpar" });
+    limpar.addEventListener("click", () => { campo.value = ""; estado.expressao = ""; campo.focus(); atualizar(); });
+    acoes.appendChild(limpar);
+    caixa.appendChild(acoes);
+
+    function atualizar() {
+      const texto = campo.value.trim();
+      if (!texto) { saida.innerHTML = `<span class="ajuda">Escreva a conta e o resultado aparece aqui. NA é a constante de Avogadro.</span>`; usar.disabled = true; return; }
+      try {
+        const valor = calcular(texto);
+        if (valor === null) { saida.innerHTML = ""; usar.disabled = true; return; }
+        saida.innerHTML = `<span class="igual">=</span> <span class="valor-calc">${formatarNumero(valor, 6)}</span>`;
+        usar.disabled = false;
+      } catch (e) {
+        saida.innerHTML = `<span class="erro-calc">${e.message}</span>`;
+        usar.disabled = true;
+      }
+    }
+
+    campo.addEventListener("input", () => { estado.expressao = campo.value; atualizar(); });
+    campo.addEventListener("keydown", (ev) => { if (ev.key === "Enter") usar.click(); });
+    atualizar();
+    alvo.appendChild(caixa);
   }
 
   function responder(bruto) {

@@ -518,3 +518,78 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
   border-left: 4px solid var(--mb-atencao); background: var(--mb-atencao-bg);
   padding: 10px 14px; margin-top: var(--mb-e3); font-size: var(--mb-t-apoio);
 }
+
+/* ---------- estrutura e núcleo ---------- */
+
+.estrutura { text-align: center; color: var(--mb-texto-2); }
+.estrutura svg { width: 100%; max-width: 340px; height: auto; }
+.rotulo-atomo { font-family: var(--mb-fonte-dado); font-weight: 500; fill: #FFFFFF; }
+.atomo { fill: var(--mb-estrutura); }
+.a-H  { fill: #8AA0C4; }
+.a-C  { fill: #3D4A5C; }
+.a-O  { fill: #C43C0E; }
+.a-N  { fill: #164194; }
+.a-S  { fill: #B8860B; }
+.a-Cl { fill: #1B7A3A; }
+
+.fila-nucleos {
+  display: flex; flex-wrap: wrap; gap: var(--mb-e4);
+  align-items: flex-end; justify-content: center;
+  padding: var(--mb-e3) 0 var(--mb-e4);
+}
+.bolha { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bolha svg { display: block; overflow: visible; }
+.linha-total td { border-top: 2px solid var(--mb-borda-forte); border-bottom: 0; }
+
+/* ---------- consulta e calculadora no treino ---------- */
+
+.consulta { margin-top: var(--mb-e4); }
+.painel-consulta {
+  margin-top: var(--mb-e3); padding: var(--mb-e3) var(--mb-e4);
+  background: var(--mb-superficie-2); border-radius: var(--mb-raio);
+}
+.painel-consulta table { margin-bottom: var(--mb-e2); }
+.painel-consulta td, .painel-consulta th { padding: 6px 8px; }
+
+.eco {
+  margin: 6px 0 0; min-height: 1.4em;
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-legenda);
+  color: var(--mb-texto-2);
+}
+.eco strong { color: var(--mb-texto); }
+.eco-erro { color: var(--mb-erro); font-family: var(--mb-fonte-texto); }
+
+.calculadora {
+  margin-top: var(--mb-e4); padding-top: var(--mb-e4);
+  border-top: 1px solid var(--mb-borda);
+}
+.titulo-calc {
+  margin: 0 0 var(--mb-e2); font-size: var(--mb-t-legenda);
+  color: var(--mb-texto-2); letter-spacing: 0.04em;
+}
+.linha-calc input {
+  width: 100%; min-height: var(--mb-toque); padding: 10px 12px;
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3);
+  color: var(--mb-texto); background: var(--mb-superficie);
+  border: 1px solid var(--mb-borda-forte); border-radius: var(--mb-raio);
+}
+.atalhos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--mb-e2); }
+.tecla {
+  appearance: none; cursor: pointer; font: inherit;
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-apoio);
+  min-height: 40px; min-width: 52px; padding: 6px 12px;
+  background: var(--mb-superficie-2); color: var(--mb-texto);
+  border: 1px solid var(--mb-borda); border-radius: var(--mb-raio);
+}
+.tecla:hover { border-color: var(--mb-interacao); color: var(--mb-interacao); }
+.saida-calc {
+  margin-top: var(--mb-e2); min-height: 2em;
+  display: flex; align-items: baseline; gap: 8px;
+}
+.saida-calc .igual { color: var(--mb-interacao); font-family: var(--mb-fonte-dado); }
+.valor-calc {
+  font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums;
+  font-size: var(--mb-t-titulo-2); font-weight: 500; color: var(--mb-energia);
+}
+.erro-calc { color: var(--mb-erro); font-size: var(--mb-t-apoio); }
+.botao[disabled] { opacity: 0.45; cursor: not-allowed; }

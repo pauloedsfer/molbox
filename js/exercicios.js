@@ -137,7 +137,7 @@ const GERADORES = {
     const semMultiplicar = dentro.composicao[alvo.simbolo] || alvo.quantidade;
 
     return {
-      degrau: 1, tipo: "atomosNaFormula",
+      degrau: 1, tipo: "atomosNaFormula", formulas: [formula],
       enunciado: `Quantos átomos de <strong>${alvo.simbolo}</strong> existem em uma unidade de ${vista}?`,
       unidade: "átomos", resposta: alvo.quantidade, sig: 3,
       erros: [
@@ -158,7 +158,7 @@ const GERADORES = {
     const semIndices = a.itens.reduce((soma, i) => soma + i.massaAtomica, 0);
 
     return {
-      degrau: 1, tipo: "massaMolarSimples",
+      degrau: 1, tipo: "massaMolarSimples", formulas: [s.f],
       enunciado: `Qual a massa molar de ${s.vista} (${s.nome})?`,
       unidade: "g/mol", resposta: a.massaMolar, sig: 4,
       erros: [
@@ -179,7 +179,7 @@ const GERADORES = {
     const certo = n * CONSTANTES.AVOGADRO;
 
     return {
-      degrau: 2, tipo: "molParaParticulas",
+      degrau: 2, tipo: "molParaParticulas", formulas: [s.f],
       enunciado: `Quantas moléculas há em <strong>${formatarNumero(n, 3)} mol</strong> de ${s.vista}?`,
       unidade: "moléculas", resposta: certo, sig: 3,
       erros: [
@@ -199,7 +199,7 @@ const GERADORES = {
     const certo = N / CONSTANTES.AVOGADRO;
 
     return {
-      degrau: 2, tipo: "particulasParaMol",
+      degrau: 2, tipo: "particulasParaMol", formulas: [s.f],
       enunciado: `Uma amostra de ${s.vista} contém <strong>${formatarNumero(N, 2)} moléculas</strong>. A quantos mols isso corresponde?`,
       unidade: "mol", resposta: certo, sig: 3,
       erros: [
@@ -218,7 +218,7 @@ const GERADORES = {
     const certo = n * CONSTANTES.AVOGADRO * total;
 
     return {
-      degrau: 2, tipo: "atomosTotais",
+      degrau: 2, tipo: "atomosTotais", formulas: [s.f],
       enunciado: `Quantos <strong>átomos no total</strong> existem em ${formatarNumero(n, 3)} mol de ${s.vista}?`,
       unidade: "átomos", resposta: certo, sig: 3,
       erros: [
@@ -238,7 +238,7 @@ const GERADORES = {
     const certo = m / s.M;
 
     return {
-      degrau: 3, tipo: "massaParaMol",
+      degrau: 3, tipo: "massaParaMol", formulas: [s.f],
       enunciado: `Quantos mols há em <strong>${formatarNumero(m, 3)} g</strong> de ${s.vista} (${s.nome})?`,
       unidade: "mol", resposta: certo, sig: 3,
       contexto: `M(${s.f}) = ${formatarNumero(s.M, 5)} g/mol`,
@@ -259,7 +259,7 @@ const GERADORES = {
     const certo = n * s.M;
 
     return {
-      degrau: 3, tipo: "molParaMassa",
+      degrau: 3, tipo: "molParaMassa", formulas: [s.f],
       enunciado: `Qual a massa de <strong>${formatarNumero(n, 3)} mol</strong> de ${s.vista} (${s.nome})?`,
       unidade: "g", resposta: certo, sig: 3,
       contexto: `M(${s.f}) = ${formatarNumero(s.M, 5)} g/mol`,
@@ -280,7 +280,7 @@ const GERADORES = {
     const certo = mols * CONSTANTES.AVOGADRO;
 
     return {
-      degrau: 3, tipo: "massaParaParticulas",
+      degrau: 3, tipo: "massaParaParticulas", formulas: [s.f],
       enunciado: `Quantas moléculas há em <strong>${formatarNumero(m, 3)} g</strong> de ${s.vista}?`,
       unidade: "moléculas", resposta: certo, sig: 3,
       contexto: `M(${s.f}) = ${formatarNumero(s.M, 5)} g/mol`,
@@ -303,7 +303,7 @@ const GERADORES = {
     const certo = V / vm;
 
     return {
-      degrau: 3, tipo: "volumeParaMol",
+      degrau: 3, tipo: "volumeParaMol", formulas: [s.f],
       enunciado: `Nas condições escolhidas, <strong>${formatarNumero(V, 3)} L</strong> de ${s.vista} correspondem a quantos mols?`,
       unidade: "mol", resposta: certo, sig: 3,
       contexto: `Volume molar = ${formatarNumero(vm, 4)} L/mol · M(${s.f}) = ${formatarNumero(s.M, 5)} g/mol`,
@@ -325,7 +325,7 @@ const GERADORES = {
     const certo = mols * vm;
 
     return {
-      degrau: 3, tipo: "massaParaVolume",
+      degrau: 3, tipo: "massaParaVolume", formulas: [s.f],
       enunciado: `Que volume ocupam <strong>${formatarNumero(m, 3)} g</strong> de ${s.vista} nas condições escolhidas?`,
       unidade: "L", resposta: certo, sig: 3,
       contexto: `Volume molar = ${formatarNumero(vm, 4)} L/mol · M(${s.f}) = ${formatarNumero(s.M, 5)} g/mol`,
@@ -354,7 +354,7 @@ const GERADORES = {
     }
 
     return {
-      degrau: 4, tipo: "coeficienteNaEquacao",
+      degrau: 4, tipo: "coeficienteNaEquacao", formulas: b.especies.map(e => e.formula),
       enunciado: `Balanceando com os menores números inteiros possíveis, qual o coeficiente de <strong>${alvo.vista}</strong> em<br>${escreverEsqueleto(b)}?`,
       unidade: "", resposta: alvo.coeficiente, sig: 2,
       erros,
@@ -372,7 +372,7 @@ const GERADORES = {
     const certo = n * (para.coeficiente / de.coeficiente);
 
     return {
-      degrau: 4, tipo: "molParaMolReacao",
+      degrau: 4, tipo: "molParaMolReacao", formulas: [de.formula, para.formula],
       enunciado: `Na reação ${escreverEquacaoTextoCurto(b)}, quantos mols de <strong>${para.vista}</strong> se formam a partir de <strong>${formatarNumero(n, 3)} mol</strong> de ${de.vista}?`,
       unidade: "mol", resposta: certo, sig: 3,
       contexto: `Proporção: ${de.coeficiente} ${de.formula} para ${para.coeficiente} ${para.formula}`,
@@ -396,7 +396,7 @@ const GERADORES = {
     const certo = molsProduto * Mp;
 
     return {
-      degrau: 4, tipo: "massaParaMassaReacao",
+      degrau: 4, tipo: "massaParaMassaReacao", formulas: [de.formula, para.formula],
       enunciado: `Na reação ${escreverEquacaoTextoCurto(b)}, que massa de <strong>${para.vista}</strong> se forma a partir de <strong>${formatarNumero(m, 3)} g</strong> de ${de.vista}?`,
       unidade: "g", resposta: certo, sig: 3,
       contexto: `M(${de.formula}) = ${formatarNumero(Md, 5)} g/mol · M(${para.formula}) = ${formatarNumero(Mp, 5)} g/mol`,
@@ -432,7 +432,7 @@ const GERADORES = {
     const pelaOutra = produto.coeficiente * Math.max(razao1, razao2);
 
     return {
-      degrau: 4, tipo: "produtoComLimitante",
+      degrau: 4, tipo: "produtoComLimitante", formulas: [a1.formula, a2.formula, produto.formula],
       enunciado: `Misturam-se <strong>${formatarNumero(m1, 3)} g</strong> de ${a1.vista} com <strong>${formatarNumero(m2, 3)} g</strong> de ${a2.vista} segundo ${escreverEquacaoTextoCurto(b)}. Quantos mols de <strong>${produto.vista}</strong> se formam?`,
       unidade: "mol", resposta: certo, sig: 3,
       contexto: `M(${a1.formula}) = ${formatarNumero(a1.analise.massaMolar, 5)} · M(${a2.formula}) = ${formatarNumero(a2.analise.massaMolar, 5)} g/mol`,
@@ -457,7 +457,7 @@ const GERADORES = {
     const porAtomos = (alvo.quantidade / a.totalAtomos) * 100;
 
     return {
-      degrau: 3, tipo: "percentualEmMassa",
+      degrau: 3, tipo: "percentualEmMassa", formulas: [s.f],
       enunciado: `Qual a porcentagem <strong>em massa</strong> de ${alvo.simbolo} em ${s.vista}?`,
       unidade: "%", resposta: certo, sig: 3,
       contexto: `M(${s.f}) = ${formatarNumero(a.massaMolar, 5)} g/mol`,

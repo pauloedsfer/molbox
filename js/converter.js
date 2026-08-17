@@ -61,10 +61,32 @@ function formatarNumero(x, significativos = 4) {
   return separarMilhar(inteiro) + (decimal ? "," + decimal : "");
 }
 
-/* Lê número digitado aceitando vírgula, ponto e notação 6,02e23 */
+const SUB_PARA_NORMAL = { "⁰":"0","¹":"1","²":"2","³":"3","⁴":"4","⁵":"5","⁶":"6","⁷":"7","⁸":"8","⁹":"9","⁻":"-","⁺":"+" };
+
+/* Ninguém escreve "6,02e23" à mão. As pessoas escrevem 6,02×10²³, 6,02x10^23,
+   6,02 . 10^23 ou 10^23 sozinho. Todas essas formas viram a notação que o
+   JavaScript entende, antes de qualquer tentativa de leitura. */
+function normalizarPotencia(texto) {
+  let s = String(texto).trim();
+
+  // expoentes escritos em sobrescrito: 10²³ vira 10^23
+  s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+/g, (m) =>
+    "^" + [...m].map((c) => SUB_PARA_NORMAL[c]).join(""));
+  s = s.replace(/\^\s*\^/g, "^");
+
+  // multiplicação por dez elevado a algo, em qualquer grafia usual
+  s = s.replace(/(?:×|x|X|\*|·|\.)?\s*10\s*\^\s*([+-]?\d+)/g, "e$1");
+
+  // "10^23" no começo, sem mantissa, significa 1×10²³
+  if (/^e[+-]?\d+$/.test(s)) s = "1" + s;
+
+  return s.replace(/\s+/g, "");
+}
+
+/* Lê número digitado aceitando vírgula, ponto, 6,02e23 e 6,02×10²³ */
 function lerNumero(texto) {
   if (texto === null || texto === undefined) return NaN;
-  const limpo = String(texto).trim().replace(/\s/g, "").replace(",", ".");
+  const limpo = normalizarPotencia(texto).replace(",", ".");
   if (limpo === "") return NaN;
   if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(limpo)) return NaN;
   return parseFloat(limpo);
