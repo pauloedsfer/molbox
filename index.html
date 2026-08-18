@@ -26,17 +26,25 @@
   </div>
   <p class="sidebar-lema">Do átomo ao mol,<br>do mol à bancada</p>
   <nav class="menu" id="menu">
+    <p class="grupo">Fundamentos</p>
     <button type="button" class="item" data-tela="tela-massa" aria-current="page"><span class="glifo" aria-hidden="true">M</span><span class="rotulo">Massa molar</span></button>
     <button type="button" class="item" data-tela="tela-ponte"><span class="glifo" aria-hidden="true">&#8596;</span><span class="rotulo">Ponte do mol</span></button>
+    <button type="button" class="item" data-tela="tela-tabela"><span class="glifo" aria-hidden="true">&#8862;</span><span class="rotulo">Tabela periódica</span></button>
+    <p class="grupo">Reações</p>
     <button type="button" class="item" data-tela="tela-balancear"><span class="glifo" aria-hidden="true">&#8646;</span><span class="rotulo">Balancear</span></button>
     <button type="button" class="item" data-tela="tela-esteq"><span class="glifo" aria-hidden="true">&#8721;</span><span class="rotulo">Estequiometria</span></button>
+    <p class="grupo">Soluções</p>
+    <button type="button" class="item" data-tela="tela-solucoes"><span class="glifo" aria-hidden="true">&#8776;</span><span class="rotulo">Concentração</span></button>
+    <button type="button" class="item" data-tela="tela-preparo"><span class="glifo" aria-hidden="true">&#9707;</span><span class="rotulo">Preparo</span></button>
+    <button type="button" class="item" data-tela="tela-ph"><span class="glifo" aria-hidden="true">pH</span><span class="rotulo">Ácidos e bases</span></button>
+    <button type="button" class="item" data-tela="tela-titulacao"><span class="glifo" aria-hidden="true">&#8735;</span><span class="rotulo">Titulação</span></button>
+    <p class="grupo">Prática</p>
     <button type="button" class="item" data-tela="tela-treino"><span class="glifo" aria-hidden="true">&#9998;</span><span class="rotulo">Treino</span></button>
     <button type="button" class="item" data-tela="tela-progresso"><span class="glifo" aria-hidden="true">&#9650;</span><span class="rotulo">Progresso</span></button>
-    <button type="button" class="item" data-tela="tela-tabela"><span class="glifo" aria-hidden="true">&#8862;</span><span class="rotulo">Tabela periódica</span></button>
   </nav>
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
-    <p class="versao">MOLBOX v0.4 &middot; funciona sem internet</p>
+    <p class="versao">MOLBOX v0.5 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -109,6 +117,30 @@
     <div id="painel-esteq"></div>
   </section>
 
+  <section id="tela-solucoes" hidden>
+    <h1>Concentração</h1>
+    <p class="intro">Escreva o soluto, informe uma concentração em qualquer unidade e veja todas as outras. Abaixo, diluição e mistura.</p>
+    <div id="painel-solucoes"></div>
+  </section>
+
+  <section id="tela-preparo" hidden>
+    <h1>Preparo</h1>
+    <p class="intro">O que a conta manda pesar e o que a bancada exige de verdade: pureza do rótulo, vidraria compatível e a ordem das operações.</p>
+    <div id="painel-preparo"></div>
+  </section>
+
+  <section id="tela-ph" hidden>
+    <h1>Ácidos e bases</h1>
+    <p class="intro">pH calculado pelo balanço de cargas, sem atalho. Vale para ácido forte, fraco, poliprótico e para tampão — inclusive nas faixas onde as fórmulas de bolso erram.</p>
+    <div id="painel-ph"></div>
+  </section>
+
+  <section id="tela-titulacao" hidden>
+    <h1>Titulação</h1>
+    <p class="intro">A curva inteira ponto a ponto, o salto no ponto de equivalência, e qual indicador serve — com o erro que cada um introduz.</p>
+    <div id="painel-titulacao"></div>
+  </section>
+
   <section id="tela-treino" hidden>
     <h1>Treino</h1>
     <p class="intro">Os exercícios são sorteados na hora, nunca repetem iguais. Quando você erra, o aplicativo tenta dizer <em>qual</em> passo saiu do trilho &#8212; não só que o número está errado.</p>
@@ -142,7 +174,7 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>MOLBOX v0.4 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>MOLBOX v0.5 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
 </main>
 
@@ -153,6 +185,9 @@
 <script src="js/estequiometria.js"></script>
 <script src="js/moleculas.js"></script>
 <script src="js/calculadora.js"></script>
+<script src="js/solucoes.js"></script>
+<script src="js/preparo.js"></script>
+<script src="js/acidobase.js"></script>
 <script src="js/exercicios.js"></script>
 <script src="js/progresso.js"></script>
 <script src="js/app.js"></script>

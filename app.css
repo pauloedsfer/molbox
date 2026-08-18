@@ -593,3 +593,87 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
 }
 .erro-calc { color: var(--mb-erro); font-size: var(--mb-t-apoio); }
 .botao[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* ---------- grupos do menu ---------- */
+
+.menu .grupo {
+  margin: var(--mb-e4) var(--mb-e3) 4px;
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+.menu .grupo:first-child { margin-top: 0; }
+
+/* ---------- soluções ---------- */
+
+.tabela-unidades td:first-child { width: 46%; }
+.tabela-unidades tr.escolhida td { background: var(--mb-interacao-bg); }
+.tabela-unidades tr.escolhida td:first-child { border-left: 3px solid var(--mb-interacao); }
+
+.grelha-3 { display: grid; gap: var(--mb-e3); grid-template-columns: 1fr; }
+@media (min-width: 560px) { .grelha-3 { grid-template-columns: repeat(3, 1fr); } }
+.grelha-2 { display: grid; gap: var(--mb-e3); grid-template-columns: 1fr; }
+@media (min-width: 560px) { .grelha-2 { grid-template-columns: 1fr 1fr; } }
+
+.grelha-2 input, .grelha-3 input, .grelha-2 select, .grelha-3 select {
+  font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums;
+}
+
+.destaque-linha {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums;
+  font-size: var(--mb-t-titulo-2); margin: var(--mb-e3) 0 0;
+}
+.destaque-linha .rot { font-family: var(--mb-fonte-texto); font-size: var(--mb-t-apoio); color: var(--mb-texto-2); }
+.destaque-linha .val { color: var(--mb-energia); font-weight: 500; }
+
+.ressalva {
+  border-left: 4px solid var(--mb-atencao); background: var(--mb-atencao-bg);
+  padding: 10px 14px; margin-top: var(--mb-e3); font-size: var(--mb-t-apoio);
+}
+
+/* ---------- preparo ---------- */
+
+.roteiro { counter-reset: passo; list-style: none; padding: 0; margin: 0; }
+.roteiro li {
+  counter-increment: passo; position: relative;
+  padding: 0 0 var(--mb-e4) 44px; margin: 0;
+}
+.roteiro li::before {
+  content: counter(passo); position: absolute; left: 0; top: 0;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--mb-estrutura); color: #FFFFFF;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-apoio); font-weight: 500;
+}
+.roteiro li::after {
+  content: ""; position: absolute; left: 15px; top: 34px; bottom: 6px;
+  width: 1px; background: var(--mb-borda);
+}
+.roteiro li:last-child { padding-bottom: 0; }
+.roteiro li:last-child::after { display: none; }
+.roteiro .titulo-passo { font-weight: 500; margin: 4px 0 4px; }
+.roteiro p { margin: 0; font-size: var(--mb-t-apoio); color: var(--mb-texto-2); }
+
+.ficha-bancada { display: grid; grid-template-columns: auto 1fr; gap: 6px var(--mb-e4); margin: 0; }
+.ficha-bancada dt { font-size: var(--mb-t-legenda); color: var(--mb-texto-2); }
+.ficha-bancada dd {
+  margin: 0; font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums;
+  font-size: var(--mb-t-apoio);
+}
+
+/* ---------- curva de titulação ---------- */
+
+.grafico { width: 100%; overflow-x: auto; }
+.grafico svg { width: 100%; height: auto; display: block; min-width: 300px; }
+.eixo { stroke: var(--mb-borda-forte); stroke-width: 1; }
+.malha { stroke: var(--mb-borda); stroke-width: 0.5; }
+.rotulo-eixo { fill: var(--mb-texto-2); font-family: var(--mb-fonte-dado); font-size: 9px; }
+.titulo-eixo { fill: var(--mb-texto-2); font-family: var(--mb-fonte-texto); font-size: 10px; }
+.curva { fill: none; stroke: var(--mb-interacao); stroke-width: 2.2; stroke-linejoin: round; }
+.faixa-indicador { fill: var(--mb-energia); opacity: 0.13; }
+.linha-equivalencia { stroke: var(--mb-energia); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.marca-equivalencia { fill: var(--mb-energia); }
+
+.lista-indicadores tr.adequado td { background: var(--mb-acerto-bg); }
+.lista-indicadores tr.adequado td:first-child { border-left: 3px solid var(--mb-acerto); }
+.lista-indicadores .erro-val { font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums; }

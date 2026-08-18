@@ -17,6 +17,13 @@
     equacao: "CH4 + O2 -> CO2 + H2O",
     balanceada: null,
     esteq: { unidade: "g", quantidades: {}, purezas: {}, produtoRendimento: 0, massaObtida: "" },
+    solucao: { formula: "NaCl", unidade: "molar", valor: "1,0", densidade: "1,00",
+               dil: { c1: "1,0", v1: "", c2: "0,1", v2: "250" },
+               mix: [{ c: "0,5", v: "100" }, { c: "0,1", v: "400" }] },
+    preparo: { formula: "NaOH", volume: "500", concentracao: "0,1", pureza: "97", densidade: "" },
+    ph: { modo: "acidoFraco", indice: 4, concentracao: "0,1",
+          tampaoAcido: "0,1", tampaoBase: "0,1" },
+    titulacao: { indice: 4, cAnalito: "0,1", vAnalito: "25", cTitulante: "0,1", indicador: 6 },
     degrau: 1,
     exercicio: null,
     tipoAnterior: null,
@@ -72,6 +79,10 @@
     "tela-ponte": "Ponte do mol",
     "tela-balancear": "Balancear",
     "tela-esteq": "Estequiometria",
+    "tela-solucoes": "Concentração",
+    "tela-preparo": "Preparo",
+    "tela-ph": "Ácidos e bases",
+    "tela-titulacao": "Titulação",
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
     "tela-tabela": "Tabela periódica",
@@ -107,6 +118,10 @@
 
     if (id === "tela-ponte") desenharPonte();
     if (id === "tela-esteq") desenharEstequiometria();
+    if (id === "tela-solucoes") desenharSolucoes();
+    if (id === "tela-preparo") desenharPreparo();
+    if (id === "tela-ph") desenharAcidoBase();
+    if (id === "tela-titulacao") desenharTitulacao();
     if (id === "tela-treino") entrarNoTreino();
     if (id === "tela-progresso") desenharProgresso();
   }
@@ -779,6 +794,740 @@
     }
 
     saida.appendChild(rendCartao);
+  }
+
+
+  /* ---------------- ajudantes de formulário ---------------- */
+
+  function campoTexto(pai, { id, rotulo, valor, dica, aoMudar, placeholder }) {
+    const caixa = criar("div");
+    caixa.appendChild(criar("label", { htmlFor: id, textContent: rotulo }));
+    const input = criar("input", {
+      type: "text", id, inputMode: "decimal", autocomplete: "off",
+      spellcheck: false, value: valor || "", placeholder: placeholder || "",
+    });
+    input.addEventListener("input", () => aoMudar(input.value));
+    caixa.appendChild(input);
+    if (dica) caixa.appendChild(criar("p", { className: "ajuda", textContent: dica }));
+    pai.appendChild(caixa);
+    return input;
+  }
+
+  function campoSelecao(pai, { id, rotulo, opcoes, valor, aoMudar }) {
+    const caixa = criar("div");
+    caixa.appendChild(criar("label", { htmlFor: id, textContent: rotulo }));
+    const sel = criar("select", { id });
+    for (const o of opcoes) sel.appendChild(criar("option", { value: String(o.valor), textContent: o.rotulo }));
+    sel.value = String(valor);
+    sel.addEventListener("change", () => aoMudar(sel.value));
+    caixa.appendChild(sel);
+    pai.appendChild(caixa);
+    return sel;
+  }
+
+  function cartaoDeErro(alvo, mensagem) {
+    const c = criar("div", { className: "cartao" });
+    c.appendChild(criar("div", { className: "erro", textContent: mensagem }));
+    alvo.appendChild(c);
+  }
+
+  function listaDeAvisos(pai, avisos, classe = "ressalva") {
+    for (const a of avisos || []) {
+      pai.appendChild(criar("div", { className: classe, textContent: a }));
+    }
+  }
+
+  /* ---------------- tela: concentração ---------------- */
+
+  function desenharSolucoes() {
+    const alvo = $("#painel-solucoes");
+    alvo.innerHTML = "";
+    const st = estado.solucao;
+
+    const entrada = criar("div", { className: "cartao" });
+    entrada.innerHTML = `<h2 style="margin-top:0">A solução</h2>`;
+    const grade = criar("div", { className: "grelha-3" });
+
+    campoTexto(grade, {
+      id: "sol-formula", rotulo: "Soluto", valor: st.formula, placeholder: "NaCl",
+      aoMudar: (v) => { st.formula = v; desenharSaidaSolucao(); },
+    });
+    campoSelecao(grade, {
+      id: "sol-unidade", rotulo: "Unidade informada",
+      opcoes: Object.keys(UNIDADES_CONCENTRACAO).map((k) => ({ valor: k, rotulo: UNIDADES_CONCENTRACAO[k].rotulo })),
+      valor: st.unidade, aoMudar: (v) => { st.unidade = v; desenharSolucoes(); },
+    });
+    campoTexto(grade, {
+      id: "sol-valor", rotulo: `Valor (${UNIDADES_CONCENTRACAO[st.unidade].unidade || "adimensional"})`,
+      valor: st.valor, aoMudar: (v) => { st.valor = v; desenharSaidaSolucao(); },
+    });
+    entrada.appendChild(grade);
+
+    const linha2 = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e3)" });
+    campoTexto(linha2, {
+      id: "sol-densidade", rotulo: "Densidade da solução (g/mL)", valor: st.densidade,
+      dica: "Sem densidade não há conversão entre massa e volume. Água pura é 1,00; ácido clorídrico concentrado é 1,19.",
+      aoMudar: (v) => { st.densidade = v; desenharSaidaSolucao(); },
+    });
+    entrada.appendChild(linha2);
+    alvo.appendChild(entrada);
+
+    alvo.appendChild(criar("div", { id: "saida-solucao" }));
+    desenharSaidaSolucao();
+
+    desenharDiluicao(alvo);
+    desenharMistura(alvo);
+  }
+
+  function desenharSaidaSolucao() {
+    const alvo = $("#saida-solucao");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const st = estado.solucao;
+
+    let analise;
+    try { analise = analisar(st.formula); }
+    catch (e) { cartaoDeErro(alvo, e.message); return; }
+
+    const valor = lerNumero(st.valor);
+    const densidade = lerNumero(st.densidade);
+    if (!isFinite(valor) || valor <= 0) {
+      alvo.innerHTML = `<div class="cartao"><p class="ajuda" style="margin:0">Informe um valor de concentração.</p></div>`;
+      return;
+    }
+
+    const molar = paraMolar(valor, st.unidade, analise.massaMolar, densidade);
+    const tudo = todasAsConcentracoes(molar, analise.massaMolar, densidade);
+
+    const cartao = criar("div", { className: "cartao" });
+    cartao.innerHTML =
+      `<h2 style="margin-top:0">A mesma solução em todas as unidades</h2>` +
+      `<p class="ajuda">${formatarFormula(analise.normalizada)} · M = ${formatarNumero(analise.massaMolar, 5)} g/mol · ` +
+      `d = ${formatarNumero(isFinite(densidade) && densidade > 0 ? densidade : 1, 3)} g/mL</p>`;
+
+    const tabela = criar("table", { className: "tabela-unidades" });
+    tabela.innerHTML = `<thead><tr><th>Unidade</th><th>Valor</th></tr></thead>`;
+    const corpo = criar("tbody");
+    for (const chave of Object.keys(UNIDADES_CONCENTRACAO)) {
+      const u = UNIDADES_CONCENTRACAO[chave];
+      const tr = criar("tr");
+      if (chave === st.unidade) tr.className = "escolhida";
+      const v = tudo[chave];
+      tr.innerHTML = `<td>${u.rotulo}${chave === st.unidade ? " <span class=\"ajuda\">informado</span>" : ""}</td>` +
+        `<td class="num">${isFinite(v) ? formatarNumero(v, 5) : "—"} ${u.unidade}</td>`;
+      corpo.appendChild(tr);
+    }
+    tabela.appendChild(corpo);
+    cartao.appendChild(tabela);
+
+    const base = criar("p", { className: "ajuda" });
+    base.innerHTML = `Em um litro desta solução há <strong>${formatarNumero(tudo.massaSolutoPorLitro, 4)} g</strong> de soluto ` +
+      `e <strong>${formatarNumero(tudo.massaSolventePorLitro, 5)} g</strong> de solvente, somando ${formatarNumero(tudo.massaSolucaoPorLitro, 5)} g. ` +
+      `Todas as unidades acima são razões entre esses três números.`;
+    cartao.appendChild(base);
+
+    if (tudo.impossivel) {
+      cartao.appendChild(criar("div", {
+        className: "erro",
+        textContent: "Esta combinação é impossível: a massa de soluto por litro já ultrapassa a massa total da solução. Confira a densidade ou a concentração.",
+      }));
+    }
+
+    const fm = fracaoMolar(molar, analise.massaMolar, densidade);
+    if (isFinite(fm)) {
+      cartao.appendChild(criar("p", {
+        className: "ajuda",
+        textContent: `Fração molar do soluto em água: ${formatarNumero(fm, 4)}.`,
+      }));
+    }
+    alvo.appendChild(cartao);
+  }
+
+  function desenharDiluicao(alvo) {
+    const st = estado.solucao.dil;
+    const cartao = criar("div", { className: "cartao" });
+    cartao.innerHTML = `<h2 style="margin-top:0">Diluição</h2>` +
+      `<p class="ajuda">Preencha três campos e deixe o quarto em branco. Diluir não muda a quantidade de matéria do soluto: espalha a mesma quantidade num volume maior.</p>`;
+
+    const grade = criar("div", { className: "grelha-2" });
+    const campos = [
+      ["dil-c1", "Concentração inicial (mol/L)", "c1"],
+      ["dil-v1", "Volume inicial (mL)", "v1"],
+      ["dil-c2", "Concentração final (mol/L)", "c2"],
+      ["dil-v2", "Volume final (mL)", "v2"],
+    ];
+    for (const [id, rotulo, chave] of campos) {
+      campoTexto(grade, {
+        id, rotulo, valor: st[chave], placeholder: "em branco",
+        aoMudar: (v) => { st[chave] = v; atualizarDiluicao(); },
+      });
+    }
+    cartao.appendChild(grade);
+    cartao.appendChild(criar("div", { id: "saida-diluicao" }));
+    alvo.appendChild(cartao);
+    atualizarDiluicao();
+  }
+
+  function atualizarDiluicao() {
+    const alvo = $("#saida-diluicao");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const st = estado.solucao.dil;
+    const r = diluicao({
+      c1: lerNumero(st.c1), v1: lerNumero(st.v1),
+      c2: lerNumero(st.c2), v2: lerNumero(st.v2),
+    });
+
+    if (r.situacao !== "ok") {
+      alvo.innerHTML = `<p class="ajuda" style="margin-top:var(--mb-e3)">${r.mensagem}</p>`;
+      return;
+    }
+
+    const linha = criar("div", { className: "destaque-linha" });
+    linha.innerHTML =
+      `<span class="rot">Pipete</span><span class="val">${formatarNumero(r.v1, 4)} mL</span>` +
+      `<span class="rot">da solução de ${formatarNumero(r.c1, 4)} mol/L e complete a</span>` +
+      `<span class="val">${formatarNumero(r.v2, 4)} mL</span>`;
+    alvo.appendChild(linha);
+
+    alvo.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: `Diluição de ${formatarNumero(r.fator, 4)} vezes. São ${formatarNumero(r.quantidadeDeMateria, 4)} mol de soluto, ` +
+        `que continuam os mesmos depois de acrescentar ${formatarNumero(r.aguaAdicionada, 4)} mL de solvente.`,
+    }));
+    listaDeAvisos(alvo, r.avisos);
+  }
+
+  function desenharMistura(alvo) {
+    const st = estado.solucao.mix;
+    const cartao = criar("div", { className: "cartao" });
+    cartao.innerHTML = `<h2 style="margin-top:0">Mistura de soluções</h2>` +
+      `<p class="ajuda">Duas soluções do mesmo soluto. A quantidade de matéria soma; a concentração final é a soma dividida pelo volume total.</p>`;
+
+    st.forEach((parte, i) => {
+      const grade = criar("div", { className: "grelha-2" });
+      campoTexto(grade, {
+        id: `mix-c-${i}`, rotulo: `Solução ${i + 1} — concentração (mol/L)`, valor: parte.c,
+        aoMudar: (v) => { parte.c = v; atualizarMistura(); },
+      });
+      campoTexto(grade, {
+        id: `mix-v-${i}`, rotulo: `Solução ${i + 1} — volume (mL)`, valor: parte.v,
+        aoMudar: (v) => { parte.v = v; atualizarMistura(); },
+      });
+      cartao.appendChild(grade);
+    });
+
+    cartao.appendChild(criar("div", { id: "saida-mistura" }));
+    alvo.appendChild(cartao);
+    atualizarMistura();
+  }
+
+  function atualizarMistura() {
+    const alvo = $("#saida-mistura");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const r = misturar(estado.solucao.mix.map((p) => ({ c: lerNumero(p.c), v: lerNumero(p.v) })));
+
+    if (r.situacao !== "ok") {
+      alvo.innerHTML = `<p class="ajuda" style="margin-top:var(--mb-e3)">${r.mensagem}</p>`;
+      return;
+    }
+    const linha = criar("div", { className: "destaque-linha" });
+    linha.innerHTML = `<span class="rot">Concentração final</span><span class="val">${formatarNumero(r.cFinal, 5)} mol/L</span>`;
+    alvo.appendChild(linha);
+    alvo.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: `${formatarNumero(r.mols, 5)} mol de soluto em ${formatarNumero(r.volume, 5)} mL.`,
+    }));
+    alvo.appendChild(criar("div", { className: "ressalva", textContent: r.ressalva }));
+  }
+
+
+  /* ---------------- tela: preparo ---------------- */
+
+  function desenharPreparo() {
+    const alvo = $("#painel-preparo");
+    alvo.innerHTML = "";
+    const st = estado.preparo;
+
+    const entrada = criar("div", { className: "cartao" });
+    entrada.innerHTML = `<h2 style="margin-top:0">O que você quer preparar</h2>`;
+
+    const g1 = criar("div", { className: "grelha-3" });
+    campoTexto(g1, { id: "prep-formula", rotulo: "Reagente", valor: st.formula, placeholder: "NaOH",
+      aoMudar: (v) => { st.formula = v; atualizarPreparo(); } });
+    campoTexto(g1, { id: "prep-volume", rotulo: "Volume final (mL)", valor: st.volume,
+      aoMudar: (v) => { st.volume = v; atualizarPreparo(); } });
+    campoTexto(g1, { id: "prep-conc", rotulo: "Concentração (mol/L)", valor: st.concentracao,
+      aoMudar: (v) => { st.concentracao = v; atualizarPreparo(); } });
+    entrada.appendChild(g1);
+
+    const g2 = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e3)" });
+    campoTexto(g2, { id: "prep-pureza", rotulo: "Pureza do rótulo (%)", valor: st.pureza, placeholder: "100",
+      dica: "O que está escrito no frasco. Esquecer este número é o erro de preparo mais comum.",
+      aoMudar: (v) => { st.pureza = v; atualizarPreparo(); } });
+    campoTexto(g2, { id: "prep-densidade", rotulo: "Densidade, se líquido (g/mL)", valor: st.densidade, placeholder: "só para reagente líquido",
+      aoMudar: (v) => { st.densidade = v; atualizarPreparo(); } });
+    entrada.appendChild(g2);
+
+    const atalhos = criar("div", { className: "chips" });
+    const exemplos = [
+      ["NaOH 0,1 mol/L · 500 mL", { formula: "NaOH", volume: "500", concentracao: "0,1", pureza: "97", densidade: "" }],
+      ["HCl 0,1 mol/L · 1 L", { formula: "HCl", volume: "1000", concentracao: "0,1", pureza: "", densidade: "" }],
+      ["H2SO4 0,5 mol/L · 250 mL", { formula: "H2SO4", volume: "250", concentracao: "0,5", pureza: "", densidade: "" }],
+      ["NaCl 0,9% fisiológico", { formula: "NaCl", volume: "1000", concentracao: "0,154", pureza: "99,5", densidade: "" }],
+    ];
+    for (const [rotulo, cfg] of exemplos) {
+      const b = criar("button", { type: "button", className: "chip", textContent: rotulo });
+      b.addEventListener("click", () => { Object.assign(st, cfg); desenharPreparo(); });
+      atalhos.appendChild(b);
+    }
+    entrada.appendChild(atalhos);
+    alvo.appendChild(entrada);
+
+    alvo.appendChild(criar("div", { id: "saida-preparo" }));
+    atualizarPreparo();
+  }
+
+  function atualizarPreparo() {
+    const alvo = $("#saida-preparo");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const st = estado.preparo;
+
+    let analise;
+    try { analise = analisar(st.formula); }
+    catch (e) { cartaoDeErro(alvo, e.message); return; }
+
+    const r = prepararSolucao({
+      formula: analise.normalizada,
+      massaMolar: analise.massaMolar,
+      volumeFinalML: lerNumero(st.volume),
+      concentracaoMolar: lerNumero(st.concentracao),
+      pureza: lerNumero(st.pureza),
+      densidadeReagente: lerNumero(st.densidade),
+    });
+
+    if (r.situacao !== "ok") { cartaoDeErro(alvo, r.mensagem); return; }
+
+    const resumo = criar("div", { className: "cartao" });
+    resumo.innerHTML = `<h2 style="margin-top:0">Na balança e na bureta</h2>`;
+
+    const linha = criar("div", { className: "destaque-linha" });
+    if (r.ehLiquido) {
+      linha.innerHTML = `<span class="rot">Meça</span><span class="val">${formatarNumero(r.volumeReagenteML, 4)} mL</span>` +
+        `<span class="rot">do reagente concentrado</span>`;
+    } else {
+      // cinco algarismos: a balança analítica lê até 0,1 mg, e arredondar
+      // para quatro joga fora um dígito que o instrumento entrega
+      linha.innerHTML = `<span class="rot">Pese</span><span class="val">${formatarNumero(r.massaReagente, 5)} g</span>` +
+        `<span class="rot">do reagente</span>`;
+    }
+    resumo.appendChild(linha);
+
+    const ficha = criar("dl", { className: "ficha-bancada", style: "margin-top:var(--mb-e4)" });
+    const itens = [
+      ["Quantidade de matéria", `${formatarNumero(r.mols, 5)} mol`],
+      ["Massa de substância pura", `${formatarNumero(r.massaPura, 5)} g`],
+      ["Pureza considerada", `${formatarNumero(r.purezaUsada, 4)}%`],
+      ["Massa molar", `${formatarNumero(analise.massaMolar, 5)} g/mol`],
+    ];
+    if (r.ehLiquido) {
+      itens.push(["Densidade do frasco", `${formatarNumero(r.densidade, 4)} g/mL`]);
+      itens.push(["Concentração do frasco", `${formatarNumero(r.concentracaoDoFrasco, 4)} mol/L`]);
+      itens.push(["Vidraria de medida", r.medidor.tipo]);
+    } else {
+      itens.push(["Balança", `${r.balanca.classe}${r.balanca.precisao ? " (" + r.balanca.precisao + ")" : ""}`]);
+    }
+    itens.push(["Balão volumétrico", r.balao.volume ? `${r.balao.volume} mL` : "não há tamanho adequado"]);
+    for (const [rot, val] of itens) {
+      ficha.appendChild(criar("dt", { textContent: rot }));
+      ficha.appendChild(criar("dd", { textContent: val }));
+    }
+    resumo.appendChild(ficha);
+    alvo.appendChild(resumo);
+
+    const roteiro = criar("div", { className: "cartao" });
+    roteiro.innerHTML = `<h2 style="margin-top:0">A ordem das operações</h2>`;
+    const lista = criar("ol", { className: "roteiro" });
+    for (const passo of r.passos) {
+      const li = criar("li");
+      li.innerHTML = `<p class="titulo-passo">${passo.titulo}</p><p>${passo.texto}</p>`;
+      lista.appendChild(li);
+    }
+    roteiro.appendChild(lista);
+    alvo.appendChild(roteiro);
+
+    if (r.avisos.length) {
+      const cuidados = criar("div", { className: "cartao" });
+      cuidados.innerHTML = `<h2 style="margin-top:0">O que o exercício não conta</h2>`;
+      listaDeAvisos(cuidados, r.avisos);
+      alvo.appendChild(cuidados);
+    }
+  }
+
+  /* ---------------- tela: ácidos e bases ---------------- */
+
+  function desenharAcidoBase() {
+    const alvo = $("#painel-ph");
+    alvo.innerHTML = "";
+    const st = estado.ph;
+
+    const entrada = criar("div", { className: "cartao" });
+    entrada.innerHTML = `<h2 style="margin-top:0">A solução</h2>`;
+
+    const g1 = criar("div", { className: "grelha-2" });
+    campoSelecao(g1, {
+      id: "ph-modo", rotulo: "Tipo de sistema", valor: st.modo,
+      opcoes: [
+        { valor: "acidoForte", rotulo: "Ácido forte" },
+        { valor: "acidoFraco", rotulo: "Ácido fraco ou poliprótico" },
+        { valor: "baseForte", rotulo: "Base forte" },
+        { valor: "baseFraca", rotulo: "Base fraca" },
+        { valor: "tampao", rotulo: "Tampão" },
+      ],
+      aoMudar: (v) => { st.modo = v; st.indice = 0; desenharAcidoBase(); },
+    });
+
+    const acidos = st.modo === "baseForte" || st.modo === "baseFraca";
+    const acervo = acidos
+      ? BASES.filter((b) => (st.modo === "baseForte" ? b.forte : !b.forte))
+      : ACIDOS.filter((a) => (st.modo === "acidoForte" ? a.forte : !a.forte));
+
+    campoSelecao(g1, {
+      id: "ph-especie", rotulo: acidos ? "Base" : "Ácido",
+      valor: Math.min(st.indice, acervo.length - 1),
+      opcoes: acervo.map((e, i) => ({ valor: i, rotulo: `${e.formula} — ${e.nome}` })),
+      aoMudar: (v) => { st.indice = Number(v); atualizarAcidoBase(); },
+    });
+    entrada.appendChild(g1);
+
+    const g2 = criar("div", { className: st.modo === "tampao" ? "grelha-2" : "grelha-2", style: "margin-top:var(--mb-e3)" });
+    if (st.modo === "tampao") {
+      campoTexto(g2, { id: "ph-ca", rotulo: "Concentração do ácido (mol/L)", valor: st.tampaoAcido,
+        aoMudar: (v) => { st.tampaoAcido = v; atualizarAcidoBase(); } });
+      campoTexto(g2, { id: "ph-cb", rotulo: "Concentração da base conjugada (mol/L)", valor: st.tampaoBase,
+        aoMudar: (v) => { st.tampaoBase = v; atualizarAcidoBase(); } });
+    } else {
+      campoTexto(g2, { id: "ph-conc", rotulo: "Concentração (mol/L)", valor: st.concentracao,
+        aoMudar: (v) => { st.concentracao = v; atualizarAcidoBase(); } });
+    }
+    entrada.appendChild(g2);
+    entrada.dataset.acervo = acervo.length;
+    alvo.appendChild(entrada);
+
+    alvo.appendChild(criar("div", { id: "saida-ph" }));
+    atualizarAcidoBase();
+  }
+
+  function acervoAtualPH() {
+    const st = estado.ph;
+    if (st.modo === "baseForte") return BASES.filter((b) => b.forte);
+    if (st.modo === "baseFraca") return BASES.filter((b) => !b.forte);
+    if (st.modo === "acidoForte") return ACIDOS.filter((a) => a.forte);
+    return ACIDOS.filter((a) => !a.forte);
+  }
+
+  function atualizarAcidoBase() {
+    const alvo = $("#saida-ph");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const st = estado.ph;
+    const acervo = acervoAtualPH();
+    const especie = acervo[Math.min(st.indice, acervo.length - 1)];
+    if (!especie) return;
+
+    let pH = null;
+    const detalhes = [];
+    let extra = null;
+
+    if (st.modo === "tampao") {
+      const ca = lerNumero(st.tampaoAcido), cb = lerNumero(st.tampaoBase);
+      if (!(ca > 0) || !(cb > 0)) {
+        alvo.innerHTML = `<div class="cartao"><p class="ajuda" style="margin:0">Informe as duas concentrações.</p></div>`;
+        return;
+      }
+      const Ka = especie.Kas[0];
+      const t = tampao(Ka, ca, cb);
+      pH = t.pH;
+      extra = t;
+      detalhes.push(["pKa do ácido", formatarNumero(t.pKa, 4)]);
+      detalhes.push(["Razão base/ácido", formatarNumero(cb / ca, 4)]);
+      detalhes.push(["Henderson-Hasselbalch prevê", formatarNumero(t.henderson, 4)]);
+      detalhes.push(["Capacidade tamponante", `${formatarNumero(t.capacidade, 3)} mol/L por unidade de pH`]);
+    } else {
+      const c = lerNumero(st.concentracao);
+      if (!(c > 0)) {
+        alvo.innerHTML = `<div class="cartao"><p class="ajuda" style="margin:0">Informe a concentração.</p></div>`;
+        return;
+      }
+      if (st.modo === "acidoForte") {
+        pH = pHAcidoForte(c);
+        detalhes.push(["Ionização", "total"]);
+      } else if (st.modo === "acidoFraco") {
+        pH = pHde(resolverH({ Kas: especie.Kas, cAcido: c, cCation: 0 }));
+        especie.Kas.forEach((k, i) => detalhes.push([`Ka${i + 1}`, `${formatarNumero(k, 3)}  (pKa ${formatarNumero(pKde(k), 3)})`]));
+      } else if (st.modo === "baseForte") {
+        pH = pHBaseForte(c, especie.hidroxilas || 1);
+        detalhes.push(["Hidroxilas por fórmula", String(especie.hidroxilas || 1)]);
+      } else {
+        pH = pHBaseFraca(especie.Kb, c);
+        detalhes.push(["Kb", `${formatarNumero(especie.Kb, 3)}  (pKb ${formatarNumero(pKde(especie.Kb), 3)})`]);
+        detalhes.push(["Ka do ácido conjugado", formatarNumero(KaDeKb(especie.Kb), 3)]);
+      }
+    }
+
+    const h = Math.pow(10, -pH);
+    const oh = KW_25 / h;
+
+    const cartao = criar("div", { className: "cartao destaque" });
+    cartao.innerHTML =
+      `<p class="rotulo">pH DA SOLUÇÃO</p>` +
+      `<p class="valor">${formatarNumero(pH, 4)}</p>` +
+      `<p class="ajuda" style="margin-top:var(--mb-e2)">pOH ${formatarNumero(pOHde(pH), 4)} · ` +
+      `[H⁺] = ${formatarNumero(h, 3)} mol/L · [OH⁻] = ${formatarNumero(oh, 3)} mol/L</p>`;
+    alvo.appendChild(cartao);
+
+    const ficha = criar("div", { className: "cartao" });
+    ficha.innerHTML = `<h2 style="margin-top:0">${especie.formula} — ${especie.nome}</h2>`;
+    const dl = criar("dl", { className: "ficha-bancada" });
+    for (const [rot, val] of detalhes) {
+      dl.appendChild(criar("dt", { textContent: rot }));
+      dl.appendChild(criar("dd", { textContent: val }));
+    }
+    ficha.appendChild(dl);
+    if (especie.observacao) {
+      ficha.appendChild(criar("p", { className: "ajuda", textContent: especie.observacao }));
+    }
+    if (extra && extra.alerta) {
+      ficha.appendChild(criar("div", { className: "ressalva", textContent: extra.alerta }));
+    }
+    ficha.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "O pH acima sai do balanço de cargas resolvido numericamente, não de fórmula aproximada. Por isso ele continua correto em soluções muito diluídas, onde a autoionização da água passa a mandar.",
+    }));
+    alvo.appendChild(ficha);
+  }
+
+
+  /* ---------------- tela: titulação ---------------- */
+
+  function analitosDeTitulacao() {
+    return ACIDOS.map((a) => ({
+      ...a,
+      rotulo: `${a.formula} — ${a.nome}${a.forte ? " (forte)" : a.Kas.length > 1 ? ` (${a.Kas.length} prótons)` : ""}`,
+    }));
+  }
+
+  function configuracaoDeTitulacao() {
+    const st = estado.titulacao;
+    const lista = analitosDeTitulacao();
+    const analito = lista[Math.min(st.indice, lista.length - 1)];
+    return {
+      analito,
+      cfg: {
+        cAnalito: lerNumero(st.cAnalito),
+        vAnalito: lerNumero(st.vAnalito),
+        cTitulante: lerNumero(st.cTitulante),
+        analitoForte: analito.forte,
+        Kas: analito.Kas,
+      },
+    };
+  }
+
+  function desenharTitulacao() {
+    const alvo = $("#painel-titulacao");
+    alvo.innerHTML = "";
+    const st = estado.titulacao;
+
+    const entrada = criar("div", { className: "cartao" });
+    entrada.innerHTML = `<h2 style="margin-top:0">O experimento</h2>` +
+      `<p class="ajuda">Analito no erlenmeyer, base forte na bureta.</p>`;
+
+    const g1 = criar("div", { className: "grelha-2" });
+    campoSelecao(g1, {
+      id: "tit-analito", rotulo: "Analito", valor: st.indice,
+      opcoes: analitosDeTitulacao().map((a, i) => ({ valor: i, rotulo: a.rotulo })),
+      aoMudar: (v) => { st.indice = Number(v); desenharTitulacao(); },
+    });
+    campoTexto(g1, { id: "tit-c-analito", rotulo: "Concentração do analito (mol/L)", valor: st.cAnalito,
+      aoMudar: (v) => { st.cAnalito = v; atualizarTitulacao(); } });
+    entrada.appendChild(g1);
+
+    const g2 = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e3)" });
+    campoTexto(g2, { id: "tit-v-analito", rotulo: "Volume do analito (mL)", valor: st.vAnalito,
+      aoMudar: (v) => { st.vAnalito = v; atualizarTitulacao(); } });
+    campoTexto(g2, { id: "tit-c-titulante", rotulo: "Concentração do titulante (mol/L)", valor: st.cTitulante,
+      aoMudar: (v) => { st.cTitulante = v; atualizarTitulacao(); } });
+    entrada.appendChild(g2);
+    alvo.appendChild(entrada);
+
+    alvo.appendChild(criar("div", { id: "saida-titulacao" }));
+    atualizarTitulacao();
+  }
+
+  /* Desenha a curva em SVG puro. Escala do eixo x pelo volume, do eixo y de
+     pH 0 a 14, com a faixa de viragem do indicador escolhido em destaque. */
+  function desenharCurva(curva, cfg, indicador) {
+    const L = 44, R = 12, T = 12, B = 34;
+    const largura = 620, altura = 340;
+    const areaX = largura - L - R;
+    const areaY = altura - T - B;
+    const vMax = curva.vFinal || 1;
+
+    const px = (v) => L + (v / vMax) * areaX;
+    const py = (pH) => T + ((14 - pH) / 14) * areaY;
+
+    const partes = [];
+
+    if (indicador) {
+      const y1 = py(indicador.fim), y2 = py(indicador.inicio);
+      partes.push(`<rect x="${L}" y="${y1.toFixed(1)}" width="${areaX}" height="${(y2 - y1).toFixed(1)}" class="faixa-indicador"/>`);
+    }
+
+    for (let pH = 0; pH <= 14; pH += 2) {
+      const y = py(pH);
+      partes.push(`<line x1="${L}" y1="${y.toFixed(1)}" x2="${largura - R}" y2="${y.toFixed(1)}" class="malha"/>`);
+      partes.push(`<text x="${L - 6}" y="${(y + 3).toFixed(1)}" class="rotulo-eixo" text-anchor="end">${pH}</text>`);
+    }
+
+    const passoV = vMax <= 30 ? 5 : vMax <= 70 ? 10 : 25;
+    for (let v = 0; v <= vMax; v += passoV) {
+      const x = px(v);
+      partes.push(`<line x1="${x.toFixed(1)}" y1="${T}" x2="${x.toFixed(1)}" y2="${T + areaY}" class="malha"/>`);
+      partes.push(`<text x="${x.toFixed(1)}" y="${altura - B + 14}" class="rotulo-eixo" text-anchor="middle">${v}</text>`);
+    }
+
+    partes.push(`<line x1="${L}" y1="${T}" x2="${L}" y2="${T + areaY}" class="eixo"/>`);
+    partes.push(`<line x1="${L}" y1="${T + areaY}" x2="${largura - R}" y2="${T + areaY}" class="eixo"/>`);
+    partes.push(`<text x="${(L + areaX / 2).toFixed(0)}" y="${altura - 4}" class="titulo-eixo" text-anchor="middle">volume de titulante (mL)</text>`);
+    partes.push(`<text x="12" y="${(T + areaY / 2).toFixed(0)}" class="titulo-eixo" text-anchor="middle" transform="rotate(-90 12 ${(T + areaY / 2).toFixed(0)})">pH</text>`);
+
+    for (const eq of curva.equivalencias) {
+      const x = px(eq.volume);
+      if (x > largura - R) continue;
+      partes.push(`<line x1="${x.toFixed(1)}" y1="${T}" x2="${x.toFixed(1)}" y2="${(T + areaY).toFixed(1)}" class="linha-equivalencia"/>`);
+      partes.push(`<circle cx="${x.toFixed(1)}" cy="${py(eq.pH).toFixed(1)}" r="4" class="marca-equivalencia"/>`);
+    }
+
+    const d = curva.dados
+      .map((p, i) => `${i === 0 ? "M" : "L"}${px(p.v).toFixed(1)} ${py(Math.max(0, Math.min(14, p.pH))).toFixed(1)}`)
+      .join(" ");
+    partes.push(`<path d="${d}" class="curva"/>`);
+
+    return `<svg viewBox="0 0 ${largura} ${altura}" role="img" ` +
+      `aria-label="Curva de titulação: pH em função do volume de titulante adicionado">` +
+      `<title>Curva de titulação</title>${partes.join("")}</svg>`;
+  }
+
+  function atualizarTitulacao() {
+    const alvo = $("#saida-titulacao");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const st = estado.titulacao;
+    const { analito, cfg } = configuracaoDeTitulacao();
+
+    if (!(cfg.cAnalito > 0) || !(cfg.vAnalito > 0) || !(cfg.cTitulante > 0)) {
+      alvo.innerHTML = `<div class="cartao"><p class="ajuda" style="margin:0">Preencha concentração e volume para ver a curva.</p></div>`;
+      return;
+    }
+
+    const curva = curvaDeTitulacao(cfg);
+    const indicador = INDICADORES[Math.min(st.indicador, INDICADORES.length - 1)];
+
+    const grafico = criar("div", { className: "cartao" });
+    const quadro = criar("div", { className: "grafico" });
+    quadro.innerHTML = desenharCurva(curva, cfg, indicador);
+    grafico.appendChild(quadro);
+    grafico.appendChild(criar("p", {
+      className: "ajuda", style: "text-align:center;margin:var(--mb-e2) 0 0",
+      textContent: `${analito.formula} ${formatarNumero(cfg.cAnalito, 3)} mol/L, ${formatarNumero(cfg.vAnalito, 3)} mL, titulado com base forte ${formatarNumero(cfg.cTitulante, 3)} mol/L. Faixa sombreada: viragem da ${indicador.nome.toLowerCase()}.`,
+    }));
+    alvo.appendChild(grafico);
+
+    const pontos = criar("div", { className: "cartao" });
+    pontos.innerHTML = `<h2 style="margin-top:0">Pontos que valem olhar</h2>`;
+    const tabela = criar("table");
+    tabela.innerHTML = `<thead><tr><th>Momento</th><th>Volume</th><th>pH</th></tr></thead>`;
+    const corpo = criar("tbody");
+    const marcos = [{ rotulo: "Antes de começar", v: 0 }];
+    curva.equivalencias.forEach((eq, i) => {
+      marcos.push({ rotulo: `Meia-neutralização ${curva.equivalencias.length > 1 ? "do próton " + (i + 1) : ""}`.trim(), v: eq.volume - (i === 0 ? eq.volume / 2 : (eq.volume - curva.equivalencias[i - 1].volume) / 2) });
+      marcos.push({ rotulo: `Equivalência ${curva.equivalencias.length > 1 ? "do próton " + (i + 1) : ""}`.trim(), v: eq.volume, destaque: true });
+    });
+    const ultima = curva.equivalencias[curva.equivalencias.length - 1].volume;
+    marcos.push({ rotulo: "Excesso de titulante", v: ultima * 1.5 });
+
+    for (const m of marcos) {
+      const pH = pontoDeTitulacao({ ...cfg, vTitulante: m.v });
+      const tr = criar("tr");
+      if (m.destaque) tr.className = "limitante";
+      tr.innerHTML = `<td>${m.rotulo}</td><td class="num">${formatarNumero(m.v, 4)} mL</td><td class="num">${formatarNumero(pH, 3)}</td>`;
+      corpo.appendChild(tr);
+    }
+    tabela.appendChild(corpo);
+    pontos.appendChild(tabela);
+
+    const primeira = curva.equivalencias[0];
+    const salto = pontoDeTitulacao({ ...cfg, vTitulante: primeira.volume * 1.004 }) -
+                  pontoDeTitulacao({ ...cfg, vTitulante: primeira.volume * 0.996 });
+    pontos.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: `Entre 0,4% antes e 0,4% depois da primeira equivalência o pH salta ${formatarNumero(Math.abs(salto), 3)} unidades. ` +
+        `É esse salto que torna a titulação possível: uma gota a mais muda a cor. Quanto mais fraco o ácido, menor o salto — e mais difícil enxergar o ponto final.`,
+    }));
+
+    if (!analito.forte && analito.Kas.length === 1) {
+      pontos.appendChild(criar("div", {
+        className: "ressalva",
+        textContent: `Repare que a equivalência não cai em pH 7, e sim em ${formatarNumero(primeira.pH, 3)}. No ponto de equivalência de um ácido fraco só existe a base conjugada dele em solução, e ela hidrolisa. Quem escolhe indicador supondo pH 7 erra aqui.`,
+      }));
+    }
+    alvo.appendChild(pontos);
+
+    // ---- indicadores ----
+    const escolha = criar("div", { className: "cartao" });
+    escolha.innerHTML = `<h2 style="margin-top:0">Qual indicador usar</h2>`;
+    campoSelecao(escolha, {
+      id: "tit-indicador", rotulo: "Indicador destacado no gráfico", valor: st.indicador,
+      opcoes: INDICADORES.map((ind, i) => ({ valor: i, rotulo: `${ind.nome} (${formatarNumero(ind.inicio, 3)}–${formatarNumero(ind.fim, 3)})` })),
+      aoMudar: (v) => { st.indicador = Number(v); atualizarTitulacao(); },
+    });
+
+    const avaliados = melhorIndicador(cfg, primeira);
+    const t2 = criar("table", { className: "lista-indicadores", style: "margin-top:var(--mb-e3)" });
+    t2.innerHTML = `<thead><tr><th>Indicador</th><th>Faixa</th><th>Para em</th><th>Erro</th></tr></thead>`;
+    const c2 = criar("tbody");
+    for (const a of avaliados) {
+      const tr = criar("tr");
+      if (a.adequado) tr.className = "adequado";
+      tr.innerHTML =
+        `<td>${a.indicador.nome}<br><span class="ajuda">${a.indicador.corAcida} → ${a.indicador.corBasica}</span></td>` +
+        `<td class="num">${formatarNumero(a.indicador.inicio, 3)}–${formatarNumero(a.indicador.fim, 3)}</td>` +
+        `<td class="num">${formatarNumero(a.vFinal, 5)} mL</td>` +
+        `<td class="num erro-val">${a.erro > 0 ? "+" : ""}${formatarNumero(a.erro, 3)}%</td>`;
+      c2.appendChild(tr);
+    }
+    t2.appendChild(c2);
+    escolha.appendChild(t2);
+
+    const melhor = avaliados[0];
+    escolha.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: `Volume de equivalência: ${formatarNumero(primeira.volume, 5)} mL. O erro de cada indicador é a diferença entre onde o analista para — quando enxerga a virada, no fim da faixa — e onde deveria parar.`,
+    }));
+    const veredito = criar("div", { className: melhor.adequado ? "dica-caixa" : "ressalva" });
+    veredito.innerHTML = `<strong>${melhor.indicador.nome}</strong> é a melhor escolha aqui: erro de ${formatarNumero(melhor.erro, 3)}%. ${melhor.julgamento}`;
+    escolha.appendChild(veredito);
+
+    const ruins = avaliados.filter((a) => Math.abs(a.erro) > 2);
+    if (ruins.length) {
+      escolha.appendChild(criar("p", {
+        className: "ajuda",
+        textContent: `Não servem para esta titulação: ${ruins.map((a) => a.indicador.nome.toLowerCase()).join(", ")}. A faixa de viragem deles cai fora do salto, então a cor muda longe da equivalência.`,
+      }));
+    }
+    alvo.appendChild(escolha);
   }
 
   /* ---------------- tela: treino ---------------- */
