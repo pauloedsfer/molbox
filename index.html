@@ -26,8 +26,10 @@
   </div>
   <p class="sidebar-lema">Do átomo ao mol,<br>do mol à bancada</p>
   <nav class="menu" id="menu">
+    <p class="grupo">Comece por aqui</p>
+    <button type="button" class="item" data-tela="tela-mol" aria-current="page"><span class="glifo" aria-hidden="true">&#9679;</span><span class="rotulo">O que é o mol</span></button>
     <p class="grupo">Fundamentos</p>
-    <button type="button" class="item" data-tela="tela-massa" aria-current="page"><span class="glifo" aria-hidden="true">M</span><span class="rotulo">Massa molar</span></button>
+    <button type="button" class="item" data-tela="tela-massa"><span class="glifo" aria-hidden="true">M</span><span class="rotulo">Massa molar</span></button>
     <button type="button" class="item" data-tela="tela-ponte"><span class="glifo" aria-hidden="true">&#8596;</span><span class="rotulo">Ponte do mol</span></button>
     <button type="button" class="item" data-tela="tela-tabela"><span class="glifo" aria-hidden="true">&#8862;</span><span class="rotulo">Tabela periódica</span></button>
     <p class="grupo">Reações</p>
@@ -44,7 +46,7 @@
   </nav>
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
-    <p class="versao">MOLBOX v0.5 &middot; funciona sem internet</p>
+    <p class="versao">MOLBOX v0.6 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -57,7 +59,11 @@
 
 <main id="conteudo">
 
-  <section id="tela-massa">
+  <section id="tela-mol" hidden>
+    <div id="painel-mol"></div>
+  </section>
+
+  <section id="tela-massa" hidden>
     <h1>Massa molar</h1>
     <p class="intro">Escreva uma fórmula. O aplicativo mostra quanto pesa um mol dela e de onde vem cada grama dessa massa.</p>
 
@@ -174,7 +180,7 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>MOLBOX v0.5 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>MOLBOX v0.6 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
 </main>
 
@@ -188,6 +194,7 @@
 <script src="js/solucoes.js"></script>
 <script src="js/preparo.js"></script>
 <script src="js/acidobase.js"></script>
+<script src="js/mol.js"></script>
 <script src="js/exercicios.js"></script>
 <script src="js/progresso.js"></script>
 <script src="js/app.js"></script>

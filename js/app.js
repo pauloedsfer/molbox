@@ -13,7 +13,8 @@
     origem: "massa",
     entradaBruta: "4,00",
     elementoAberto: null,
-    telaAtual: "tela-massa",
+    telaAtual: "tela-mol",
+    mol: { pacote: 5, comparacao: 0, elemento: "C", copoAgua: "180" },
     equacao: "CH4 + O2 -> CO2 + H2O",
     balanceada: null,
     esteq: { unidade: "g", quantidades: {}, purezas: {}, produtoRendimento: 0, massaObtida: "" },
@@ -49,6 +50,7 @@
         formula: estado.formula,
         volumeMolarId: estado.volumeMolarId,
         equacao: estado.equacao,
+        telaAtual: estado.telaAtual,
         origem: estado.origem,
         entradaBruta: estado.entradaBruta,
       }));
@@ -62,6 +64,7 @@
       const d = JSON.parse(bruto);
       if (d.formula) estado.formula = d.formula;
       if (d.equacao) estado.equacao = d.equacao;
+      if (d.telaAtual) estado.telaAtual = d.telaAtual;
       if (d.volumeMolarId) estado.volumeMolarId = d.volumeMolarId;
       if (d.origem && GRANDEZAS[d.origem]) estado.origem = d.origem;
       if (d.entradaBruta) estado.entradaBruta = d.entradaBruta;
@@ -75,6 +78,7 @@
   /* ---------------- navegação ---------------- */
 
   const TITULOS = {
+    "tela-mol": "O que é o mol",
     "tela-massa": "Massa molar",
     "tela-ponte": "Ponte do mol",
     "tela-balancear": "Balancear",
@@ -107,6 +111,7 @@
 
   function mostrarTela(id) {
     estado.telaAtual = id;
+    guardar();
     for (const s of document.querySelectorAll("main > section")) s.hidden = (s.id !== id);
     for (const b of document.querySelectorAll(".menu .item")) {
       if (b.dataset.tela === id) b.setAttribute("aria-current", "page");
@@ -116,6 +121,7 @@
     if (typeof window.scrollTo === "function") { try { window.scrollTo(0, 0); } catch (e) {} }
     if (estreita()) fecharMenu();
 
+    if (id === "tela-mol") desenharMol();
     if (id === "tela-ponte") desenharPonte();
     if (id === "tela-esteq") desenharEstequiometria();
     if (id === "tela-solucoes") desenharSolucoes();
@@ -124,6 +130,241 @@
     if (id === "tela-titulacao") desenharTitulacao();
     if (id === "tela-treino") entrarNoTreino();
     if (id === "tela-progresso") desenharProgresso();
+  }
+
+
+  /* ---------------- tela: o que é o mol ---------------- */
+
+  function secao(alvo, titulo, sobretitulo) {
+    const cartao = criar("div", { className: "cartao secao-mol" });
+    if (sobretitulo) cartao.appendChild(criar("p", { className: "sobretitulo", textContent: sobretitulo }));
+    cartao.appendChild(criar("h2", { textContent: titulo, style: "margin-top:0" }));
+    alvo.appendChild(cartao);
+    return cartao;
+  }
+
+  function desenharMol() {
+    const alvo = $("#painel-mol");
+    alvo.innerHTML = "";
+
+    /* --- abertura --- */
+    const capa = criar("div", { className: "cartao capa-mol" });
+    capa.innerHTML =
+      `<h1 style="margin:0 0 var(--mb-e3)">O mol</h1>` +
+      `<p class="lede-mol">Você não consegue contar átomos. Ninguém consegue.</p>` +
+      `<p>Um copo de água tem mais moléculas do que existem estrelas em todo o universo observável. ` +
+      `Elas são pequenas demais para ver, numerosas demais para contar e leves demais para pesar uma a uma.</p>` +
+      `<p>E ainda assim, todo dia, alguém precisa saber <em>quantas</em>. Porque é o número de partículas que decide ` +
+      `se a reação acontece, quanto de produto sai e qual dose faz efeito.</p>` +
+      `<p class="fecho-mol">O mol é a solução desse problema. E a solução é mais simples do que parece: ` +
+      `é um pacote.</p>`;
+    alvo.appendChild(capa);
+
+    /* --- 1. pacotes --- */
+    const s1 = secao(alvo, "Você já usa pacotes a vida inteira", "PRIMEIRA IDEIA");
+    s1.appendChild(criar("p", {
+      textContent: "Ninguém pede quinhentas folhas de papel na papelaria: pede uma resma. Ninguém compra doze ovos: compra uma dúzia. Sempre que uma coisa é numerosa demais para contar uma a uma, a gente inventa um pacote e passa a contar pacotes.",
+    }));
+
+    const chips = criar("div", { className: "chips" });
+    PACOTES.forEach((p, i) => {
+      const b = criar("button", { type: "button", className: "chip" + (i === estado.mol.pacote ? " ativo" : "") });
+      b.textContent = p.nome;
+      b.addEventListener("click", () => { estado.mol.pacote = i; desenharMol(); });
+      chips.appendChild(b);
+    });
+    s1.appendChild(chips);
+
+    const p = PACOTES[estado.mol.pacote];
+    const cartaoPacote = criar("div", { className: "quadro-pacote" + (p.destaque ? " destaque-pacote" : "") });
+    cartaoPacote.innerHTML =
+      `<p class="nome-pacote">1 ${p.nome} =</p>` +
+      // pacotes pequenos são contagens exatas: "1 dezena = 10", não "10,0000"
+      `<p class="qtd-pacote">${Number.isInteger(p.quantidade) && p.quantidade < 1e6
+        ? p.quantidade.toLocaleString("pt-BR")
+        : formatarNumero(p.quantidade, 6)}</p>` +
+      `<p class="uso-pacote">de ${p.usoPara}</p>` +
+      `<p class="porque-pacote">${p.porque}</p>`;
+    s1.appendChild(cartaoPacote);
+
+    s1.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "Repare que nenhum desses números é redondo por acaso. Cada um foi escolhido para resolver um problema prático de quem contava. Com o mol não é diferente — só que o problema era muito maior.",
+    }));
+
+    /* --- 2. tamanho do pacote --- */
+    const s2 = secao(alvo, "Quão grande é esse pacote", "SEGUNDA IDEIA");
+    s2.appendChild(criar("p", {
+      innerHTML: `Um mol são <strong>602 214 076 000 000 000 000 000</strong> unidades. Ler esse número em voz alta não ajuda em nada — ` +
+        `ninguém tem intuição para vinte e três zeros. Então escolha um objeto do dia a dia e veja o que acontece quando você junta um mol dele.`,
+    }));
+
+    const chipsObj = criar("div", { className: "chips" });
+    COMPARACOES.forEach((c, i) => {
+      const b = criar("button", { type: "button", className: "chip" + (i === estado.mol.comparacao ? " ativo" : "") });
+      b.textContent = `${c.emoji} ${c.nome}`;
+      b.addEventListener("click", () => { estado.mol.comparacao = i; desenharMol(); });
+      chipsObj.appendChild(b);
+    });
+    s2.appendChild(chipsObj);
+
+    const comp = COMPARACOES[estado.mol.comparacao];
+    const r = comp.calcular(CONSTANTES.AVOGADRO);
+    const quadro = criar("div", { className: "quadro-comparacao" });
+    quadro.innerHTML =
+      `<p class="ajuda" style="margin:0 0 6px">Um mol de ${comp.nome} — ${comp.medida.nota} — dá</p>` +
+      `<p class="resultado-comparacao">${r.resultado}</p>` +
+      `<p class="conta-comparacao">${r.conta}</p>` +
+      `<p class="referencia-comparacao">${r.referencia}</p>`;
+    s2.appendChild(quadro);
+
+    /* --- 3. o contraste --- */
+    const s3 = secao(alvo, "Agora o golpe", "TERCEIRA IDEIA");
+    const contraste = contrasteDaAgua(analisar("H2O").massaMolar);
+    s3.appendChild(criar("p", {
+      innerHTML: `Você viu que um mol de <strong>gotas</strong> de água encheria ${contraste.gotas.texto} de todos os oceanos do planeta.`,
+    }));
+
+    const duasColunas = criar("div", { className: "contraste" });
+    duasColunas.innerHTML =
+      `<div class="lado"><p class="rot-contraste">1 mol de GOTAS</p>` +
+      `<p class="val-contraste">${contraste.gotas.texto}</p>` +
+      `<p class="ajuda">de toda a água dos oceanos</p></div>` +
+      `<div class="lado"><p class="rot-contraste">1 mol de MOLÉCULAS</p>` +
+      `<p class="val-contraste destaque-val">${contraste.moleculas.texto}</p>` +
+      `<p class="ajuda">uma colher de sopa</p></div>`;
+    s3.appendChild(duasColunas);
+
+    s3.appendChild(criar("p", {
+      innerHTML: `A mesma quantidade. O mesmo pacote. A diferença entre encher parte de um oceano e encher uma colher ` +
+        `é exatamente <strong>o tamanho de uma molécula de água</strong>.`,
+    }));
+    s3.appendChild(criar("div", {
+      className: "dica-caixa",
+      textContent: "É por isso que o mol precisa ser tão grande. Não é exagero de químico: é o tamanho necessário para que um pacote de partículas caiba numa colher e possa ser pesado numa balança comum.",
+    }));
+
+    /* --- 4. por que este número --- */
+    const s4 = secao(alvo, "Por que 6,02×10²³ e não um número redondo", "QUARTA IDEIA");
+    s4.appendChild(criar("p", {
+      textContent: "Aqui está a parte genial, e é a que quase ninguém conta. O tamanho do pacote não foi escolhido para ser bonito. Foi escolhido para que um número que você lê na tabela periódica sirva para duas coisas ao mesmo tempo.",
+    }));
+
+    const chipsEl = criar("div", { className: "chips" });
+    for (const sim of ELEMENTOS_VITRINE) {
+      const b = criar("button", { type: "button", className: "chip" + (sim === estado.mol.elemento ? " ativo" : "") });
+      b.textContent = sim;
+      b.addEventListener("click", () => { estado.mol.elemento = sim; desenharMol(); });
+      chipsEl.appendChild(b);
+    }
+    s4.appendChild(chipsEl);
+
+    const el = pontesDoElemento(estado.mol.elemento);
+    const ponte = criar("div", { className: "quadro-ponte" });
+    ponte.innerHTML =
+      `<div class="lado-ponte"><p class="rot-ponte">1 ÁTOMO de ${el.nome}</p>` +
+      `<p class="val-ponte">${formatarNumero(el.massaAtomica, 5)} u</p>` +
+      `<p class="ajuda">${el.z} prótons e ${el.neutrons} nêutrons no núcleo</p></div>` +
+      `<div class="seta-ponte" aria-hidden="true">×&nbsp;6,02×10²³</div>` +
+      `<div class="lado-ponte"><p class="rot-ponte">1 MOL de ${el.nome}</p>` +
+      `<p class="val-ponte destaque-val">${formatarNumero(el.massaMolar, 5)} g</p>` +
+      `<p class="ajuda">${formatarNumero(CONSTANTES.AVOGADRO, 4)} átomos</p></div>`;
+    s4.appendChild(ponte);
+
+    s4.appendChild(criar("p", {
+      innerHTML: `<strong>É o mesmo número dos dois lados.</strong> A massa de um átomo em unidades de massa atômica e a massa ` +
+        `de um mol em gramas dão o mesmo valor. O tamanho do pacote foi calibrado para que isso acontecesse.`,
+    }));
+    s4.appendChild(criar("p", {
+      textContent: "E é por isso que a tabela periódica é um instrumento de bancada, não um cartaz. Aquele número embaixo do símbolo diz, ao mesmo tempo, quanto pesa um átomo sozinho e quantos gramas você precisa pesar para ter um pacote inteiro deles.",
+    }));
+    s4.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "Um detalhe honesto: desde 2019 o mol é definido fixando o número de Avogadro em 6,02214076×10²³ exatamente, e não mais pelo carbono-12. A correspondência entre u e g/mol deixou de ser exata por definição, mas continua valendo até a nona casa decimal. Nenhum cálculo de laboratório sente a diferença.",
+    }));
+
+    /* --- 5. as reações --- */
+    const s5 = secao(alvo, "Por que isso decide se a reação dá certo", "QUINTA IDEIA");
+    s5.appendChild(criar("p", {
+      textContent: "As substâncias não reagem em gramas. Elas reagem em partículas, e em proporções de números inteiros: duas moléculas de hidrogênio para cada molécula de oxigênio, nunca uma vírgula sete.",
+    }));
+    s5.appendChild(criar("div", {
+      className: "equacao-vista", style: "font-size:var(--mb-t-titulo-3);padding:var(--mb-e3) 0",
+      innerHTML: `<span class="termo-eq"><b class="coef">2</b> H₂</span> <span class="op">+</span> <span class="termo-eq">O₂</span> <span class="op seta">→</span> <span class="termo-eq"><b class="coef">2</b> H₂O</span>`,
+    }));
+    s5.appendChild(criar("p", {
+      textContent: "Só que a balança pesa gramas. Nenhum laboratório do mundo tem um instrumento que conte moléculas. É aí que o mol entra: ele traduz o que a reação exige para o que a balança consegue medir.",
+    }));
+
+    const entradaCopo = criar("div", { style: "max-width:280px" });
+    campoTexto(entradaCopo, {
+      id: "mol-copo", rotulo: "Quero produzir esta massa de água (g)", valor: estado.mol.copoAgua,
+      aoMudar: (v) => { estado.mol.copoAgua = v; atualizarReceita(); },
+    });
+    s5.appendChild(entradaCopo);
+    s5.appendChild(criar("div", { id: "saida-receita" }));
+
+    /* --- 6. profissão --- */
+    const s6 = secao(alvo, "O que isso destrava", "POR FIM");
+    s6.appendChild(criar("p", {
+      textContent: "Entender o mol não é passar de ano. É a chave que abre praticamente tudo que se faz com química depois da escola.",
+    }));
+    const lista = criar("div", { className: "aplicacoes" });
+    for (const a of APLICACOES) {
+      const item = criar("div", { className: "aplicacao" });
+      item.innerHTML = `<p class="area">${a.area}</p><p>${a.texto}</p>`;
+      lista.appendChild(item);
+    }
+    s6.appendChild(lista);
+
+    const acoes = criar("div", { className: "acoes" });
+    const irTreino = criar("button", { className: "botao", type: "button", textContent: "Começar o treino" });
+    irTreino.addEventListener("click", () => mostrarTela("tela-treino"));
+    acoes.appendChild(irTreino);
+    const irMassa = criar("button", { className: "botao secundario", type: "button", textContent: "Calcular uma massa molar" });
+    irMassa.addEventListener("click", () => mostrarTela("tela-massa"));
+    acoes.appendChild(irMassa);
+    s6.appendChild(acoes);
+
+    atualizarReceita();
+  }
+
+  function atualizarReceita() {
+    const alvo = $("#saida-receita");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const massa = lerNumero(estado.mol.copoAgua);
+    if (!(massa > 0)) {
+      alvo.innerHTML = `<p class="ajuda">Informe uma massa de água.</p>`;
+      return;
+    }
+
+    const r = receitaDaAgua(massa);
+    const tabela = criar("table", { style: "margin-top:var(--mb-e3)" });
+    tabela.innerHTML = `<thead><tr><th>Substância</th><th>Partículas</th><th>Mol</th><th>Na balança</th></tr></thead>`;
+    const corpo = criar("tbody");
+    const linhas = [
+      ["H₂", r.molH2 * CONSTANTES.AVOGADRO, r.molH2, r.massaH2],
+      ["O₂", r.molO2 * CONSTANTES.AVOGADRO, r.molO2, r.massaO2],
+      ["H₂O", r.moleculasAgua, r.molAgua, r.massaAgua],
+    ];
+    for (const [nome, part, mol, g] of linhas) {
+      const tr = criar("tr");
+      tr.innerHTML = `<td style="font-family:var(--mb-fonte-dado)">${nome}</td>` +
+        `<td class="num">${formatarNumero(part, 3)}</td>` +
+        `<td class="num">${formatarNumero(mol, 4)}</td>` +
+        `<td class="num" style="color:var(--mb-energia);font-weight:500">${formatarNumero(g, 4)} g</td>`;
+      corpo.appendChild(tr);
+    }
+    tabela.appendChild(corpo);
+    alvo.appendChild(tabela);
+
+    alvo.appendChild(criar("div", {
+      className: "motivo",
+      innerHTML: `Você jamais conseguiria contar ${formatarNumero(r.moleculasAgua, 3)} moléculas. ` +
+        `Mas consegue pesar ${formatarNumero(r.massaH2, 4)} g e ${formatarNumero(r.massaO2, 4)} g numa balança comum. ` +
+        `<strong>É isso que o mol faz:</strong> transforma uma contagem impossível numa pesagem trivial.`,
+    }));
   }
 
   /* ---------------- tela: massa molar ---------------- */
@@ -2092,7 +2333,12 @@
       if (ev.key === "Escape" && estreita()) fecharMenu();
     });
 
+    // quem chega pela primeira vez começa pela explicação do mol; quem já
+    // usou volta para onde parou
+    mostrarTela(estado.telaAtual);
+
     const destino = {
+      "#mol": "tela-mol",
       "#massa-molar": "tela-massa", "#converter": "tela-ponte",
       "#balancear": "tela-balancear", "#estequiometria": "tela-esteq",
       "#treino": "tela-treino", "#progresso": "tela-progresso", "#tabela": "tela-tabela",

@@ -20,6 +20,13 @@ const GRANDEZAS = {
   volume:     { rotulo: "Volume de gás",         unidade: "L",         curta: "L" },
 };
 
+/* Acessores das tabelas constantes deste módulo. Ver a nota em mol.js: um
+   `const` declarado dentro de um eval não escapa para o escopo global, e as
+   baterias de teste carregam os módulos assim. */
+function constantesFisicas() { return CONSTANTES; }
+function volumesMolares() { return VOLUMES_MOLARES; }
+function grandezasDoMol() { return GRANDEZAS; }
+
 /* ---------- apresentação de números ---------- */
 
 const SOBRE = { "0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","-":"⁻" };
