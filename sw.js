@@ -2,7 +2,7 @@
    O app é um conjunto pequeno e estável de arquivos; a rede só entra
    quando falta algo no cache ou quando a versão muda. */
 
-const VERSAO = "molbox-v0.6.0";
+const VERSAO = "molbox-v0.7.0";
 const ARQUIVOS = [
   "./", "./index.html", "./app.css", "./tokens.css", "./fontes.css",
   "./manifest.webmanifest",

@@ -17,6 +17,7 @@ const MEDALHAS = [
   { id: "cinquenta",   nome: "Meio cento",          condicao: (p) => p.totalAcertos >= 50, descricao: "Acertar cinquenta exercícios" },
   { id: "sequencia5",  nome: "Cinco em sequência",  condicao: (p) => p.melhorSequencia >= 5,  descricao: "Cinco acertos seguidos" },
   { id: "sequencia15", nome: "Quinze em sequência", condicao: (p) => p.melhorSequencia >= 15, descricao: "Quinze acertos seguidos" },
+  { id: "degrau1",     nome: "Entendeu o pacote",   condicao: (p) => p.desbloqueado >= 1, descricao: "Liberar o degrau do átomo" },
   { id: "degrau2",     nome: "Contador",            condicao: (p) => p.desbloqueado >= 2, descricao: "Liberar o degrau da contagem" },
   { id: "degrau3",     nome: "Atravessou a ponte",  condicao: (p) => p.desbloqueado >= 3, descricao: "Liberar o degrau do mol" },
   { id: "degrau4",     nome: "Química de verdade",  condicao: (p) => p.desbloqueado >= 4, descricao: "Liberar o degrau da reação" },
@@ -33,8 +34,8 @@ function progressoVazio() {
     acertosSemDica: 0,
     sequencia: 0,
     melhorSequencia: 0,
-    desbloqueado: 1,
-    porDegrau: { 1: { acertos: 0, erros: 0 }, 2: { acertos: 0, erros: 0 }, 3: { acertos: 0, erros: 0 }, 4: { acertos: 0, erros: 0 } },
+    desbloqueado: 0,
+    porDegrau: { 0: { acertos: 0, erros: 0 }, 1: { acertos: 0, erros: 0 }, 2: { acertos: 0, erros: 0 }, 3: { acertos: 0, erros: 0 }, 4: { acertos: 0, erros: 0 } },
     porTipo: {},          // { tipo: { acertos, erros } }
     ofensiva: 0,
     melhorOfensiva: 0,
@@ -122,7 +123,8 @@ function registrarResposta(p, exercicio, acertou, usouDica) {
   }
 
   // libera o próximo degrau quando o atual acumula acertos suficientes
-  while (p.desbloqueado < DEGRAUS.length && p.porDegrau[p.desbloqueado].acertos >= ACERTOS_PARA_LIBERAR) {
+  const ultimoDegrau = DEGRAUS[DEGRAUS.length - 1].n;
+  while (p.desbloqueado < ultimoDegrau && p.porDegrau[p.desbloqueado].acertos >= ACERTOS_PARA_LIBERAR) {
     p.desbloqueado += 1;
   }
 

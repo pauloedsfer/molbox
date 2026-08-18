@@ -173,12 +173,19 @@ function receitaDaAgua(massaDesejadaGramas) {
 
 /* ---------------- onde isso aparece na profissão ---------------- */
 
+const VIDEO = {
+  id: "FC1jvXZXAgI",
+  titulo: "O mol explicado em aula",
+  autor: "Prof. Paulo",
+  descricao: "A mesma explicação desta página, em vídeo. Se você aprende melhor ouvindo, comece por aqui.",
+};
+
 const APLICACOES = [
-  { area: "Farmácia", texto: "A dose de um medicamento é massa, mas o efeito depende do número de moléculas que chegam ao receptor. Trocar o sal de um princípio ativo muda a massa molar e muda a dose que se pesa." },
-  { area: "Indústria química", texto: "Comprar reagente a mais é prejuízo, a menos é lote perdido. O cálculo de carga de um reator é estequiometria pura, e o erro custa dinheiro por tonelada." },
-  { area: "Análise e controle de qualidade", texto: "Toda titulação, todo laudo de teor e toda curva de calibração terminam numa conta de mol. Sem ela não existe resultado defensável." },
-  { area: "Tratamento de água e efluentes", texto: "A dosagem de coagulante e de cloro é calculada em massa, mas a reação acontece em proporção de partículas. Errar a conta é errar o tratamento." },
-  { area: "Segurança do trabalho", texto: "Limite de exposição vem em ppm, que é razão de partículas. Converter para massa por metro cúbico exige o mol." },
+  { area: "Farmácia", emoji: "💊", texto: "A dose de um medicamento é massa, mas o efeito depende do número de moléculas que chegam ao receptor. Trocar o sal de um princípio ativo muda a massa molar e muda a dose que se pesa." },
+  { area: "Indústria química", emoji: "🏭", texto: "Comprar reagente a mais é prejuízo, a menos é lote perdido. O cálculo de carga de um reator é estequiometria pura, e o erro custa dinheiro por tonelada." },
+  { area: "Análise e controle de qualidade", emoji: "🧪", texto: "Toda titulação, todo laudo de teor e toda curva de calibração terminam numa conta de mol. Sem ela não existe resultado defensável." },
+  { area: "Tratamento de água e efluentes", emoji: "💧", texto: "A dosagem de coagulante e de cloro é calculada em massa, mas a reação acontece em proporção de partículas. Errar a conta é errar o tratamento." },
+  { area: "Segurança do trabalho", emoji: "🦺", texto: "Limite de exposição vem em ppm, que é razão de partículas. Converter para massa por metro cúbico exige o mol." },
 ];
 
 /* Acessores das tabelas acima. Existem porque `const` declarado dentro de um
@@ -188,3 +195,5 @@ function pacotesConhecidos() { return PACOTES; }
 function comparacoesConhecidas() { return COMPARACOES; }
 function elementosDaVitrine() { return ELEMENTOS_VITRINE; }
 function aplicacoesProfissionais() { return APLICACOES; }
+
+function videoDaAula() { return VIDEO; }

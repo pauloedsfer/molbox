@@ -25,12 +25,13 @@
     ph: { modo: "acidoFraco", indice: 4, concentracao: "0,1",
           tampaoAcido: "0,1", tampaoBase: "0,1" },
     titulacao: { indice: 4, cAnalito: "0,1", vAnalito: "25", cTitulante: "0,1", indicador: 6 },
-    degrau: 1,
+    degrau: 0,
     exercicio: null,
     tipoAnterior: null,
     usouDica: false,
     respondido: false,
     consultaAberta: false,
+    escolhaFeita: null,
     expressao: "",
     sessao: { certas: 0, total: 0, xp: 0 },
   };
@@ -159,6 +160,8 @@
       `<p class="fecho-mol">O mol é a solução desse problema. E a solução é mais simples do que parece: ` +
       `é um pacote.</p>`;
     alvo.appendChild(capa);
+
+    desenharVideo(alvo);
 
     /* --- 1. pacotes --- */
     const s1 = secao(alvo, "Você já usa pacotes a vida inteira", "PRIMEIRA IDEIA");
@@ -312,7 +315,7 @@
     const lista = criar("div", { className: "aplicacoes" });
     for (const a of APLICACOES) {
       const item = criar("div", { className: "aplicacao" });
-      item.innerHTML = `<p class="area">${a.area}</p><p>${a.texto}</p>`;
+      item.innerHTML = `<p class="area"><span class="emoji-area" aria-hidden="true">${a.emoji}</span>${a.area}</p><p>${a.texto}</p>`;
       lista.appendChild(item);
     }
     s6.appendChild(lista);
@@ -365,6 +368,56 @@
         `Mas consegue pesar ${formatarNumero(r.massaH2, 4)} g e ${formatarNumero(r.massaO2, 4)} g numa balança comum. ` +
         `<strong>É isso que o mol faz:</strong> transforma uma contagem impossível numa pesagem trivial.`,
     }));
+  }
+
+
+  /* O vídeo é a única coisa no aplicativo que depende de internet. Por isso
+     ele entra como fachada: nada do YouTube é carregado até o aluno tocar em
+     assistir. Isso mantém a página inteira funcionando offline, evita os
+     rastreadores de terceiros no carregamento e não deixa um retângulo
+     quebrado na tela de quem está sem sinal. */
+  function desenharVideo(alvo) {
+    const v = videoDaAula();
+    const cartao = criar("div", { className: "cartao cartao-video" });
+    cartao.innerHTML =
+      `<p class="sobretitulo">PREFERE ASSISTIR?</p>` +
+      `<h2 style="margin-top:0">${v.titulo}</h2>` +
+      `<p style="max-width:62ch">${v.descricao}</p>`;
+
+    const moldura = criar("div", { className: "moldura-video" });
+    const fachada = criar("button", { type: "button", className: "fachada-video" });
+    fachada.setAttribute("aria-label", `Assistir: ${v.titulo}`);
+    fachada.innerHTML =
+      `<span class="play" aria-hidden="true"></span>` +
+      `<span class="rotulo-video">${v.titulo}</span>` +
+      `<span class="aviso-video">O vídeo abre pelo YouTube e precisa de internet</span>`;
+
+    fachada.addEventListener("click", () => {
+      if (navigator.onLine === false) {
+        moldura.innerHTML = `<div class="sem-rede"><p><strong>Sem internet agora.</strong></p>` +
+          `<p>O resto desta página funciona offline — só o vídeo é que precisa de conexão. ` +
+          `Role para baixo e continue pela leitura; o vídeo cobre exatamente o mesmo conteúdo.</p></div>`;
+        return;
+      }
+      const quadro = criar("iframe", {
+        src: `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&autoplay=1`,
+        title: v.titulo,
+        allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+        loading: "lazy",
+      });
+      quadro.setAttribute("allowfullscreen", "");
+      quadro.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+      moldura.innerHTML = "";
+      moldura.appendChild(quadro);
+    });
+
+    moldura.appendChild(fachada);
+    cartao.appendChild(moldura);
+    cartao.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "Vídeo e leitura cobrem o mesmo conteúdo. Assista, leia, ou faça os dois — as partes interativas abaixo funcionam de qualquer jeito.",
+    }));
+    alvo.appendChild(cartao);
   }
 
   /* ---------------- tela: massa molar ---------------- */
@@ -1795,7 +1848,8 @@
       b.setAttribute("aria-pressed", String(d.n === estado.degrau));
       if (!liberado) b.disabled = true;
 
-      const faltam = Math.max(0, ACERTOS_PARA_LIBERAR - progresso.porDegrau[d.n - 1>0 ? d.n - 1 : 1].acertos);
+      const anterior = progresso.porDegrau[d.n - 1];
+      const faltam = anterior ? Math.max(0, ACERTOS_PARA_LIBERAR - anterior.acertos) : 0;
       const sub = liberado
         ? `${acertos} acerto${acertos === 1 ? "" : "s"} · ${d.resumo}`
         : `Faltam ${faltam} acerto${faltam === 1 ? "" : "s"} no degrau ${d.n - 1}`;
@@ -1827,6 +1881,7 @@
     estado.tipoAnterior = estado.exercicio.tipo;
     estado.usouDica = false;
     estado.respondido = false;
+    estado.escolhaFeita = null;
     estado.consultaAberta = false;
     estado.expressao = "";
     desenharExercicio();
@@ -1845,40 +1900,60 @@
 
     if (q.contexto) alvo.appendChild(criar("p", { className: "contexto", textContent: q.contexto }));
 
-    const linha = criar("div", { className: "resposta-linha" });
-    const campo = criar("input", {
-      type: "text", id: "resposta", inputMode: "decimal",
-      autocomplete: "off", spellcheck: false, placeholder: "sua resposta",
-    });
-    campo.setAttribute("aria-label", "Sua resposta em " + q.unidade);
-    if (estado.respondido) campo.readOnly = true;
-    linha.appendChild(campo);
-    linha.appendChild(criar("span", { className: "unidade", textContent: q.unidade }));
-    alvo.appendChild(linha);
+    if (q.formato === "escolha") {
+      const lista = criar("div", { className: "alternativas" });
+      q.opcoes.forEach((op, i) => {
+        const b = criar("button", { type: "button", className: "alternativa" });
+        b.innerHTML = `<span class="letra" aria-hidden="true">${"ABCDE"[i]}</span><span>${op.texto}</span>`;
+        if (estado.respondido) {
+          b.disabled = true;
+          if (op.correta) b.classList.add("certa");
+          if (i === estado.escolhaFeita && !op.correta) b.classList.add("errada");
+        } else {
+          b.addEventListener("click", () => { estado.escolhaFeita = i; responder(String(i)); });
+        }
+        lista.appendChild(b);
+      });
+      alvo.appendChild(lista);
+    } else {
 
-    // eco do valor interpretado: quem escreve 6,02x10^23 precisa ver que o
-    // aplicativo entendeu 6,02×10²³, e não outra coisa
-    const eco = criar("p", { className: "eco", id: "eco-resposta" });
-    alvo.appendChild(eco);
-    const atualizarEco = () => {
-      const bruto = campo.value.trim();
-      if (!bruto) { eco.textContent = ""; return; }
-      const valor = lerNumero(bruto);
-      if (!isFinite(valor)) {
-        eco.innerHTML = `<span class="eco-erro">Não consegui ler esse número.</span>`;
-      } else {
-        eco.innerHTML = `entendi <strong>${formatarNumero(valor, 6)}</strong> ${q.unidade}`;
-      }
-    };
-    campo.addEventListener("input", atualizarEco);
-    atualizarEco();
+    const linha = criar("div", { className: "resposta-linha" });
+      const campo = criar("input", {
+        type: "text", id: "resposta", inputMode: "decimal",
+        autocomplete: "off", spellcheck: false, placeholder: "sua resposta",
+      });
+      campo.setAttribute("aria-label", "Sua resposta em " + q.unidade);
+      if (estado.respondido) campo.readOnly = true;
+      linha.appendChild(campo);
+      linha.appendChild(criar("span", { className: "unidade", textContent: q.unidade }));
+      alvo.appendChild(linha);
+
+      // eco do valor interpretado: quem escreve 6,02x10^23 precisa ver que o
+      // aplicativo entendeu 6,02×10²³, e não outra coisa
+      const eco = criar("p", { className: "eco", id: "eco-resposta" });
+      alvo.appendChild(eco);
+      const atualizarEco = () => {
+        const bruto = campo.value.trim();
+        if (!bruto) { eco.textContent = ""; return; }
+        const valor = lerNumero(bruto);
+        if (!isFinite(valor)) {
+          eco.innerHTML = `<span class="eco-erro">Não consegui ler esse número.</span>`;
+        } else {
+          eco.innerHTML = `entendi <strong>${formatarNumero(valor, 6)}</strong> ${q.unidade}`;
+        }
+      };
+      campo.addEventListener("input", atualizarEco);
+      atualizarEco();
+    }
 
     const acoes = criar("div", { className: "acoes" });
 
     if (!estado.respondido) {
-      const verificar = criar("button", { className: "botao", type: "button", textContent: "Verificar" });
-      verificar.addEventListener("click", () => responder(campo.value));
-      acoes.appendChild(verificar);
+      if (q.formato !== "escolha") {
+        const verificar = criar("button", { className: "botao", type: "button", textContent: "Verificar" });
+        verificar.addEventListener("click", () => responder(document.getElementById("resposta").value));
+        acoes.appendChild(verificar);
+      }
 
       const dica = criar("button", { className: "botao secundario", type: "button", textContent: "Ver dica" });
       dica.addEventListener("click", () => {
@@ -1893,7 +1968,10 @@
       pular.addEventListener("click", proximoExercicio);
       acoes.appendChild(pular);
 
-      campo.addEventListener("keydown", (ev) => { if (ev.key === "Enter") responder(campo.value); });
+      const campoEnter = document.getElementById("resposta");
+      if (campoEnter) {
+        campoEnter.addEventListener("keydown", (ev) => { if (ev.key === "Enter") responder(campoEnter.value); });
+      }
     } else {
       const seguinte = criar("button", { className: "botao", type: "button", textContent: "Próximo exercício" });
       seguinte.addEventListener("click", proximoExercicio);
@@ -1902,10 +1980,12 @@
 
     alvo.appendChild(acoes);
 
-    montarConsulta(alvo, q);
-    montarCalculadora(alvo, campo);
-
-    if (!estado.respondido) campo.focus();
+    if (q.formulas && q.formulas.length) montarConsulta(alvo, q);
+    if (q.formato !== "escolha") {
+      montarCalculadora(alvo, document.getElementById("resposta"));
+      const campoResposta = document.getElementById("resposta");
+      if (!estado.respondido && campoResposta) campoResposta.focus();
+    }
   }
 
   /* Consultar massa atômica não é colar: nenhum químico decora esses números,
@@ -2067,7 +2147,8 @@
     estado.sessao.xp += efeito.ganho;
 
     desenharExercicio();
-    document.getElementById("resposta").value = bruto;
+    const campoRespondido = document.getElementById("resposta");
+    if (campoRespondido) campoRespondido.value = bruto;
 
     const caixa = criar("div", { className: "veredito " + veredito.situacao });
     const selo = acertou ? "CERTO"

@@ -785,3 +785,75 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
   margin: 0 0 4px; font-weight: 500; font-size: var(--mb-t-apoio); color: var(--mb-estrutura);
 }
 .aplicacao p { margin: 0; font-size: var(--mb-t-legenda); color: var(--mb-texto-2); max-width: none; }
+
+/* ---------- vídeo da aula ---------- */
+
+.cartao-video { border-left: 4px solid var(--mb-interacao); }
+.moldura-video {
+  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  border-radius: var(--mb-raio-card); overflow: hidden;
+  background: var(--mb-estrutura); margin-top: var(--mb-e3);
+}
+.moldura-video iframe { width: 100%; height: 100%; border: 0; display: block; }
+.fachada-video {
+  appearance: none; border: 0; cursor: pointer; font: inherit;
+  width: 100%; height: 100%; padding: var(--mb-e4);
+  background: linear-gradient(150deg, #164194 0%, #0B2A66 100%);
+  color: #FFFFFF; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--mb-e3);
+}
+.fachada-video .play {
+  width: 62px; height: 62px; border-radius: 50%;
+  background: var(--mb-laranja-senai, #E84910);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  position: relative;
+}
+.fachada-video .play::after {
+  content: ""; border-style: solid; border-width: 12px 0 12px 20px;
+  border-color: transparent transparent transparent #FFFFFF;
+  margin-left: 5px;
+}
+.fachada-video:hover .play { transform: scale(1.06); }
+.rotulo-video {
+  font-family: var(--mb-fonte-marca); font-style: italic; font-weight: 600;
+  font-size: var(--mb-t-titulo-3); text-align: center;
+}
+.aviso-video { font-size: var(--mb-t-legenda); color: rgba(255, 255, 255, 0.72); text-align: center; }
+.sem-rede {
+  height: 100%; display: flex; flex-direction: column; justify-content: center;
+  padding: var(--mb-e5); color: #FFFFFF; text-align: center;
+}
+.sem-rede p { margin: 0 0 var(--mb-e2); max-width: none; }
+
+.emoji-area { margin-right: 6px; font-style: normal; }
+
+/* ---------- alternativas de múltipla escolha ---------- */
+
+.alternativas { display: flex; flex-direction: column; gap: var(--mb-e2); }
+.alternativa {
+  appearance: none; cursor: pointer; font: inherit; text-align: left;
+  display: flex; align-items: flex-start; gap: var(--mb-e3);
+  min-height: var(--mb-toque); padding: 12px var(--mb-e4);
+  background: var(--mb-superficie); color: var(--mb-texto);
+  border: 1px solid var(--mb-borda-forte); border-radius: var(--mb-raio);
+  line-height: 1.5;
+}
+.alternativa:hover:not([disabled]) {
+  border-color: var(--mb-interacao); background: var(--mb-interacao-bg);
+}
+.alternativa .letra {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--mb-superficie-2); color: var(--mb-texto-2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-legenda); font-weight: 500;
+  margin-top: 1px;
+}
+.alternativa[disabled] { cursor: default; opacity: 1; }
+.alternativa.certa {
+  border-color: var(--mb-acerto); border-width: 2px; background: var(--mb-acerto-bg);
+}
+.alternativa.certa .letra { background: var(--mb-acerto); color: #FFFFFF; }
+.alternativa.errada {
+  border-color: var(--mb-erro); border-width: 2px; background: var(--mb-erro-bg);
+}
+.alternativa.errada .letra { background: var(--mb-erro); color: #FFFFFF; }

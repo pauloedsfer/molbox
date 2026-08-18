@@ -50,6 +50,7 @@ const VALORES_BONITOS = [0.5, 1.0, 2.0, 2.5, 4.0, 5.0, 8.0, 10.0, 20.0, 25.0, 40
 const VALORES_MOL     = [0.10, 0.20, 0.25, 0.50, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0];
 
 const DEGRAUS = [
+  { n: 0, nome: "A ideia",  resumo: "o que é o mol, para que serve e de onde vem o número" },
   { n: 1, nome: "Átomo",    resumo: "massa atômica, símbolo e contagem de átomos numa fórmula" },
   { n: 2, nome: "Contagem", resumo: "a constante de Avogadro e o salto entre contar e medir" },
   { n: 3, nome: "Mol",      resumo: "a ponte completa: massa, mol, entidades e volume" },
@@ -121,7 +122,150 @@ function engano(valor, mensagem) { return { valor, mensagem }; }
 
 /* ---------------- geradores por tipo ---------------- */
 
+
+/* ---------------- degrau 0: a ideia ----------------
+
+   Perguntas conceituais sobre o conteúdo da tela de abertura. São de múltipla
+   escolha porque aqui não há conta a fazer: o que se verifica é se a ideia
+   ficou de pé. Cada alternativa errada carrega o próprio diagnóstico, do mesmo
+   jeito que os erros numéricos dos outros degraus.
+*/
+
+const PERGUNTAS_DA_IDEIA = [
+  {
+    enunciado: "Uma dúzia é um pacote de 12. Uma resma é um pacote de 500. O <strong>mol</strong> é um pacote de quantas unidades?",
+    opcoes: [
+      { texto: "6,02×10²³", correta: true },
+      { texto: "1 000 000", diagnostico: "Um milhão é grande para nós, mas minúsculo para átomos. Um milhão de moléculas de água seria invisível até no microscópio." },
+      { texto: "1000", diagnostico: "Mil é o pacote do quilo, não do mol. O mol precisa ser muito maior porque átomos são muito menores." },
+      { texto: "100", diagnostico: "Cem é o pacote da porcentagem. O mol tem vinte e três zeros a mais." },
+    ],
+    resolucao: "O mol contém 6,02214076×10²³ unidades. É um pacote como a dúzia — só que gigantesco, porque átomos são pequenos e numerosos demais para qualquer pacote menor.",
+    dica: "Pense no número que aparece o tempo todo na tela de abertura, com vinte e três zeros.",
+  },
+  {
+    enunciado: "Por que o mol existe?",
+    opcoes: [
+      { texto: "Porque átomos são pequenos e numerosos demais para contar um a um", correta: true },
+      { texto: "Porque os químicos gostam de números grandes", diagnostico: "O tamanho não é gosto: é necessidade. Um pacote menor não conseguiria juntar átomos suficientes para caber numa balança." },
+      { texto: "Para deixar as contas de química mais difíceis", diagnostico: "É o contrário. O mol existe justamente para transformar uma contagem impossível numa pesagem simples." },
+      { texto: "Para medir o volume dos gases", diagnostico: "O volume molar é uma aplicação do mol, não a razão de ele existir. Ele serve para contar qualquer partícula, gás ou não." },
+    ],
+    resolucao: "O mol é a resposta a um problema prático: ninguém consegue contar partículas uma a uma, mas todo mundo consegue pesar. O mol traduz uma coisa na outra.",
+    dica: "Volte à primeira frase da tela de abertura.",
+  },
+  {
+    enunciado: "Um mol de <strong>gotas</strong> de água encheria cerca de 2% de todos os oceanos. E um mol de <strong>moléculas</strong> de água, quanto ocupa?",
+    opcoes: [
+      { texto: "Cerca de uma colher de sopa", correta: true },
+      { texto: "Uma piscina olímpica", diagnostico: "Longe disso. É esse contraste que revela o tamanho da molécula: a mesma quantidade que encheria parte de um oceano em gotas cabe na sua mão em moléculas." },
+      { texto: "Um copo de 200 mL", diagnostico: "Perto, mas ainda grande. Um mol de água são cerca de 18 mL — pouco mais de uma colher de sopa." },
+      { texto: "Também 2% dos oceanos", diagnostico: "Não. Se fosse igual, a molécula teria o tamanho de uma gota, e você conseguiria ver moléculas a olho nu." },
+    ],
+    resolucao: "Um mol de água pesa cerca de 18 g e ocupa cerca de 18 mL. A distância entre 2% dos oceanos e uma colher de sopa é exatamente o tamanho de uma molécula.",
+    dica: "Um mol de água pesa 18 g, e a densidade da água é 1 g/mL.",
+  },
+  {
+    enunciado: "Na tabela periódica, embaixo do carbono está escrito <strong>12,011</strong>. O que esse número significa?",
+    opcoes: [
+      { texto: "Um átomo pesa 12,011 u e um mol de átomos pesa 12,011 g", correta: true },
+      { texto: "Só que um átomo de carbono pesa 12,011 gramas", diagnostico: "Um átomo não pesa gramas — pesa 12,011 u, que é uma unidade minúscula. Só o pacote inteiro, o mol, é que pesa 12,011 gramas." },
+      { texto: "Que existem 12,011 tipos de carbono", diagnostico: "Esse número é massa, não contagem. O carbono tem três isótopos naturais, e 12,011 é a média ponderada da massa deles." },
+      { texto: "Que o carbono tem 12,011 prótons", diagnostico: "Próton é número inteiro: o carbono tem exatamente 6. O 12,011 é massa, e é fracionário porque é média entre isótopos." },
+    ],
+    resolucao: "O mesmo número serve duas vezes: em unidades de massa atômica para um átomo, e em gramas para um mol inteiro. O tamanho do mol foi calibrado para que isso acontecesse — é o que torna a tabela periódica um instrumento de bancada.",
+    dica: "É o mesmo número dos dois lados da ponte, mudando só a unidade.",
+  },
+  {
+    enunciado: "Quase toda a massa de um átomo está em qual parte?",
+    opcoes: [
+      { texto: "No núcleo, nos prótons e nêutrons", correta: true },
+      { texto: "Na eletrosfera, nos elétrons", diagnostico: "Os elétrons decidem toda a química, mas quase nada da massa: um próton pesa 1836 vezes o que pesa um elétron. Numa molécula de água, os elétrons são cerca de 0,03% da massa." },
+      { texto: "Metade no núcleo, metade na eletrosfera", diagnostico: "A divisão é muito desigual. O núcleo responde por mais de 99,9% da massa." },
+      { texto: "No espaço vazio entre o núcleo e os elétrons", diagnostico: "Espaço vazio não tem massa. E o átomo é quase todo espaço vazio — a massa se concentra no núcleo, que é minúsculo em comparação." },
+    ],
+    resolucao: "Prótons e nêutrons carregam praticamente toda a massa. Por isso a massa da tabela periódica é essencialmente a contagem de núcleons — e por isso ela dá números tão próximos de inteiros.",
+    dica: "Compare o peso de um próton com o de um elétron.",
+  },
+  {
+    enunciado: "Numa reação, o hidrogênio e o oxigênio se combinam na proporção de <strong>2 para 1</strong>. Essa proporção é contada em quê?",
+    opcoes: [
+      { texto: "Em número de moléculas, ou seja, em mols", correta: true },
+      { texto: "Em gramas", diagnostico: "Se fosse em gramas, 2 g de hidrogênio reagiriam com 1 g de oxigênio — e não é isso que acontece. A proporção da equação é sempre de partículas." },
+      { texto: "Em litros", diagnostico: "Volume só funciona para gases, e mesmo assim só porque volume de gás é proporcional a mols. A proporção fundamental é de partículas." },
+      { texto: "Em qualquer unidade, tanto faz", diagnostico: "Faz muita diferença. Os coeficientes de uma equação contam partículas; usá-los direto sobre massas é o erro mais comum da estequiometria." },
+    ],
+    resolucao: "Os coeficientes de uma equação sempre contam partículas. A balança pesa gramas. O mol é o tradutor entre as duas linguagens, e é por isso que ele aparece no meio de toda conta de estequiometria.",
+    dica: "Moléculas reagem com moléculas. A balança é que fala outra língua.",
+  },
+  {
+    enunciado: "Quantos átomos existem em <strong>1 mol</strong> de ferro?",
+    opcoes: [
+      { texto: "6,02×10²³", correta: true },
+      { texto: "55,845", diagnostico: "Esse é o número de gramas que 1 mol de ferro pesa, não a quantidade de átomos. Massa e contagem são coisas diferentes." },
+      { texto: "26", diagnostico: "Esse é o número de prótons de um átomo de ferro. O número de átomos num mol é sempre o mesmo, para qualquer elemento." },
+      { texto: "Depende do elemento", diagnostico: "Não depende. Um mol são sempre 6,02×10²³ unidades, seja de ferro, de água ou de laranjas — assim como uma dúzia são sempre 12." },
+    ],
+    resolucao: "Um mol de qualquer coisa contém 6,02×10²³ unidades. O que muda de elemento para elemento é a massa desse pacote, nunca a quantidade.",
+    dica: "Uma dúzia de ovos e uma dúzia de melancias têm a mesma quantidade — só o peso muda.",
+  },
+  {
+    enunciado: "Se você contasse átomos um por segundo, sem parar nunca, quanto tempo levaria para contar 1 mol?",
+    opcoes: [
+      { texto: "Mais de um milhão de vezes a idade do universo", correta: true },
+      { texto: "Alguns anos", diagnostico: "Muito menos que a realidade. Em um ano você contaria cerca de 31 milhões — precisaria de 10¹⁶ anos para chegar a um mol." },
+      { texto: "Uma vida inteira", diagnostico: "Nem perto. Uma vida de 80 anos daria uns 2,5 bilhões de átomos: uma fração desprezível de um mol." },
+      { texto: "Cerca de mil anos", diagnostico: "Ainda muito pouco. Mil anos de contagem ininterrupta dariam 3×10¹⁰ átomos, treze ordens de grandeza abaixo de um mol." },
+    ],
+    resolucao: "São cerca de 1,9×10¹⁶ anos, aproximadamente 1,4 milhão de vezes a idade do universo. Se as 8,2 bilhões de pessoas vivas hoje contassem juntas, ainda levaria 2,3 milhões de anos.",
+    dica: "Um ano tem cerca de 3×10⁷ segundos. Divida o número de Avogadro por isso.",
+  },
+  {
+    enunciado: "Um mol de água pesa 18 g. Quanto pesam <strong>2 mols</strong> de água?",
+    opcoes: [
+      { texto: "36 g", correta: true },
+      { texto: "18 g", diagnostico: "A massa de 1 mol é 18 g. Dobrando a quantidade de matéria, dobra a massa." },
+      { texto: "9 g", diagnostico: "Você dividiu em vez de multiplicar. Mais mols significam mais massa, nunca menos." },
+      { texto: "1,2×10²⁴ g", diagnostico: "Esse é o número de moléculas em 2 mols, não a massa em gramas. Contagem e massa são grandezas diferentes." },
+    ],
+    resolucao: "A massa é proporcional à quantidade de matéria: 2 mols × 18 g/mol = 36 g. É a mesma lógica de dizer que 2 dúzias de ovos pesam o dobro de 1 dúzia.",
+    dica: "Se um pacote pesa 18 g, quanto pesam dois pacotes?",
+  },
+  {
+    enunciado: "Por que a massa do cloro na tabela periódica é <strong>35,45</strong> e não um número inteiro?",
+    opcoes: [
+      { texto: "Porque é a média das massas dos isótopos que existem na natureza", correta: true },
+      { texto: "Porque o cloro tem meio nêutron", diagnostico: "Não existe meio nêutron. Cada átomo individual tem um número inteiro de núcleons — o valor fracionário aparece só na média." },
+      { texto: "Porque os elétrons acrescentam essa fração", diagnostico: "Os elétrons pesam pouquíssimo: num átomo de cloro eles somam menos de 0,02% da massa, longe de explicar o 0,45." },
+      { texto: "Porque foi arredondado errado", diagnostico: "É um valor medido com cuidado. O cloro natural é uma mistura de cerca de 75% de cloro-35 com 25% de cloro-37, e 35,45 é a média ponderada." },
+    ],
+    resolucao: "Todo átomo de cloro tem 35 ou 37 núcleons, nunca 35,45. Mas o cloro que existe na natureza é uma mistura dos dois, e a tabela traz a média ponderada — que é o que importa quando você pesa uma amostra com incontáveis átomos.",
+    dica: "Nenhum átomo individual pesa 35,45. Mas uma amostra com muitos átomos, sim.",
+  },
+];
+
 const GERADORES = {
+
+
+  /* ----- degrau 0 ----- */
+
+  ideiaDoMol(cfg) {
+    const base = sortear(PERGUNTAS_DA_IDEIA);
+    // as alternativas são embaralhadas para que a posição da correta não vire
+    // um padrão a decorar
+    const opcoes = base.opcoes.slice();
+    for (let i = opcoes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [opcoes[i], opcoes[j]] = [opcoes[j], opcoes[i]];
+    }
+    return {
+      degrau: 0, tipo: "ideiaDoMol", formato: "escolha", formulas: [],
+      enunciado: base.enunciado,
+      opcoes, unidade: "", resposta: null, sig: 3, erros: [],
+      dica: base.dica,
+      resolucao: base.resolucao,
+    };
+  },
 
   /* ----- degrau 1 ----- */
 
@@ -473,6 +617,7 @@ const GERADORES = {
 };
 
 const TIPOS_POR_DEGRAU = {
+  0: ["ideiaDoMol"],
   1: ["atomosNaFormula", "massaMolarSimples"],
   2: ["molParaParticulas", "particulasParaMol", "atomosTotais"],
   3: ["massaParaMol", "molParaMassa", "massaParaParticulas", "volumeParaMol", "massaParaVolume", "percentualEmMassa"],
@@ -480,6 +625,7 @@ const TIPOS_POR_DEGRAU = {
 };
 
 const NOME_TIPO = {
+  ideiaDoMol: "A ideia do mol",
   atomosNaFormula: "Contagem de átomos na fórmula",
   massaMolarSimples: "Cálculo de massa molar",
   molParaParticulas: "Mol para entidades",
@@ -506,6 +652,10 @@ function gerarExercicio(degrau, cfg, tipoAnterior) {
   }
   const tipo = sortear(tipos);
   const q = GERADORES[tipo](cfg || { volumeMolar: 22.4 });
+  if (q.formato === "escolha") {
+    q.enunciadoTexto = q.enunciado.replace(/<[^>]*>/g, "");
+    return q;
+  }
   q.enunciadoTexto = q.enunciado.replace(/<[^>]*>/g, "");
 
   // Alguns sorteios fazem um erro previsto cair exatamente sobre a resposta
@@ -536,6 +686,21 @@ function proximo(a, b) {
 
 /* Devolve o veredito e, quando possível, o nome do engano cometido. */
 function corrigir(exercicio, respostaBruta) {
+  if (exercicio.formato === "escolha") {
+    const indice = Number(respostaBruta);
+    const escolhida = exercicio.opcoes[indice];
+    if (!escolhida) {
+      return { situacao: "invalido", mensagem: "Escolha uma das alternativas." };
+    }
+    if (escolhida.correta) {
+      return { situacao: "certo", mensagem: "Isso mesmo." };
+    }
+    return {
+      situacao: "diagnosticado", erroReconhecido: true,
+      mensagem: escolhida.diagnostico || "Não é essa. Releia o enunciado com calma.",
+    };
+  }
+
   const valor = lerNumero(respostaBruta);
 
   if (!isFinite(valor)) {
