@@ -14,7 +14,8 @@
     entradaBruta: "4,00",
     elementoAberto: null,
     telaAtual: "tela-mol",
-    mol: { pacote: 5, comparacao: 0, elemento: "C", copoAgua: "180" },
+    mol: { pacote: 5, comparacao: 0, elemento: "C", copoAgua: "180",
+           rodada: null, indiceRodada: 0, acertosRodada: 0, respondidaRodada: false, escolhaRodada: null },
     equacao: "CH4 + O2 -> CO2 + H2O",
     balanceada: null,
     esteq: { unidade: "g", quantidades: {}, purezas: {}, produtoRendimento: 0, massaObtida: "" },
@@ -79,7 +80,7 @@
   /* ---------------- navegação ---------------- */
 
   const TITULOS = {
-    "tela-mol": "O que é o mol",
+    "tela-mol": "Mol: A Chave",
     "tela-massa": "Massa molar",
     "tela-ponte": "Ponte do mol",
     "tela-balancear": "Balancear",
@@ -148,29 +149,41 @@
     const alvo = $("#painel-mol");
     alvo.innerHTML = "";
 
-    /* --- abertura --- */
+    /* --- abertura: a chave --- */
     const capa = criar("div", { className: "cartao capa-mol" });
     capa.innerHTML =
-      `<h1 style="margin:0 0 var(--mb-e3)">O mol</h1>` +
-      `<p class="lede-mol">Você não consegue contar átomos. Ninguém consegue.</p>` +
-      `<p>Um copo de água tem mais moléculas do que existem estrelas em todo o universo observável. ` +
-      `Elas são pequenas demais para ver, numerosas demais para contar e leves demais para pesar uma a uma.</p>` +
-      `<p>E ainda assim, todo dia, alguém precisa saber <em>quantas</em>. Porque é o número de partículas que decide ` +
-      `se a reação acontece, quanto de produto sai e qual dose faz efeito.</p>` +
-      `<p class="fecho-mol">O mol é a solução desse problema. E a solução é mais simples do que parece: ` +
-      `é um pacote.</p>`;
+      `<h1 style="margin:0 0 var(--mb-e3)">Mol: A Chave 🔑</h1>` +
+      `<p class="lede-mol">Pegue aqui <strong>A Chave</strong> 🔑 para destravar sua vida profissional com a Química.</p>` +
+      `<p>Sem o mol você não controla reação, dose, rendimento nem laudo. ` +
+      `Com o mol, a Tabela Periódica vira instrumento de bancada e a balança passa a “contar” partículas.</p>` +
+      `<p>Você não consegue contar átomos. Ninguém consegue. ` +
+      `Eles são pequenos demais, numerosos demais e leves demais. ` +
+      `Ainda assim, todo dia alguém precisa saber <em>quantas</em> — porque o número de partículas decide se a reação ` +
+      `acontece, quanto de produto sai e qual dose faz efeito.</p>` +
+      `<p class="fecho-mol">O mol resolve isso. E a solução é mais simples do que parece: <strong>é um pacote</strong> — como a dúzia.</p>`;
     alvo.appendChild(capa);
 
-    desenharVideo(alvo);
+    /* --- 1. o que a chave destrava: o impacto vem antes do conceito --- */
+    const sDestrava = secao(alvo, "O que essa chave destrava", "POR QUE IMPORTA");
+    sDestrava.appendChild(criar("p", {
+      textContent: "Entender o mol não é só passar de ano. É a ferramenta que abre praticamente tudo que se faz com química na vida profissional.",
+    }));
+    const lista = criar("div", { className: "aplicacoes" });
+    for (const a of aplicacoesProfissionais()) {
+      const item = criar("div", { className: "aplicacao" });
+      item.innerHTML = `<p class="area"><span class="emoji-area" aria-hidden="true">${a.emoji}</span> ${a.area}</p><p>${a.texto}</p>`;
+      lista.appendChild(item);
+    }
+    sDestrava.appendChild(lista);
 
-    /* --- 1. pacotes --- */
-    const s1 = secao(alvo, "Você já usa pacotes a vida inteira", "PRIMEIRA IDEIA");
+    /* --- 2. pacotes --- */
+    const s1 = secao(alvo, "Você já usa pacotes a vida inteira", "A IDEIA CENTRAL");
     s1.appendChild(criar("p", {
       textContent: "Ninguém pede quinhentas folhas de papel na papelaria: pede uma resma. Ninguém compra doze ovos: compra uma dúzia. Sempre que uma coisa é numerosa demais para contar uma a uma, a gente inventa um pacote e passa a contar pacotes.",
     }));
 
     const chips = criar("div", { className: "chips" });
-    PACOTES.forEach((p, i) => {
+    pacotesConhecidos().forEach((p, i) => {
       const b = criar("button", { type: "button", className: "chip" + (i === estado.mol.pacote ? " ativo" : "") });
       b.textContent = p.nome;
       b.addEventListener("click", () => { estado.mol.pacote = i; desenharMol(); });
@@ -178,32 +191,30 @@
     });
     s1.appendChild(chips);
 
-    const p = PACOTES[estado.mol.pacote];
+    const p = pacotesConhecidos()[estado.mol.pacote];
     const cartaoPacote = criar("div", { className: "quadro-pacote" + (p.destaque ? " destaque-pacote" : "") });
     cartaoPacote.innerHTML =
       `<p class="nome-pacote">1 ${p.nome} =</p>` +
-      // pacotes pequenos são contagens exatas: "1 dezena = 10", não "10,0000"
       `<p class="qtd-pacote">${Number.isInteger(p.quantidade) && p.quantidade < 1e6
         ? p.quantidade.toLocaleString("pt-BR")
         : formatarNumero(p.quantidade, 6)}</p>` +
       `<p class="uso-pacote">de ${p.usoPara}</p>` +
       `<p class="porque-pacote">${p.porque}</p>`;
     s1.appendChild(cartaoPacote);
-
     s1.appendChild(criar("p", {
       className: "ajuda",
       textContent: "Repare que nenhum desses números é redondo por acaso. Cada um foi escolhido para resolver um problema prático de quem contava. Com o mol não é diferente — só que o problema era muito maior.",
     }));
 
-    /* --- 2. tamanho do pacote --- */
-    const s2 = secao(alvo, "Quão grande é esse pacote", "SEGUNDA IDEIA");
+    /* --- 3. tamanho do pacote --- */
+    const s2 = secao(alvo, "Quão grande é esse pacote", "PARA SENTIR O TAMANHO");
     s2.appendChild(criar("p", {
       innerHTML: `Um mol são <strong>602 214 076 000 000 000 000 000</strong> unidades. Ler esse número em voz alta não ajuda em nada — ` +
         `ninguém tem intuição para vinte e três zeros. Então escolha um objeto do dia a dia e veja o que acontece quando você junta um mol dele.`,
     }));
 
     const chipsObj = criar("div", { className: "chips" });
-    COMPARACOES.forEach((c, i) => {
+    comparacoesConhecidas().forEach((c, i) => {
       const b = criar("button", { type: "button", className: "chip" + (i === estado.mol.comparacao ? " ativo" : "") });
       b.textContent = `${c.emoji} ${c.nome}`;
       b.addEventListener("click", () => { estado.mol.comparacao = i; desenharMol(); });
@@ -211,8 +222,8 @@
     });
     s2.appendChild(chipsObj);
 
-    const comp = COMPARACOES[estado.mol.comparacao];
-    const r = comp.calcular(CONSTANTES.AVOGADRO);
+    const comp = comparacoesConhecidas()[estado.mol.comparacao];
+    const r = comp.calcular(constantesFisicas().AVOGADRO);
     const quadro = criar("div", { className: "quadro-comparacao" });
     quadro.innerHTML =
       `<p class="ajuda" style="margin:0 0 6px">Um mol de ${comp.nome} — ${comp.medida.nota} — dá</p>` +
@@ -221,8 +232,8 @@
       `<p class="referencia-comparacao">${r.referencia}</p>`;
     s2.appendChild(quadro);
 
-    /* --- 3. o contraste --- */
-    const s3 = secao(alvo, "Agora o golpe", "TERCEIRA IDEIA");
+    /* --- 4. o contraste --- */
+    const s3 = secao(alvo, "Agora o golpe", "O CONTRASTE");
     const contraste = contrasteDaAgua(analisar("H2O").massaMolar);
     s3.appendChild(criar("p", {
       innerHTML: `Você viu que um mol de <strong>gotas</strong> de água encheria ${contraste.gotas.texto} de todos os oceanos do planeta.`,
@@ -237,7 +248,6 @@
       `<p class="val-contraste destaque-val">${contraste.moleculas.texto}</p>` +
       `<p class="ajuda">uma colher de sopa</p></div>`;
     s3.appendChild(duasColunas);
-
     s3.appendChild(criar("p", {
       innerHTML: `A mesma quantidade. O mesmo pacote. A diferença entre encher parte de um oceano e encher uma colher ` +
         `é exatamente <strong>o tamanho de uma molécula de água</strong>.`,
@@ -247,14 +257,14 @@
       textContent: "É por isso que o mol precisa ser tão grande. Não é exagero de químico: é o tamanho necessário para que um pacote de partículas caiba numa colher e possa ser pesado numa balança comum.",
     }));
 
-    /* --- 4. por que este número --- */
-    const s4 = secao(alvo, "Por que 6,02×10²³ e não um número redondo", "QUARTA IDEIA");
+    /* --- 5. por que este número --- */
+    const s4 = secao(alvo, "Por que 6,02×10²³ e não um número redondo", "PARA QUEM QUER IR MAIS FUNDO");
     s4.appendChild(criar("p", {
       textContent: "Aqui está a parte genial, e é a que quase ninguém conta. O tamanho do pacote não foi escolhido para ser bonito. Foi escolhido para que um número que você lê na tabela periódica sirva para duas coisas ao mesmo tempo.",
     }));
 
     const chipsEl = criar("div", { className: "chips" });
-    for (const sim of ELEMENTOS_VITRINE) {
+    for (const sim of elementosDaVitrine()) {
       const b = criar("button", { type: "button", className: "chip" + (sim === estado.mol.elemento ? " ativo" : "") });
       b.textContent = sim;
       b.addEventListener("click", () => { estado.mol.elemento = sim; desenharMol(); });
@@ -271,9 +281,8 @@
       `<div class="seta-ponte" aria-hidden="true">×&nbsp;6,02×10²³</div>` +
       `<div class="lado-ponte"><p class="rot-ponte">1 MOL de ${el.nome}</p>` +
       `<p class="val-ponte destaque-val">${formatarNumero(el.massaMolar, 5)} g</p>` +
-      `<p class="ajuda">${formatarNumero(CONSTANTES.AVOGADRO, 4)} átomos</p></div>`;
+      `<p class="ajuda">${formatarNumero(constantesFisicas().AVOGADRO, 4)} átomos</p></div>`;
     s4.appendChild(ponte);
-
     s4.appendChild(criar("p", {
       innerHTML: `<strong>É o mesmo número dos dois lados.</strong> A massa de um átomo em unidades de massa atômica e a massa ` +
         `de um mol em gramas dão o mesmo valor. O tamanho do pacote foi calibrado para que isso acontecesse.`,
@@ -286,8 +295,8 @@
       textContent: "Um detalhe honesto: desde 2019 o mol é definido fixando o número de Avogadro em 6,02214076×10²³ exatamente, e não mais pelo carbono-12. A correspondência entre u e g/mol deixou de ser exata por definição, mas continua valendo até a nona casa decimal. Nenhum cálculo de laboratório sente a diferença.",
     }));
 
-    /* --- 5. as reações --- */
-    const s5 = secao(alvo, "Por que isso decide se a reação dá certo", "QUINTA IDEIA");
+    /* --- 6. as reações --- */
+    const s5 = secao(alvo, "Por que isso decide se a reação dá certo", "NA BANCADA");
     s5.appendChild(criar("p", {
       textContent: "As substâncias não reagem em gramas. Elas reagem em partículas, e em proporções de números inteiros: duas moléculas de hidrogênio para cada molécula de oxigênio, nunca uma vírgula sete.",
     }));
@@ -307,27 +316,11 @@
     s5.appendChild(entradaCopo);
     s5.appendChild(criar("div", { id: "saida-receita" }));
 
-    /* --- 6. profissão --- */
-    const s6 = secao(alvo, "O que isso destrava", "POR FIM");
-    s6.appendChild(criar("p", {
-      textContent: "Entender o mol não é passar de ano. É a chave que abre praticamente tudo que se faz com química depois da escola.",
-    }));
-    const lista = criar("div", { className: "aplicacoes" });
-    for (const a of APLICACOES) {
-      const item = criar("div", { className: "aplicacao" });
-      item.innerHTML = `<p class="area"><span class="emoji-area" aria-hidden="true">${a.emoji}</span>${a.area}</p><p>${a.texto}</p>`;
-      lista.appendChild(item);
-    }
-    s6.appendChild(lista);
+    /* --- 7. vídeo --- */
+    desenharVideo(alvo);
 
-    const acoes = criar("div", { className: "acoes" });
-    const irTreino = criar("button", { className: "botao", type: "button", textContent: "Começar o treino" });
-    irTreino.addEventListener("click", () => mostrarTela("tela-treino"));
-    acoes.appendChild(irTreino);
-    const irMassa = criar("button", { className: "botao secundario", type: "button", textContent: "Calcular uma massa molar" });
-    irMassa.addEventListener("click", () => mostrarTela("tela-massa"));
-    acoes.appendChild(irMassa);
-    s6.appendChild(acoes);
+    /* --- 8. degrau 0 --- */
+    desenharTesteRapido(alvo);
 
     atualizarReceita();
   }
@@ -380,8 +373,8 @@
     const v = videoDaAula();
     const cartao = criar("div", { className: "cartao cartao-video" });
     cartao.innerHTML =
-      `<p class="sobretitulo">PREFERE ASSISTIR?</p>` +
-      `<h2 style="margin-top:0">${v.titulo}</h2>` +
+      `<p class="sobretitulo">VÍDEO</p>` +
+      `<h2 style="margin-top:0">Assista a explicação</h2>` +
       `<p style="max-width:62ch">${v.descricao}</p>`;
 
     const moldura = criar("div", { className: "moldura-video" });
@@ -415,10 +408,201 @@
     cartao.appendChild(moldura);
     cartao.appendChild(criar("p", {
       className: "ajuda",
-      textContent: "Vídeo e leitura cobrem o mesmo conteúdo. Assista, leia, ou faça os dois — as partes interativas abaixo funcionam de qualquer jeito.",
+      textContent: "Vídeo e leitura cobrem o mesmo conteúdo. Se preferir começar pelo vídeo, ele está aqui a qualquer momento — as partes interativas acima funcionam de qualquer jeito.",
     }));
     alvo.appendChild(cartao);
   }
+
+
+  /* ---------------- teste rápido do fim da tela ---------------- */
+
+  /* Uma rodada fechada de cinco perguntas, com começo, meio e fim — diferente
+     do treino, que é infinito. As perguntas vêm do mesmo banco do degrau 0 e
+     passam pela mesma correção, e cada acerto conta para o progresso de
+     verdade. Duas listas separadas de perguntas divergiriam com o tempo, e o
+     aluno acabaria vendo respostas diferentes para a mesma dúvida. */
+  function desenharTesteRapido(alvo) {
+    const s = secao(alvo, "Degrau 0 — teste rápido", "TREINO INICIAL");
+    s.appendChild(criar("p", {
+      textContent: "Perguntas bem simples sobre o que você acabou de ver. O objetivo é só confirmar que a ideia do pacote ficou clara. Cada acerto conta no seu progresso.",
+    }));
+    s.appendChild(criar("div", { id: "teste-rapido" }));
+    if (!estado.mol.rodada) iniciarRodada();
+    else desenharRodada();
+  }
+
+  function iniciarRodada() {
+    estado.mol.rodada = rodadaDaIdeia(5);
+    estado.mol.indiceRodada = 0;
+    estado.mol.acertosRodada = 0;
+    estado.mol.respondidaRodada = false;
+    estado.mol.escolhaRodada = null;
+    desenharRodada();
+  }
+
+  function desenharRodada() {
+    const alvo = $("#teste-rapido");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const m = estado.mol;
+    const total = m.rodada.length;
+
+    if (m.indiceRodada >= total) {
+      const acertos = m.acertosRodada;
+      const pct = Math.round((acertos / total) * 100);
+      let titulo, texto;
+      if (pct === 100) {
+        titulo = "Perfeito. Você mandou bem.";
+        texto = `Acertou todas as ${total} perguntas. A ideia do pacote já está clara — pode seguir com confiança.`;
+      } else if (pct >= 60) {
+        titulo = "Muito bom.";
+        texto = `Você acertou ${acertos} de ${total}. Já entendeu o essencial. Vale reler o trecho das que escaparam.`;
+      } else {
+        titulo = "Vale uma segunda passada.";
+        texto = `Você acertou ${acertos} de ${total}. Sem problema: volte à analogia da dúzia lá em cima e tente de novo. Aqui não existe nota.`;
+      }
+
+      const resultado = criar("div", { className: "resultado-rodada" });
+      resultado.innerHTML = `<h3 style="margin-top:0">${titulo}</h3><p>${texto}</p>`;
+      const acoes = criar("div", { className: "acoes" });
+      const denovo = criar("button", { type: "button", className: "botao secundario", textContent: "Tentar novamente" });
+      denovo.addEventListener("click", iniciarRodada);
+      acoes.appendChild(denovo);
+      const irTreino = criar("button", { type: "button", className: "botao", textContent: "Ir para o treino completo" });
+      irTreino.addEventListener("click", () => mostrarTela("tela-treino"));
+      acoes.appendChild(irTreino);
+      resultado.appendChild(acoes);
+      alvo.appendChild(resultado);
+      return;
+    }
+
+    const q = m.rodada[m.indiceRodada];
+
+    const barra = criar("div", { className: "progresso-rodada" });
+    barra.innerHTML =
+      `<span>Pergunta ${m.indiceRodada + 1} de ${total}</span>` +
+      `<span class="trilho-rodada"><span class="preenche-rodada" style="width:${(m.indiceRodada / total) * 100}%"></span></span>`;
+    alvo.appendChild(barra);
+
+    const pergunta = criar("p", { className: "enunciado" });
+    pergunta.innerHTML = q.enunciado;
+    alvo.appendChild(pergunta);
+
+    const opcoes = criar("div", { className: "alternativas" });
+    q.opcoes.forEach((op, i) => {
+      const b = criar("button", { type: "button", className: "alternativa" });
+      b.innerHTML = `<span class="letra" aria-hidden="true">${"ABCDE"[i]}</span><span>${op.texto}</span>`;
+      if (m.respondidaRodada) {
+        b.disabled = true;
+        if (op.correta) b.classList.add("certa");
+        if (i === m.escolhaRodada && !op.correta) b.classList.add("errada");
+      } else {
+        b.addEventListener("click", () => responderRodada(i));
+      }
+      opcoes.appendChild(b);
+    });
+    alvo.appendChild(opcoes);
+
+    if (m.respondidaRodada) {
+      const veredito = corrigir(q, String(m.escolhaRodada));
+      const caixa = criar("div", { className: "veredito " + veredito.situacao });
+      caixa.innerHTML =
+        `<span class="selo">${veredito.situacao === "certo" ? "CERTO" : "QUASE"}</span>` +
+        `<p>${veredito.mensagem}</p>`;
+      alvo.appendChild(caixa);
+
+      alvo.appendChild(criar("div", { className: "resolucao", innerHTML: q.resolucao }));
+
+      const acoes = criar("div", { className: "acoes" });
+      const seguinte = criar("button", {
+        type: "button", className: "botao",
+        textContent: m.indiceRodada + 1 >= total ? "Ver resultado" : "Próxima pergunta",
+      });
+      seguinte.addEventListener("click", () => {
+        m.indiceRodada += 1;
+        m.respondidaRodada = false;
+        m.escolhaRodada = null;
+        desenharRodada();
+      });
+      acoes.appendChild(seguinte);
+      alvo.appendChild(acoes);
+    }
+  }
+
+  function responderRodada(indice) {
+    const m = estado.mol;
+    const q = m.rodada[m.indiceRodada];
+    const veredito = corrigir(q, String(indice));
+    m.escolhaRodada = indice;
+    m.respondidaRodada = true;
+    const acertou = veredito.situacao === "certo";
+    if (acertou) m.acertosRodada += 1;
+    registrarResposta(progresso, q, acertou, false);
+    atualizarResumoLateral();
+    desenharRodada();
+  }
+
+  /* ---------------- onboarding do primeiro acesso ---------------- */
+
+  const CHAVE_ONBOARDING = "molbox.onboarding.v1";
+
+  function jaViuOnboarding() {
+    try { return localStorage.getItem(CHAVE_ONBOARDING) === "1"; }
+    catch (e) { return true; }
+  }
+
+  function marcarOnboardingVisto() {
+    try { localStorage.setItem(CHAVE_ONBOARDING, "1"); } catch (e) { /* segue sem guardar */ }
+  }
+
+  function mostrarOnboarding() {
+    if (document.getElementById("onboarding")) return;
+
+    const overlay = criar("div", { id: "onboarding", className: "onboarding" });
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "onboarding-titulo");
+
+    const painel = criar("div", { className: "onboarding-painel" });
+    painel.innerHTML =
+      `<p class="onboarding-badge">Bem-vindo ao MOLBOX</p>` +
+      `<h2 id="onboarding-titulo">Do átomo ao mol, do mol à bancada</h2>` +
+      `<ol class="onboarding-passos">` +
+      `<li><strong>Comece pela chave.</strong> A tela “Mol: A Chave” mostra por que o mol destrava o trabalho do químico — e usa a analogia da dúzia para fazer o número de Avogadro caber na cabeça.</li>` +
+      `<li><strong>Faça o Degrau 0.</strong> No fim dessa mesma tela há um teste rápido com perguntas bem simples. Serve só para confirmar que a ideia do pacote ficou clara.</li>` +
+      `<li><strong>Depois explore.</strong> Use o menu para abrir massa molar, balanceamento, soluções, titulação e o treino com diagnóstico de erro.</li>` +
+      `</ol>` +
+      `<p class="onboarding-dica">Tudo funciona sem internet. Seu progresso fica só neste aparelho.</p>`;
+
+    const acoes = criar("div", { className: "onboarding-acoes" });
+    const botao = criar("button", { type: "button", className: "botao", textContent: "Pegar a chave →" });
+    botao.addEventListener("click", fecharOnboarding);
+    acoes.appendChild(botao);
+    painel.appendChild(acoes);
+    overlay.appendChild(painel);
+    document.body.appendChild(overlay);
+
+    if (botao.focus) botao.focus();
+
+    const aoTeclar = (ev) => {
+      if (ev.key === "Escape") {
+        fecharOnboarding();
+        document.removeEventListener("keydown", aoTeclar);
+      }
+    };
+    document.addEventListener("keydown", aoTeclar);
+  }
+
+  function fecharOnboarding() {
+    const el = document.getElementById("onboarding");
+    if (!el) return;
+    el.classList.add("saindo");
+    marcarOnboardingVisto();
+    if (el.parentNode) el.parentNode.removeChild(el);
+    // agora sim a gaveta aparece no celular, para o aluno ver por onde navegar
+    if (estreita()) abrirMenu();
+  }
+
 
   /* ---------------- tela: massa molar ---------------- */
 
@@ -2426,9 +2610,10 @@
     }[location.hash];
     if (destino) mostrarTela(destino);
 
-    // no celular a gaveta começa aberta, para deixar claro que a navegação
-    // está ali — mesma escolha do sistema da Reviva
-    if (estreita()) abrirMenu();
+    // no primeiro acesso o onboarding tem a tela toda; a gaveta só abre
+    // depois, para não competir com ele por atenção
+    if (!jaViuOnboarding()) mostrarOnboarding();
+    else if (estreita()) abrirMenu();
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));

@@ -857,3 +857,56 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
   border-color: var(--mb-erro); border-width: 2px; background: var(--mb-erro-bg);
 }
 .alternativa.errada .letra { background: var(--mb-erro); color: #FFFFFF; }
+
+/* ---------- onboarding do primeiro acesso ---------- */
+
+.onboarding {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(10, 20, 40, 0.62);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--mb-e4);
+  overflow-y: auto;
+}
+.onboarding.saindo { opacity: 0; }
+.onboarding-painel {
+  background: var(--mb-superficie); border-radius: var(--mb-raio-card);
+  padding: var(--mb-e5); max-width: 560px; width: 100%;
+  border-top: 4px solid var(--mb-energia);
+  max-height: 90vh; overflow-y: auto;
+}
+.onboarding-badge {
+  margin: 0 0 4px; font-size: 11px; letter-spacing: 0.1em;
+  color: var(--mb-energia); font-weight: 500;
+}
+.onboarding-painel h2 {
+  margin: 0 0 var(--mb-e4);
+  font-family: var(--mb-fonte-marca); font-style: italic; font-weight: 600;
+  font-size: var(--mb-t-titulo-2); color: var(--mb-estrutura);
+}
+.onboarding-passos { margin: 0 0 var(--mb-e4); padding-left: var(--mb-e5); }
+.onboarding-passos li { margin-bottom: var(--mb-e3); line-height: 1.6; }
+.onboarding-dica {
+  margin: 0; font-size: var(--mb-t-legenda); color: var(--mb-texto-2);
+  border-left: 3px solid var(--mb-interacao); padding-left: var(--mb-e3);
+}
+.onboarding-acoes { margin-top: var(--mb-e5); display: flex; justify-content: flex-end; }
+
+/* ---------- teste rápido do fim da tela ---------- */
+
+.progresso-rodada {
+  display: flex; align-items: center; gap: var(--mb-e3);
+  font-size: var(--mb-t-legenda); color: var(--mb-texto-2);
+  margin: var(--mb-e4) 0 var(--mb-e3);
+}
+.trilho-rodada {
+  flex: 1; height: 6px; border-radius: 3px;
+  background: var(--mb-superficie-2); overflow: hidden;
+}
+.preenche-rodada { display: block; height: 6px; background: var(--mb-energia); border-radius: 3px; }
+.resultado-rodada {
+  padding: var(--mb-e4); border-radius: var(--mb-raio-card);
+  background: var(--mb-superficie-2); border-left: 4px solid var(--mb-energia);
+}
+.resultado-rodada h3 { font-size: var(--mb-t-titulo-3); }
+.resultado-rodada p { margin: 0; max-width: none; }
+#teste-rapido .enunciado { margin-top: var(--mb-e3); }

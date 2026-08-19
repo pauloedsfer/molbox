@@ -244,27 +244,32 @@ const PERGUNTAS_DA_IDEIA = [
   },
 ];
 
+/* As alternativas são embaralhadas a cada montagem para que a posição da
+   correta não vire um padrão a decorar. */
+function montarPerguntaDaIdeia(base) {
+  const opcoes = base.opcoes.slice();
+  for (let i = opcoes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [opcoes[i], opcoes[j]] = [opcoes[j], opcoes[i]];
+  }
+  const q = {
+    degrau: 0, tipo: "ideiaDoMol", formato: "escolha", formulas: [],
+    enunciado: base.enunciado,
+    opcoes, unidade: "", resposta: null, sig: 3, erros: [],
+    dica: base.dica,
+    resolucao: base.resolucao,
+  };
+  q.enunciadoTexto = q.enunciado.replace(/<[^>]*>/g, "");
+  return q;
+}
+
 const GERADORES = {
 
 
   /* ----- degrau 0 ----- */
 
   ideiaDoMol(cfg) {
-    const base = sortear(PERGUNTAS_DA_IDEIA);
-    // as alternativas são embaralhadas para que a posição da correta não vire
-    // um padrão a decorar
-    const opcoes = base.opcoes.slice();
-    for (let i = opcoes.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [opcoes[i], opcoes[j]] = [opcoes[j], opcoes[i]];
-    }
-    return {
-      degrau: 0, tipo: "ideiaDoMol", formato: "escolha", formulas: [],
-      enunciado: base.enunciado,
-      opcoes, unidade: "", resposta: null, sig: 3, erros: [],
-      dica: base.dica,
-      resolucao: base.resolucao,
-    };
+    return montarPerguntaDaIdeia(sortear(PERGUNTAS_DA_IDEIA));
   },
 
   /* ----- degrau 1 ----- */
@@ -731,3 +736,20 @@ function corrigir(exercicio, respostaBruta) {
 
   return { situacao: "errado", mensagem: "Não é esse valor. Refaça escrevendo as unidades ao lado de cada número: elas dizem onde a conta saiu do trilho." };
 }
+
+/* Uma rodada fechada de perguntas do degrau 0, sem repetir enunciado.
+   Serve ao teste rápido do fim da tela de abertura, que precisa de um começo,
+   um meio e um fim — diferente do treino, que é infinito. Usa exatamente o
+   mesmo banco e a mesma correção, para que não existam duas versões da
+   verdade que possam divergir com o tempo. */
+function rodadaDaIdeia(quantas = 5) {
+  const total = Math.min(quantas, PERGUNTAS_DA_IDEIA.length);
+  const indices = PERGUNTAS_DA_IDEIA.map((_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices.slice(0, total).map((i) => montarPerguntaDaIdeia(PERGUNTAS_DA_IDEIA[i]));
+}
+
+function quantasPerguntasDaIdeia() { return PERGUNTAS_DA_IDEIA.length; }
