@@ -1200,3 +1200,74 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
 }
 .chip.ativo .faixa-ind { color: var(--mb-texto-2); }
 .nome-ind { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- faixa de atualização ---------- */
+
+.faixa-atualizacao {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: max(var(--mb-e4), env(safe-area-inset-bottom));
+  z-index: 70; display: flex; align-items: center; gap: var(--mb-e3);
+  flex-wrap: wrap; justify-content: center;
+  max-width: min(560px, calc(100vw - 2 * var(--mb-e4)));
+  padding: 12px var(--mb-e4); border-radius: var(--mb-raio-card);
+  background: var(--mb-barra); color: #FFFFFF;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+  font-size: var(--mb-t-apoio);
+}
+.faixa-atualizacao .botao { min-height: 38px; padding: 8px 16px; }
+.fechar-faixa {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  color: rgba(255, 255, 255, 0.78); font: inherit; text-decoration: underline;
+  min-height: 38px; padding: 0 4px;
+}
+.fechar-faixa:hover { color: #FFFFFF; }
+
+/* ---------- rodapé de autoria ---------- */
+
+.sidebar-rodape .autoria {
+  margin: 0 0 4px; font-size: var(--mb-t-legenda);
+  color: rgba(255, 255, 255, 0.82); line-height: 1.45;
+}
+.sidebar-rodape .autoria strong { color: #FFFFFF; font-weight: 500; }
+
+/* ---------- tela Sobre ---------- */
+
+.capa-sobre { border-left: 4px solid var(--mb-energia); }
+.capa-sobre h1 { font-size: var(--mb-t-titulo-1); }
+.capa-sobre p { max-width: 62ch; }
+
+.motivo-sobre {
+  padding: var(--mb-e3) 0;
+  border-top: 1px solid var(--mb-borda);
+}
+.motivo-sobre:first-of-type { border-top: 0; padding-top: 0; }
+.motivo-sobre p { max-width: 62ch; margin: 0; }
+.titulo-motivo {
+  font-weight: 500; color: var(--mb-estrutura);
+  font-size: var(--mb-t-apoio); margin-bottom: 4px !important;
+}
+
+.cartao-autor { border-left: 4px solid var(--mb-interacao); }
+.nome-autor {
+  margin: 0; font-family: var(--mb-fonte-marca); font-style: italic;
+  font-weight: 600; font-size: var(--mb-t-titulo-2); color: var(--mb-estrutura);
+}
+.titulo-autor {
+  margin: 0 0 var(--mb-e3); font-size: var(--mb-t-apoio); color: var(--mb-texto-2);
+}
+.cartao-autor p { max-width: 62ch; }
+.botao-canal {
+  display: inline-flex; align-items: center; gap: 8px;
+  text-decoration: none; margin-top: var(--mb-e2);
+}
+
+.colaborador {
+  padding: var(--mb-e3) var(--mb-e4); margin-top: var(--mb-e3);
+  border-left: 3px solid var(--mb-energia);
+  background: var(--mb-superficie-2);
+  border-radius: 0 var(--mb-raio) var(--mb-raio) 0;
+}
+.colaborador p { margin: 0; max-width: 62ch; }
+.colaborador .quem {
+  font-weight: 500; color: var(--mb-estrutura); margin-bottom: 4px !important;
+}

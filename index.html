@@ -28,6 +28,7 @@
   <nav class="menu" id="menu">
     <p class="grupo">Comece por aqui</p>
     <button type="button" class="item" data-tela="tela-mol" aria-current="page"><span class="glifo" aria-hidden="true">🔑</span><span class="rotulo">Mol: A Chave</span></button>
+    <button type="button" class="item" data-tela="tela-sobre"><span class="glifo" aria-hidden="true">&#9432;</span><span class="rotulo">Sobre</span></button>
     <button type="button" class="item" data-acao="rever-onboarding"><span class="glifo" aria-hidden="true">?</span><span class="rotulo">Como usar</span></button>
     <p class="grupo">Fundamentos</p>
     <button type="button" class="item" data-tela="tela-massa"><span class="glifo" aria-hidden="true">M</span><span class="rotulo">Massa molar</span></button>
@@ -41,14 +42,15 @@
     <button type="button" class="item" data-tela="tela-preparo"><span class="glifo" aria-hidden="true">&#9707;</span><span class="rotulo">Preparo</span></button>
     <button type="button" class="item" data-tela="tela-ph"><span class="glifo" aria-hidden="true">pH</span><span class="rotulo">Ácidos e bases</span></button>
     <button type="button" class="item" data-tela="tela-bancada"><span class="glifo" aria-hidden="true">&#9662;</span><span class="rotulo">Titulação virtual</span></button>
-    <button type="button" class="item" data-tela="tela-titulacao"><span class="glifo" aria-hidden="true">&#8735;</span><span class="rotulo">Titulação</span></button>
+    <button type="button" class="item" data-tela="tela-titulacao"><span class="glifo" aria-hidden="true">&#8735;</span><span class="rotulo">Titulação (Curvas)</span></button>
     <p class="grupo">Prática</p>
     <button type="button" class="item" data-tela="tela-treino"><span class="glifo" aria-hidden="true">&#9998;</span><span class="rotulo">Treino</span></button>
     <button type="button" class="item" data-tela="tela-progresso"><span class="glifo" aria-hidden="true">&#9650;</span><span class="rotulo">Progresso</span></button>
   </nav>
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
-    <p class="versao">SUPER MOLBOX v0.13 &middot; funciona sem internet</p>
+    <p class="autoria">Criado pelo <strong>Prof. Paulo Fernandes</strong><br>Farmacêutico e docente de Química</p>
+    <p class="versao">SUPER MOLBOX v0.14 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -60,6 +62,10 @@
 </header>
 
 <main id="conteudo">
+
+  <section id="tela-sobre" hidden>
+    <div id="painel-sobre"></div>
+  </section>
 
   <section id="tela-mol" hidden>
     <div id="painel-mol"></div>
@@ -186,7 +192,7 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>SUPER MOLBOX v0.13 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>SUPER MOLBOX v0.14 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
 </main>
 
@@ -203,6 +209,7 @@
 <script src="js/acidobase.js"></script>
 <script src="js/bancada.js"></script>
 <script src="js/mol.js"></script>
+<script src="js/sobre.js"></script>
 <script src="js/exercicios.js"></script>
 <script src="js/progresso.js"></script>
 <script src="js/app.js"></script>

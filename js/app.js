@@ -94,7 +94,8 @@
     "tela-preparo": "Preparo",
     "tela-ph": "Ácidos e bases",
     "tela-bancada": "Titulação virtual",
-    "tela-titulacao": "Curvas de titulação",
+    "tela-titulacao": "Titulação (Curvas)",
+    "tela-sobre": "Sobre",
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
     "tela-tabela": "Tabela periódica",
@@ -129,6 +130,7 @@
     if (typeof window.scrollTo === "function") { try { window.scrollTo(0, 0); } catch (e) {} }
     if (estreita()) fecharMenu();
 
+    if (id === "tela-sobre") desenharSobre();
     if (id === "tela-mol") desenharMol();
     if (id === "tela-ponte") desenharPonte();
     if (id === "tela-esteq") desenharEstequiometria();
@@ -141,6 +143,79 @@
     if (id === "tela-progresso") desenharProgresso();
   }
 
+
+
+  /* ---------------- tela: sobre ---------------- */
+
+  function desenharSobre() {
+    const alvo = $("#painel-sobre");
+    alvo.innerHTML = "";
+    const autor = dadosDoAutor();
+
+    const capa = criar("div", { className: "cartao capa-sobre" });
+    capa.innerHTML =
+      `<p class="sobretitulo">SOBRE O APLICATIVO</p>` +
+      `<h1 style="margin:0 0 var(--mb-e3)">SUPER MOLBOX</h1>` +
+      `<p class="lede-mol">Do átomo ao mol, do mol à bancada.</p>` +
+      `<p>Um guia de bolso de Química para quem está aprendendo — e para quem já trabalha ` +
+      `e precisa conferir uma conta antes de pesar.</p>`;
+    alvo.appendChild(capa);
+
+    // --- por que existe ---
+    const porque = criar("div", { className: "cartao" });
+    porque.innerHTML = `<h2 style="margin-top:0">Por que este aplicativo existe</h2>`;
+    for (const m of motivosDoAplicativo()) {
+      const item = criar("div", { className: "motivo-sobre" });
+      item.innerHTML = `<p class="titulo-motivo">${m.titulo}</p><p>${m.texto}</p>`;
+      porque.appendChild(item);
+    }
+    alvo.appendChild(porque);
+
+    // --- o autor ---
+    const quem = criar("div", { className: "cartao cartao-autor" });
+    quem.innerHTML =
+      `<h2 style="margin-top:0">Quem faz</h2>` +
+      `<p class="nome-autor">${autor.nome}</p>` +
+      `<p class="titulo-autor">${autor.titulo}</p>` +
+      autor.apresentacao.map((p) => `<p>${p}</p>`).join("");
+
+    const canal = criar("a", {
+      className: "botao botao-canal", href: autor.canal.url,
+      target: "_blank", rel: "noopener noreferrer",
+    });
+    canal.innerHTML = `<span aria-hidden="true">▶</span> ${autor.canal.rotulo}`;
+    quem.appendChild(canal);
+    alvo.appendChild(quem);
+
+    // --- colaboração ---
+    const juntos = criar("div", { className: "cartao" });
+    juntos.innerHTML = `<h2 style="margin-top:0">Feito a várias mãos</h2>` +
+      `<p>Nenhuma tela deste aplicativo saiu pronta da primeira vez. O que existe aqui ` +
+      `passou por revisão de colegas e, sobretudo, por uso real em sala de aula.</p>`;
+    for (const c of colaboradores()) {
+      const item = criar("div", { className: "colaborador" });
+      item.innerHTML = `<p class="quem">${c.quem}</p><p>${c.texto}</p>`;
+      juntos.appendChild(item);
+    }
+    juntos.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "Se você usou o SUPER MOLBOX em aula e tem uma crítica, ela é bem-vinda. " +
+        "As melhores mudanças deste aplicativo vieram de alguém dizendo que alguma coisa não funcionava.",
+    }));
+    alvo.appendChild(juntos);
+
+    // --- ficha técnica ---
+    const ficha = criar("div", { className: "cartao" });
+    ficha.innerHTML =
+      `<h2 style="margin-top:0">Ficha técnica</h2>` +
+      `<p class="ajuda">Aplicativo web instalável, sem cadastro e sem servidor. Todo o progresso ` +
+      `fica guardado apenas neste aparelho, e nenhum dado é enviado para lugar nenhum. ` +
+      `Depois da primeira visita, funciona sem internet.</p>` +
+      `<p class="ajuda">As massas atômicas seguem a tabela IUPAC 2021. As orientações de segurança ` +
+      `vêm de fichas de segurança e manuais de boas práticas, e não substituem a FISPQ do lote ` +
+      `nem as normas do seu laboratório.</p>`;
+    alvo.appendChild(ficha);
+  }
 
   /* ---------------- tela: o que é o mol ---------------- */
 
@@ -3308,9 +3383,93 @@
     if (!jaViuOnboarding()) mostrarOnboarding();
     else if (estreita()) abrirMenu();
 
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
-    }
+    ligarAtualizacao();
+  }
+
+
+  /* ---------------- atualização do aplicativo ----------------
+
+     O aluno relatou precisar recarregar muitas vezes para ver uma versão nova.
+     Eram três causas somadas, e todas precisam de correção:
+
+     1. O service worker servia tudo do cache primeiro. Corrigido em sw.js.
+     2. O próprio arquivo sw.js podia vir do cache HTTP do navegador. Daí o
+        `updateViaCache: "none"` no registro.
+     3. Ninguém procurava atualização depois que a página abria. Agora
+        procuramos ao abrir, ao voltar para o app e de hora em hora.
+
+     E mesmo com tudo isso, a página que já está aberta continua rodando o
+     código antigo até recarregar. Por isso existe a faixa de aviso: em vez de
+     recarregar sozinho no meio de um exercício, o aplicativo pergunta. */
+
+  const INTERVALO_DE_BUSCA = 60 * 60 * 1000;   // uma hora
+
+  function ligarAtualizacao() {
+    if (!("serviceWorker" in navigator)) return;
+
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+        .then((registro) => {
+          const vigiar = () => {
+            const novo = registro.installing || registro.waiting;
+            if (!novo) return;
+            if (registro.waiting && navigator.serviceWorker.controller) {
+              mostrarAtualizacao(registro);
+              return;
+            }
+            novo.addEventListener("statechange", () => {
+              // "installed" com controlador ativo significa: já existia uma
+              // versão rodando, e chegou outra. Primeira visita não avisa nada.
+              if (novo.state === "installed" && navigator.serviceWorker.controller) {
+                mostrarAtualizacao(registro);
+              }
+            });
+          };
+
+          vigiar();
+          registro.addEventListener("updatefound", vigiar);
+
+          const procurar = () => registro.update().catch(() => {});
+          setInterval(procurar, INTERVALO_DE_BUSCA);
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") procurar();
+          });
+        })
+        .catch(() => { /* sem service worker o app funciona igual, só sem offline */ });
+    });
+
+    let recarregando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      // a trava evita o laço de recarregamento clássico quando o controlador
+      // troca mais de uma vez
+      if (recarregando) return;
+      recarregando = true;
+      window.location.reload();
+    });
+  }
+
+  function mostrarAtualizacao(registro) {
+    if (document.getElementById("faixa-atualizacao")) return;
+
+    const faixa = criar("div", { id: "faixa-atualizacao", className: "faixa-atualizacao" });
+    faixa.setAttribute("role", "status");
+    faixa.innerHTML = `<span>Uma versão nova do SUPER MOLBOX está pronta.</span>`;
+
+    const atualizar = criar("button", { type: "button", className: "botao", textContent: "Atualizar agora" });
+    atualizar.addEventListener("click", () => {
+      atualizar.disabled = true;
+      atualizar.textContent = "Atualizando…";
+      if (registro.waiting) registro.waiting.postMessage("assumir-agora");
+      else window.location.reload();
+    });
+    faixa.appendChild(atualizar);
+
+    const depois = criar("button", { type: "button", className: "fechar-faixa", textContent: "Agora não" });
+    depois.setAttribute("aria-label", "Adiar a atualização");
+    depois.addEventListener("click", () => { if (faixa.parentNode) faixa.parentNode.removeChild(faixa); });
+    faixa.appendChild(depois);
+
+    document.body.appendChild(faixa);
   }
 
   document.addEventListener("DOMContentLoaded", iniciar);
