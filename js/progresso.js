@@ -85,6 +85,49 @@ function registrarDia(p) {
   return p;
 }
 
+/* ---------------- rendimento decrescente por degrau ----------------
+
+   Na primeira aula em sala, vários alunos descobriram que dava para acumular
+   XP repetindo o degrau 0, que é o mais fácil. É o comportamento esperado de
+   qualquer jogador competente: se a regra premia repetição, repetir é jogar
+   bem. O erro estava na regra, não no aluno.
+
+   A correção é rendimento decrescente. Os primeiros acertos de um degrau
+   valem cheio, porque é ali que se aprende. Depois disso o XP cai até um piso
+   simbólico: continuar praticando nunca é punido, mas deixa de ser o caminho
+   mais curto para subir de nível. O caminho curto passa a ser o degrau
+   seguinte — que é exatamente para onde queremos o aluno.
+
+   Não zeramos o ganho. Zerar transformaria a prática extra em perda de tempo
+   declarada, e há aluno que precisa mesmo repetir o degrau 1 vinte vezes.
+*/
+const ACERTOS_COM_VALOR_CHEIO = 5;   // até aqui, XP integral: é a fase de aprender
+const ACERTOS_ATE_O_PISO = 20;       // daqui em diante, só o piso
+const PISO_DE_GANHO = 0.2;           // 20% do valor, para nunca chegar a zero
+
+function fatorDeSaturacao(acertosNoDegrau) {
+  // `acertosNoDegrau` ainda não inclui o acerto que está sendo registrado
+  const jaFeitos = acertosNoDegrau - 1;
+  if (jaFeitos < ACERTOS_COM_VALOR_CHEIO) return 1;
+  if (jaFeitos >= ACERTOS_ATE_O_PISO) return PISO_DE_GANHO;
+  const percorrido = (jaFeitos - ACERTOS_COM_VALOR_CHEIO) / (ACERTOS_ATE_O_PISO - ACERTOS_COM_VALOR_CHEIO);
+  return 1 - percorrido * (1 - PISO_DE_GANHO);
+}
+
+/* Quanto o aluno ainda ganha por acerto neste degrau, para a interface poder
+   avisar antes que ele descubra sozinho e se sinta enganado. */
+function rendimentoDoDegrau(p, degrau) {
+  const acertos = p.porDegrau[degrau] ? p.porDegrau[degrau].acertos : 0;
+  const fator = fatorDeSaturacao(acertos + 1);
+  return {
+    fator,
+    saturado: fator <= PISO_DE_GANHO + 1e-9,
+    caindo: fator < 1,
+    acertos,
+    restamCheios: Math.max(0, ACERTOS_COM_VALOR_CHEIO - acertos),
+  };
+}
+
 function nivel(xp) {
   // cada nível custa um pouco mais que o anterior
   return Math.floor((-1 + Math.sqrt(1 + xp / 12.5)) / 2) + 1;
@@ -114,7 +157,10 @@ function registrarResposta(p, exercicio, acertou, usouDica) {
     p.melhorSequencia = Math.max(p.melhorSequencia, p.sequencia);
     if (!usouDica) p.acertosSemDica += 1;
 
-    ganho = 10 + (usouDica ? 0 : 5) + Math.min(10, Math.floor(p.sequencia / 3) * 2);
+    ganho = Math.round(
+      (10 + (usouDica ? 0 : 5) + Math.min(10, Math.floor(p.sequencia / 3) * 2))
+      * fatorDeSaturacao(p.porDegrau[d].acertos)
+    );
     p.xp += ganho;
   } else {
     p.porDegrau[d].erros += 1;

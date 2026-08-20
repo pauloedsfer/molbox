@@ -216,11 +216,11 @@ function videoDaAula() { return VIDEO; }
    compreensão, e uma barra que enche sozinha não recompensa nada.
 */
 const DENTES_DA_CHAVE = [
-  { id: "chegou",   rotulo: "Você pegou a chave",        dica: "Abrir esta tela" },
-  { id: "pacote",   rotulo: "Entendeu o pacote de átomos",         dica: "Comparar a dúzia com o mol" },
-  { id: "primeira", rotulo: "Acertou a primeira",        dica: "Responder a pergunta da dúzia" },
-  { id: "tamanho",  rotulo: "Verificou o tamanho do número",          dica: "Ver um mol de alguma coisa" },
-  { id: "degrau",   rotulo: "Fechou o Degrau 0",         dica: "Concluir o teste rápido" },
+  { id: "chegou",   rotulo: "Você pegou a chave",              dica: "Abrir esta tela" },
+  { id: "pacote",   rotulo: "Entendeu o pacote de átomos",      dica: "Comparar a dúzia com o mol" },
+  { id: "primeira", rotulo: "Acertou a primeira",               dica: "Responder a pergunta da dúzia" },
+  { id: "tamanho",  rotulo: "Verificou o tamanho do número",    dica: "Ver um mol de alguma coisa" },
+  { id: "degrau",   rotulo: "Fechou o Degrau 0",                dica: "Concluir o teste rápido" },
 ];
 
 function dentesDaChave() { return DENTES_DA_CHAVE; }

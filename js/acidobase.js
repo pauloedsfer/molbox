@@ -205,6 +205,22 @@ function volumeParaPH(cfg, pHAlvo, vMaximo) {
 
 /* ---------------- indicadores ---------------- */
 
+/* Cores reais dos indicadores, para que o gráfico mostre o que o aluno vai
+   ver no béquer em vez de uma faixa cinza abstrata. São aproximações visuais
+   da cor da solução diluída, não valores colorimétricos. O incolor recebe um
+   cinza muito claro, porque uma faixa transparente sumiria no fundo. */
+const CORES_DE_INDICADOR = {
+  incolor:   "#F2F4F7",
+  amarelo:   "#F5C518",
+  vermelho:  "#D93025",
+  azul:      "#1A73C8",
+  rosa:      "#E0559B",
+  laranja:   "#EE7A21",
+  verde:     "#2E9E4F",
+};
+
+function corDeIndicador(nome) { return CORES_DE_INDICADOR[nome] || "#C7CDD6"; }
+
 const INDICADORES = [
   { nome: "Alaranjado de metila",   inicio: 3.1,  fim: 4.4,  corAcida: "vermelho",  corBasica: "amarelo" },
   { nome: "Verde de bromocresol",   inicio: 3.8,  fim: 5.4,  corAcida: "amarelo",   corBasica: "azul" },
@@ -285,3 +301,6 @@ const BASES = [
   { formula: "C5H5N",   nome: "piridina",               forte: false, Kb: 1.7e-9 },
   { formula: "N2H4",    nome: "hidrazina",              forte: false, Kb: 1.3e-6 },
 ];
+
+function indicadoresConhecidos() { return INDICADORES; }
+function coresDeIndicador() { return CORES_DE_INDICADOR; }

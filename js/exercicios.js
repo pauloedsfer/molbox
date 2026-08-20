@@ -773,3 +773,11 @@ function perguntaDaIdeiaPorId(id) {
   const base = PERGUNTAS_DA_IDEIA.filter((p) => p.id === id)[0];
   return base ? montarPerguntaDaIdeia(base) : null;
 }
+
+/* Busca o degrau pelo número, não pela posição no vetor. Desde que o degrau 0
+   passou a existir, posição e número deixaram de coincidir — e a interface
+   chegou a anunciar "Degrau 1 liberado: A ideia", que é justamente o degrau de
+   onde o aluno estava saindo. */
+function degrauPorNumero(n) {
+  return DEGRAUS.filter((d) => d.n === n)[0] || null;
+}

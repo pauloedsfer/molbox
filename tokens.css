@@ -27,6 +27,9 @@
 
   /* ---- papeis semanticos ---- */
   --mb-estrutura:    #164194;  /* 9.5:1  — titulos, cabecalho, marca */
+  /* Fundo da barra superior. Token próprio porque no modo escuro a cor de
+     estrutura fica clara, e texto branco sobre ela seria ilegível. */
+  --mb-barra:        #164194;  /* branco sobre este fundo: 9.5:1 */
   --mb-interacao:    #0B5E8C;  /* 7.0:1  — links e botoes (azul claro escurecido) */
   --mb-interacao-bg: #E6F1FB;
   --mb-energia:      #C43C0E;  /* 5.3:1  — texto/icone laranja legivel */
@@ -77,6 +80,7 @@
     --mb-texto-inv:    #0B1220;
 
     --mb-estrutura:    #6FC5F0;  /* 9.7:1  */
+    --mb-barra:        #0D1729;  /* branco sobre este fundo: 16:1 */
     --mb-interacao:    #6FC5F0;
     --mb-interacao-bg: #12283C;
     --mb-energia:      #FF7A45;  /* 7.2:1  */

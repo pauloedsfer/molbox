@@ -40,6 +40,7 @@
     <button type="button" class="item" data-tela="tela-solucoes"><span class="glifo" aria-hidden="true">&#8776;</span><span class="rotulo">Concentração</span></button>
     <button type="button" class="item" data-tela="tela-preparo"><span class="glifo" aria-hidden="true">&#9707;</span><span class="rotulo">Preparo</span></button>
     <button type="button" class="item" data-tela="tela-ph"><span class="glifo" aria-hidden="true">pH</span><span class="rotulo">Ácidos e bases</span></button>
+    <button type="button" class="item" data-tela="tela-bancada"><span class="glifo" aria-hidden="true">&#9662;</span><span class="rotulo">Titulação virtual</span></button>
     <button type="button" class="item" data-tela="tela-titulacao"><span class="glifo" aria-hidden="true">&#8735;</span><span class="rotulo">Titulação</span></button>
     <p class="grupo">Prática</p>
     <button type="button" class="item" data-tela="tela-treino"><span class="glifo" aria-hidden="true">&#9998;</span><span class="rotulo">Treino</span></button>
@@ -47,7 +48,7 @@
   </nav>
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
-    <p class="versao">MOLBOX v0.10 &middot; funciona sem internet</p>
+    <p class="versao">MOLBOX v0.11 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -142,6 +143,10 @@
     <div id="painel-ph"></div>
   </section>
 
+  <section id="tela-bancada" hidden>
+    <div id="painel-bancada"></div>
+  </section>
+
   <section id="tela-titulacao" hidden>
     <h1>Titulação</h1>
     <p class="intro">A curva inteira ponto a ponto, o salto no ponto de equivalência, e qual indicador serve — com o erro que cada um introduz.</p>
@@ -181,7 +186,7 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>MOLBOX v0.10 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>MOLBOX v0.11 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
 </main>
 
@@ -196,6 +201,7 @@
 <script src="js/preparo.js"></script>
 <script src="js/seguranca.js"></script>
 <script src="js/acidobase.js"></script>
+<script src="js/bancada.js"></script>
 <script src="js/mol.js"></script>
 <script src="js/exercicios.js"></script>
 <script src="js/progresso.js"></script>

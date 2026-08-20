@@ -14,6 +14,7 @@
     entradaBruta: "4,00",
     elementoAberto: null,
     telaAtual: "tela-mol",
+    bancada: null,
     mol: { pacote: 5, comparacao: 0, elemento: "C", copoAgua: "180",
            dentes: [], primeiraResposta: null, tecnicaAberta: false,
            rodada: null, indiceRodada: 0, acertosRodada: 0, respondidaRodada: false, escolhaRodada: null },
@@ -91,6 +92,7 @@
     "tela-solucoes": "Concentração",
     "tela-preparo": "Preparo",
     "tela-ph": "Ácidos e bases",
+    "tela-bancada": "Titulação virtual",
     "tela-titulacao": "Titulação",
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
@@ -132,6 +134,7 @@
     if (id === "tela-solucoes") desenharSolucoes();
     if (id === "tela-preparo") desenharPreparo();
     if (id === "tela-ph") desenharAcidoBase();
+    if (id === "tela-bancada") desenharBancada();
     if (id === "tela-titulacao") desenharTitulacao();
     if (id === "tela-treino") entrarNoTreino();
     if (id === "tela-progresso") desenharProgresso();
@@ -675,9 +678,69 @@
     m.respondidaRodada = true;
     const acertou = veredito.situacao === "certo";
     if (acertou) m.acertosRodada += 1;
-    registrarResposta(progresso, q, acertou, false);
+    const efeito = registrarResposta(progresso, q, acertou, false);
     atualizarResumoLateral();
     desenharRodada();
+    if (efeito.subiuDegrau) mostrarDesbloqueio(efeito.subiuDegrau);
+  }
+
+
+  /* ---------------- aviso de degrau desbloqueado ----------------
+
+     Na primeira aula em sala, uma aluna apontou que o desbloqueio passava
+     despercebido: a mensagem era uma linha dentro da caixa de correção, no
+     meio de outras informações. Sem perceber que havia um degrau novo, vários
+     alunos continuaram repetindo o degrau 0.
+
+     Este aviso ocupa a tela e faz uma pergunta direta, porque é uma decisão
+     que o aluno precisa tomar, não um recado que ele precisa ler. */
+  function mostrarDesbloqueio(numero) {
+    const d = degrauPorNumero(numero);
+    if (!d || document.getElementById("desbloqueio")) return;
+
+    const overlay = criar("div", { id: "desbloqueio", className: "onboarding desbloqueio" });
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "desbloqueio-titulo");
+
+    const painel = criar("div", { className: "onboarding-painel painel-desbloqueio" });
+    painel.innerHTML =
+      `<p class="selo-desbloqueio">DEGRAU ${numero} DESBLOQUEADO</p>` +
+      `<h2 id="desbloqueio-titulo">${d.nome}</h2>` +
+      `<p class="desafio-desbloqueio">Você será desafiado em <strong>${d.resumo}</strong>.</p>` +
+      `<p class="ajuda">Você pode continuar treinando aqui quando quiser — mas os acertos ` +
+      `repetidos num degrau que você já domina valem cada vez menos XP. O degrau novo vale cheio.</p>`;
+
+    const acoes = criar("div", { className: "onboarding-acoes" });
+    const depois = criar("button", { type: "button", className: "botao secundario", textContent: "Agora não" });
+    depois.addEventListener("click", fecharDesbloqueio);
+    acoes.appendChild(depois);
+
+    const aceitar = criar("button", { type: "button", className: "botao", textContent: "Aceitar o desafio →" });
+    aceitar.addEventListener("click", () => {
+      fecharDesbloqueio();
+      estado.degrau = numero;
+      estado.tipoAnterior = null;
+      mostrarTela("tela-treino");
+      desenharDegraus();
+      proximoExercicio();
+    });
+    acoes.appendChild(aceitar);
+
+    painel.appendChild(acoes);
+    overlay.appendChild(painel);
+    document.body.appendChild(overlay);
+    if (aceitar.focus) aceitar.focus();
+
+    const aoTeclar = (ev) => {
+      if (ev.key === "Escape") { fecharDesbloqueio(); document.removeEventListener("keydown", aoTeclar); }
+    };
+    document.addEventListener("keydown", aoTeclar);
+  }
+
+  function fecharDesbloqueio() {
+    const el = document.getElementById("desbloqueio");
+    if (el && el.parentNode) el.parentNode.removeChild(el);
   }
 
   /* ---------------- onboarding do primeiro acesso ---------------- */
@@ -1856,6 +1919,245 @@
     alvo.appendChild(cartao);
   }
 
+
+  /* Escreve uma equação em texto simples com índices e seta corretos. */
+  function formatarEquacaoTexto(texto) {
+    return texto.split(/(\s+→\s+|\s\+\s)/).map((parte) => {
+      if (/→/.test(parte)) return ` <span class="op seta">→</span> `;
+      if (/^\s\+\s$/.test(parte)) return ` <span class="op">+</span> `;
+      const m = parte.trim().match(/^(\d+)\s+(.*)$/);
+      if (m) return `<span class="termo-eq"><b class="coef">${m[1]}</b> ${formatarFormula(m[2])}</span>`;
+      return `<span class="termo-eq">${formatarFormula(parte.trim())}</span>`;
+    }).join("");
+  }
+
+  /* ---------------- tela: titulação virtual ----------------
+
+     A bureta e o béquer ficam sempre visíveis. Cada clique deixa cair uma
+     gota, e vinte gotas fazem um mililitro — a convenção de bancada que
+     explica por que titular exige paciência. Segurando o botão, o fluxo é
+     contínuo a 1 mL/s, que é o que se faz longe do ponto final.
+
+     O pHmetro vem desligado de propósito. Numa titulação de verdade o aluno
+     não vê o pH: ele vê a cor, e só a cor. Mostrar o número o tempo todo
+     transformaria o exercício em "espere chegar a 8,2", que é justamente o
+     raciocínio que a titulação não ensina. Quem quiser conferir, liga. */
+
+  const CONFIG_BANCADA_PADRAO = {
+    parId: "hcl-naoh", indicador: "Fenolftaleína",
+    cAnalito: "0,1", vAnalito: "25", cTitulante: "0,1",
+    phmetro: false, avaliacao: null,
+  };
+
+  function estadoBancada() {
+    if (!estado.bancada) {
+      estado.bancada = Object.assign({}, CONFIG_BANCADA_PADRAO);
+      reiniciarBancada();
+    }
+    return estado.bancada;
+  }
+
+  function reiniciarBancada() {
+    const st = estado.bancada;
+    st.avaliacao = null;
+    st.motor = novaBancada({
+      parId: st.parId, indicador: st.indicador,
+      cAnalito: lerNumero(st.cAnalito) || 0.1,
+      vAnalito: lerNumero(st.vAnalito) || 25,
+      cTitulante: lerNumero(st.cTitulante) || 0.1,
+      volumeBureta: 50,
+    });
+  }
+
+  function desenharBancada() {
+    const st = estadoBancada();
+    const alvo = $("#painel-bancada");
+    alvo.innerHTML = "";
+
+    const par = parDeTitulacao(st.parId);
+
+    /* --- escolhas --- */
+    const escolhas = criar("div", { className: "cartao" });
+    escolhas.innerHTML = `<h2 style="margin-top:0">O que você vai titular</h2>`;
+
+    const chipsPar = criar("div", { className: "chips" });
+    for (const p of paresDeTitulacao()) {
+      const b = criar("button", { type: "button", className: "chip" + (p.id === st.parId ? " ativo" : "") });
+      b.innerHTML = formatarFormula(p.analito.formula) + " + " + formatarFormula(p.titulante.formula);
+      b.addEventListener("click", () => {
+        st.parId = p.id;
+        st.indicador = p.indicadorSugerido;
+        reiniciarBancada();
+        desenharBancada();
+      });
+      chipsPar.appendChild(b);
+    }
+    escolhas.appendChild(chipsPar);
+
+    const eq = criar("div", { className: "equacao-bancada" });
+    eq.innerHTML = formatarEquacaoTexto(par.equacao);
+    escolhas.appendChild(eq);
+    escolhas.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: par.proporcao === 1
+        ? "Proporção de 1 para 1: cada mol de ácido consome um mol de base."
+        : `Proporção de 1 para ${par.proporcao}: cada mol de ácido consome ${par.proporcao} mols de base. Esquecer isso divide o resultado por ${par.proporcao}.`,
+    }));
+    escolhas.appendChild(criar("p", { textContent: par.contexto }));
+
+    const chipsInd = criar("div", { className: "chips" });
+    for (const i of indicadoresConhecidos()) {
+      const b = criar("button", { type: "button", className: "chip chip-indicador" + (i.nome === st.indicador ? " ativo" : "") });
+      b.innerHTML = `<i class="ponto-ind" style="background:${corDeIndicador(i.corBasica)}"></i>${i.nome}`;
+      b.addEventListener("click", () => { st.indicador = i.nome; reiniciarBancada(); desenharBancada(); });
+      chipsInd.appendChild(b);
+    }
+    escolhas.appendChild(criar("p", { className: "rot-campo", textContent: "Indicador", style: "margin-bottom:6px" }));
+    escolhas.appendChild(chipsInd);
+
+    const campos = criar("div", { className: "grade-campos" });
+    campoTexto(campos, { id: "banc-ca", rotulo: `Concentração do ${par.analito.formula} (mol/L)`, valor: st.cAnalito,
+      aoMudar: (v) => { st.cAnalito = v; reiniciarBancada(); desenharBancada(); } });
+    campoTexto(campos, { id: "banc-va", rotulo: "Volume no béquer (mL)", valor: st.vAnalito,
+      aoMudar: (v) => { st.vAnalito = v; reiniciarBancada(); desenharBancada(); } });
+    campoTexto(campos, { id: "banc-ct", rotulo: `Concentração do ${par.titulante.formula} na bureta (mol/L)`, valor: st.cTitulante,
+      aoMudar: (v) => { st.cTitulante = v; reiniciarBancada(); desenharBancada(); } });
+    escolhas.appendChild(campos);
+    alvo.appendChild(escolhas);
+
+    /* --- a bancada --- */
+    const bancada = criar("div", { className: "cartao" });
+    const leitura = lerBancada(st.motor);
+
+    const cena = criar("div", { className: "cena-bancada" });
+    cena.innerHTML = svgDaBancada(leitura);
+    bancada.appendChild(cena);
+
+    const painel = criar("div", { className: "painel-bancada" });
+    painel.innerHTML =
+      `<div class="medida"><span class="rot">Na bureta</span>` +
+      `<span class="val">${formatarNumero(leitura.restaNaBureta, 4)} mL</span></div>` +
+      `<div class="medida destaque"><span class="rot">Adicionado</span>` +
+      `<span class="val">${formatarNumero(leitura.volumeAdicionado, 4)} mL</span></div>` +
+      `<div class="medida"><span class="rot">Gotas</span>` +
+      `<span class="val">${leitura.gotas}</span></div>` +
+      (st.phmetro
+        ? `<div class="medida"><span class="rot">pHmetro</span><span class="val">${formatarNumero(leitura.pH, 3)}</span></div>`
+        : "");
+    bancada.appendChild(painel);
+
+    const controles = criar("div", { className: "controles-bancada" });
+
+    const gotejar = criar("button", { type: "button", className: "botao botao-gota", id: "botao-gota" });
+    gotejar.innerHTML = `<span class="icone-gota" aria-hidden="true">💧</span>` +
+      `<span>Gotejar<small>clique: 1 gota · segure: 1 mL/s</small></span>`;
+    if (leitura.buretaVazia) gotejar.disabled = true;
+    ligarGotejamento(gotejar, st);
+    controles.appendChild(gotejar);
+
+    const umML = criar("button", { type: "button", className: "botao secundario", textContent: "+1 mL" });
+    umML.disabled = leitura.buretaVazia;
+    umML.addEventListener("click", () => { aplicarGotas(st, gotasPorML()); });
+    controles.appendChild(umML);
+
+    const parar = criar("button", { type: "button", className: "botao secundario", textContent: "Parei aqui" });
+    parar.disabled = leitura.gotas === 0;
+    parar.addEventListener("click", () => {
+      st.avaliacao = avaliarTitulacao(st.motor);
+      desenharBancada();
+    });
+    controles.appendChild(parar);
+
+    const limpar = criar("button", { type: "button", className: "botao secundario", textContent: "Recomeçar" });
+    limpar.addEventListener("click", () => { reiniciarBancada(); desenharBancada(); });
+    controles.appendChild(limpar);
+    bancada.appendChild(controles);
+
+    const opcao = criar("label", { className: "opcao-phmetro" });
+    const caixa = criar("input", { type: "checkbox", id: "banc-phmetro" });
+    caixa.checked = st.phmetro;
+    caixa.addEventListener("change", () => { st.phmetro = caixa.checked; desenharBancada(); });
+    opcao.appendChild(caixa);
+    opcao.appendChild(criar("span", { textContent: "Ligar o pHmetro (numa titulação real você só enxerga a cor)" }));
+    bancada.appendChild(opcao);
+
+    if (leitura.buretaVazia) {
+      bancada.appendChild(criar("div", {
+        className: "dica-caixa",
+        textContent: "A bureta acabou. Numa bancada de verdade você completaria a bureta e anotaria as duas leituras — aqui, recomece.",
+      }));
+    }
+    alvo.appendChild(bancada);
+
+    if (st.avaliacao) desenharAvaliacao(alvo, st.avaliacao, par);
+  }
+
+  function aplicarGotas(st, quantas) {
+    const efeito = pingar(st.motor, quantas);
+    st.avaliacao = null;
+    desenharBancada();
+    return efeito;
+  }
+
+  /* Clique dá uma gota; segurar abre o fluxo contínuo. O intervalo é sempre
+     limpo no soltar, no sair do botão e no perder o foco, porque um fluxo que
+     continua sozinho enche a bureta inteira e arruína a titulação do aluno. */
+  function ligarGotejamento(botao, st) {
+    let temporizador = null;
+    let escoou = false;
+
+    const abrir = () => {
+      escoou = false;
+      temporizador = setInterval(() => {
+        escoou = true;
+        // 1 mL/s, entregue em fatias de 100 ms para o desenho acompanhar
+        aplicarGotas(st, Math.max(1, Math.round(gotasPorML() * mlPorSegundoSegurando() / 10)));
+      }, 100);
+    };
+    const fechar = () => {
+      if (temporizador === null) return;
+      clearInterval(temporizador);
+      temporizador = null;
+      if (!escoou) aplicarGotas(st, 1);
+    };
+
+    botao.addEventListener("mousedown", abrir);
+    botao.addEventListener("touchstart", (ev) => { ev.preventDefault(); abrir(); });
+    for (const evento of ["mouseup", "mouseleave", "touchend", "touchcancel", "blur"]) {
+      botao.addEventListener(evento, fechar);
+    }
+    // teclado: sem "segurar", cada acionamento é uma gota
+    botao.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); aplicarGotas(st, 1); }
+    });
+  }
+
+  function desenharAvaliacao(alvo, a, par) {
+    const cartao = criar("div", { className: "cartao avaliacao-titulacao " + a.veredito });
+    const titulos = { excelente: "Titulação bem feita", bom: "Aceitável, dá para melhorar",
+                      passou: "Você passou do ponto", faltou: "Você parou antes" };
+    cartao.innerHTML = `<h2 style="margin-top:0">${titulos[a.veredito]}</h2>`;
+
+    const tabela = criar("table");
+    tabela.innerHTML = `<tbody>` +
+      `<tr><td>Volume gasto</td><td class="num">${formatarNumero(a.volumeGasto, 4)} mL</td></tr>` +
+      `<tr><td>Volume de equivalência</td><td class="num">${formatarNumero(a.vEquivalencia, 4)} mL</td></tr>` +
+      `<tr><td>Erro relativo</td><td class="num">${a.erroRelativo >= 0 ? "+" : ""}${formatarNumero(a.erroRelativo, 3)}%</td></tr>` +
+      `<tr><td>Concentração que você acharia</td><td class="num">${formatarNumero(a.cEncontrada, 4)} mol/L</td></tr>` +
+      `<tr><td>Concentração verdadeira</td><td class="num">${formatarNumero(a.cVerdadeira, 4)} mol/L</td></tr>` +
+      `</tbody>`;
+    cartao.appendChild(tabela);
+    cartao.appendChild(criar("p", { textContent: a.comentario }));
+
+    cartao.appendChild(criar("div", {
+      className: "motivo",
+      innerHTML: `A conta que fecha o exercício: <strong>C<sub>ácido</sub> = ` +
+        `(C<sub>base</sub> × V<sub>base</sub>) ÷ (V<sub>ácido</sub> × ${par.proporcao})</strong>. ` +
+        `Foi ela que transformou o volume que você leu na bureta numa concentração.`,
+    }));
+    alvo.appendChild(cartao);
+  }
+
   /* ---------------- tela: ácidos e bases ---------------- */
 
   function desenharAcidoBase() {
@@ -2070,9 +2372,26 @@
 
     const partes = [];
 
+    /* As três zonas do indicador, pintadas com as cores que o aluno vai ver
+       no béquer: abaixo da faixa, a cor ácida; acima, a cor básica; no meio,
+       a faixa de viragem, que fica no cinza neutro de sempre porque ali a cor
+       não é nem uma nem outra — é a mistura que o analista está tentando
+       enxergar. Antes o gráfico era todo cinza, e a curva não dizia nada
+       sobre o que ia acontecer visualmente. */
     if (indicador) {
-      const y1 = py(indicador.fim), y2 = py(indicador.inicio);
-      partes.push(`<rect x="${L}" y="${y1.toFixed(1)}" width="${areaX}" height="${(y2 - y1).toFixed(1)}" class="faixa-indicador"/>`);
+      const yFim = py(indicador.fim), yInicio = py(indicador.inicio);
+      const corA = corDeIndicador(indicador.corAcida);
+      const corB = corDeIndicador(indicador.corBasica);
+
+      // zona ácida: do fundo do gráfico até o início da viragem
+      partes.push(`<rect x="${L}" y="${yInicio.toFixed(1)}" width="${areaX}" ` +
+        `height="${(T + areaY - yInicio).toFixed(1)}" fill="${corA}" class="zona-indicador"/>`);
+      // zona básica: do topo até o fim da viragem
+      partes.push(`<rect x="${L}" y="${T}" width="${areaX}" ` +
+        `height="${(yFim - T).toFixed(1)}" fill="${corB}" class="zona-indicador"/>`);
+      // faixa de viragem, mantida no destaque neutro
+      partes.push(`<rect x="${L}" y="${yFim.toFixed(1)}" width="${areaX}" ` +
+        `height="${(yInicio - yFim).toFixed(1)}" class="faixa-indicador"/>`);
     }
 
     for (let pH = 0; pH <= 14; pH += 2) {
@@ -2128,10 +2447,22 @@
     const grafico = criar("div", { className: "cartao" });
     const quadro = criar("div", { className: "grafico" });
     quadro.innerHTML = desenharCurva(curva, cfg, indicador);
+
     grafico.appendChild(quadro);
+
+    if (indicador) {
+      const legenda = criar("div", { className: "legenda-indicador" });
+      legenda.innerHTML =
+        `<span class="amostra"><i style="background:${corDeIndicador(indicador.corAcida)}"></i>` +
+        `abaixo de pH ${formatarNumero(indicador.inicio, 3)}: ${indicador.corAcida}</span>` +
+        `<span class="amostra"><i class="i-viragem"></i>viragem</span>` +
+        `<span class="amostra"><i style="background:${corDeIndicador(indicador.corBasica)}"></i>` +
+        `acima de pH ${formatarNumero(indicador.fim, 3)}: ${indicador.corBasica}</span>`;
+      grafico.appendChild(legenda);
+    }
     grafico.appendChild(criar("p", {
       className: "ajuda", style: "text-align:center;margin:var(--mb-e2) 0 0",
-      textContent: `${analito.formula} ${formatarNumero(cfg.cAnalito, 3)} mol/L, ${formatarNumero(cfg.vAnalito, 3)} mL, titulado com base forte ${formatarNumero(cfg.cTitulante, 3)} mol/L. Faixa sombreada: viragem da ${indicador.nome.toLowerCase()}.`,
+      textContent: `${analito.formula} ${formatarNumero(cfg.cAnalito, 3)} mol/L, ${formatarNumero(cfg.vAnalito, 3)} mL, titulado com base forte ${formatarNumero(cfg.cTitulante, 3)} mol/L. Faixa central: viragem da ${indicador.nome.toLowerCase()}.`,
     }));
     alvo.appendChild(grafico);
 
@@ -2250,7 +2581,13 @@
         ? `${acertos} acerto${acertos === 1 ? "" : "s"} · ${d.resumo}`
         : `Faltam ${faltam} acerto${faltam === 1 ? "" : "s"} no degrau ${d.n - 1}`;
 
-      b.innerHTML = `<span class="cabeca">${liberado ? "" : "🔒 "}Degrau ${d.n} — ${d.nome}</span><span class="sub">${sub}</span>`;
+      // marca o degrau já saturado, para o aluno não descobrir sozinho que o
+      // XP caiu e se sentir enganado
+      const rendimento = rendimentoDoDegrau(progresso, d.n);
+      const selo = liberado && rendimento.saturado
+        ? `<span class="selo-saturado" title="Você já domina este degrau: os acertos aqui valem XP reduzido">XP reduzido</span>`
+        : "";
+      b.innerHTML = `<span class="cabeca">${liberado ? "" : "🔒 "}Degrau ${d.n} — ${d.nome}${selo}</span><span class="sub">${sub}</span>`;
       b.addEventListener("click", () => {
         if (!liberado) return;
         estado.degrau = d.n;
@@ -2375,6 +2712,22 @@
     }
 
     alvo.appendChild(acoes);
+
+    const rend = rendimentoDoDegrau(progresso, estado.degrau);
+    const ultimo = DEGRAUS[DEGRAUS.length - 1].n;
+    if (rend.saturado && estado.degrau < progresso.desbloqueado) {
+      const nome = degrauPorNumero(estado.degrau + 1);
+      const dica = criar("div", { className: "dica-caixa aviso-saturado" });
+      dica.innerHTML = `Você já domina este degrau, então os acertos aqui rendem pouco XP agora. ` +
+        `Treinar mais nunca é errado — mas se quiser avançar, o <strong>Degrau ${estado.degrau + 1} — ` +
+        `${nome ? nome.nome : ""}</strong> está liberado e vale XP cheio.`;
+      alvo.appendChild(dica);
+    } else if (rend.saturado && estado.degrau === ultimo) {
+      alvo.appendChild(criar("div", {
+        className: "dica-caixa aviso-saturado",
+        textContent: "Você já domina este degrau. Os acertos rendem pouco XP daqui em diante, mas a prática continua valendo: o mapa de dificuldades segue registrando onde você erra.",
+      }));
+    }
 
     if (q.formulas && q.formulas.length) montarConsulta(alvo, q);
     if (q.formato !== "escolha") {
@@ -2555,9 +2908,10 @@
       caixa.appendChild(criar("span", { className: "ganho", textContent: `+${efeito.ganho} XP` }));
     }
     if (efeito.subiuDegrau) {
+      mostrarDesbloqueio(efeito.subiuDegrau);
       caixa.appendChild(criar("p", {
         style: "margin-top:var(--mb-e2);font-weight:500",
-        textContent: `Degrau ${efeito.subiuDegrau} liberado: ${DEGRAUS[efeito.subiuDegrau - 1].nome}.`
+        textContent: `Degrau ${efeito.subiuDegrau} liberado: ${degrauPorNumero(efeito.subiuDegrau).nome}.`
       }));
     }
     for (const m of efeito.medalhasNovas) {
