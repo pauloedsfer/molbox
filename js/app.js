@@ -15,6 +15,7 @@
     elementoAberto: null,
     telaAtual: "tela-mol",
     mol: { pacote: 5, comparacao: 0, elemento: "C", copoAgua: "180",
+           dentes: [], primeiraResposta: null, tecnicaAberta: false,
            rodada: null, indiceRodada: 0, acertosRodada: 0, respondidaRodada: false, escolhaRodada: null },
     equacao: "CH4 + O2 -> CO2 + H2O",
     balanceada: null,
@@ -55,6 +56,7 @@
         telaAtual: estado.telaAtual,
         origem: estado.origem,
         entradaBruta: estado.entradaBruta,
+        chave: estado.mol.dentes,
       }));
     } catch (e) { /* modo privativo: seguir sem guardar */ }
   }
@@ -69,6 +71,7 @@
       if (d.telaAtual) estado.telaAtual = d.telaAtual;
       if (d.volumeMolarId) estado.volumeMolarId = d.volumeMolarId;
       if (d.origem && GRANDEZAS[d.origem]) estado.origem = d.origem;
+      if (Array.isArray(d.chave)) estado.mol.dentes = d.chave;
       if (d.entradaBruta) estado.entradaBruta = d.entradaBruta;
     } catch (e) { /* dado corrompido: começar limpo */ }
   }
@@ -116,7 +119,7 @@
     guardar();
     for (const s of document.querySelectorAll("main > section")) s.hidden = (s.id !== id);
     for (const b of document.querySelectorAll(".menu .item")) {
-      if (b.dataset.tela === id) b.setAttribute("aria-current", "page");
+      if (b.dataset.tela && b.dataset.tela === id) b.setAttribute("aria-current", "page");
       else b.removeAttribute("aria-current");
     }
     $("#tituloPagina").textContent = TITULOS[id] || "MOLBOX";
@@ -163,6 +166,9 @@
       `<p class="fecho-mol">O mol resolve isso. E a solução é mais simples do que parece: <strong>é um pacote</strong> — como a dúzia.</p>`;
     alvo.appendChild(capa);
 
+    ganharDente("chegou");
+    desenharEmblema(alvo);
+
     /* --- 1. o que a chave destrava: o impacto vem antes do conceito --- */
     const sDestrava = secao(alvo, "O que essa chave destrava", "POR QUE IMPORTA");
     sDestrava.appendChild(criar("p", {
@@ -186,7 +192,7 @@
     pacotesConhecidos().forEach((p, i) => {
       const b = criar("button", { type: "button", className: "chip" + (i === estado.mol.pacote ? " ativo" : "") });
       b.textContent = p.nome;
-      b.addEventListener("click", () => { estado.mol.pacote = i; desenharMol(); });
+      b.addEventListener("click", () => { estado.mol.pacote = i; ganharDente("pacote"); desenharMol(); });
       chips.appendChild(b);
     });
     s1.appendChild(chips);
@@ -206,6 +212,8 @@
       textContent: "Repare que nenhum desses números é redondo por acaso. Cada um foi escolhido para resolver um problema prático de quem contava. Com o mol não é diferente — só que o problema era muito maior.",
     }));
 
+    desenharPrimeiraPergunta(s1);
+
     /* --- 3. tamanho do pacote --- */
     const s2 = secao(alvo, "Quão grande é esse pacote", "PARA SENTIR O TAMANHO");
     s2.appendChild(criar("p", {
@@ -217,7 +225,7 @@
     comparacoesConhecidas().forEach((c, i) => {
       const b = criar("button", { type: "button", className: "chip" + (i === estado.mol.comparacao ? " ativo" : "") });
       b.textContent = `${c.emoji} ${c.nome}`;
-      b.addEventListener("click", () => { estado.mol.comparacao = i; desenharMol(); });
+      b.addEventListener("click", () => { estado.mol.comparacao = i; ganharDente("tamanho"); desenharMol(); });
       chipsObj.appendChild(b);
     });
     s2.appendChild(chipsObj);
@@ -258,7 +266,24 @@
     }));
 
     /* --- 5. por que este número --- */
-    const s4 = secao(alvo, "Por que 6,02×10²³ e não um número redondo", "PARA QUEM QUER IR MAIS FUNDO");
+    /* Esta seção vem recolhida de propósito. Ela é a parte mais bonita da
+       história e a mais difícil, e deixá-la aberta alonga a página justamente
+       onde o aluno com dificuldade já está cansado. Recolhida, ela encurta a
+       tela e — mais importante — dá permissão explícita para pular, sem que
+       pular pareça fracasso. Quem quer, abre. */
+    const cartaoTecnico = criar("div", { className: "cartao secao-mol secao-opcional" });
+    cartaoTecnico.appendChild(criar("p", { className: "sobretitulo", textContent: "PARA QUEM QUER IR MAIS FUNDO" }));
+    const s4 = criar("details", { className: "aprofundamento" });
+    if (estado.mol.tecnicaAberta) s4.setAttribute("open", "");
+    s4.addEventListener("toggle", () => { estado.mol.tecnicaAberta = s4.hasAttribute("open"); });
+    const resumoTecnico = criar("summary");
+    resumoTecnico.innerHTML =
+      `<span class="titulo-opcional">Por que 6,02×10²³ e não um número redondo</span>` +
+      `<span class="ajuda-opcional">Opcional. Dá para seguir sem isso e voltar depois.</span>`;
+    s4.appendChild(resumoTecnico);
+    cartaoTecnico.appendChild(s4);
+    alvo.appendChild(cartaoTecnico);
+
     s4.appendChild(criar("p", {
       textContent: "Aqui está a parte genial, e é a que quase ninguém conta. O tamanho do pacote não foi escolhido para ser bonito. Foi escolhido para que um número que você lê na tabela periódica sirva para duas coisas ao mesmo tempo.",
     }));
@@ -294,6 +319,7 @@
       className: "ajuda",
       textContent: "Um detalhe honesto: desde 2019 o mol é definido fixando o número de Avogadro em 6,02214076×10²³ exatamente, e não mais pelo carbono-12. A correspondência entre u e g/mol deixou de ser exata por definição, mas continua valendo até a nona casa decimal. Nenhum cálculo de laboratório sente a diferença.",
     }));
+
 
     /* --- 6. as reações --- */
     const s5 = secao(alvo, "Por que isso decide se a reação dá certo", "NA BANCADA");
@@ -414,6 +440,117 @@
   }
 
 
+
+  /* ---------------- o emblema da chave ---------------- */
+
+  function ganharDente(id) {
+    if (estado.mol.dentes.indexOf(id) >= 0) return false;
+    estado.mol.dentes.push(id);
+    guardar();
+    return true;
+  }
+
+  function desenharEmblema(alvo) {
+    const total = dentesDaChave().length;
+    const tem = estado.mol.dentes.length;
+    const cartao = criar("div", { className: "emblema-chave" });
+
+    const arte = criar("div", { className: "arte-chave" });
+    arte.innerHTML = svgDaChave(estado.mol.dentes);
+    cartao.appendChild(arte);
+
+    const lado = criar("div", { className: "texto-chave" });
+    lado.appendChild(criar("p", {
+      className: "contagem-chave",
+      textContent: tem >= total ? "Chave completa" : `${tem} de ${total} dentes`,
+    }));
+
+    const faltando = dentesDaChave().filter((d) => estado.mol.dentes.indexOf(d.id) < 0);
+    lado.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: faltando.length === 0
+        ? "Você percorreu a tela inteira. A chave está pronta para o treino."
+        : `Falta: ${faltando[0].dica.toLowerCase()}.`,
+    }));
+
+    const lista = criar("ul", { className: "dentes-lista" });
+    for (const d of dentesDaChave()) {
+      const item = criar("li", { className: estado.mol.dentes.indexOf(d.id) >= 0 ? "conquistado" : "" });
+      item.innerHTML = `<span class="marca" aria-hidden="true"></span>${d.rotulo}`;
+      lista.appendChild(item);
+    }
+    lado.appendChild(lista);
+
+    cartao.appendChild(lado);
+    alvo.appendChild(cartao);
+  }
+
+  /* ---------------- a vitória antecipada ---------------- */
+
+  /* Uma única pergunta, logo depois da analogia da dúzia. Existe porque o
+     teste rápido fica no fim da tela: quem desiste no meio nunca chega nele,
+     ou seja, o único momento de "eu consegui" estava guardado justamente para
+     quem não precisava dele. Aqui a primeira sensação de competência chega em
+     dois minutos de leitura.
+
+     A pergunta é fixa, e não sorteada: ela cobra exatamente o que o aluno
+     acabou de ler. Sortear aqui poderia cair numa pergunta sobre um trecho
+     que ainda está lá embaixo. */
+  function desenharPrimeiraPergunta(alvo) {
+    const caixa = criar("div", { className: "primeira-pergunta" });
+    caixa.appendChild(criar("p", { className: "rot-primeira", textContent: "RESPONDA DE CABEÇA" }));
+
+    const q = perguntaDaIdeiaPorId("tamanho-do-pacote");
+    const pergunta = criar("p", { className: "enunciado" });
+    pergunta.innerHTML = q.enunciado;
+    caixa.appendChild(pergunta);
+
+    const respondida = estado.mol.primeiraResposta !== null;
+    const opcoes = criar("div", { className: "alternativas" });
+    q.opcoes.forEach((op, i) => {
+      const b = criar("button", { type: "button", className: "alternativa" });
+      b.innerHTML = `<span class="letra" aria-hidden="true">${"ABCDE"[i]}</span><span>${op.texto}</span>`;
+      if (respondida) {
+        b.disabled = true;
+        if (op.correta) b.classList.add("certa");
+        if (op.texto === estado.mol.primeiraResposta && !op.correta) b.classList.add("errada");
+      } else {
+        b.addEventListener("click", () => {
+          // guarda o texto, não o índice: as alternativas são embaralhadas a
+          // cada montagem, e o índice não sobreviveria ao redesenho
+          estado.mol.primeiraResposta = op.texto;
+          const acertou = !!op.correta;
+          registrarResposta(progresso, q, acertou, false);
+          atualizarResumoLateral();
+          if (acertou) ganharDente("primeira");
+          desenharMol();
+        });
+      }
+      opcoes.appendChild(b);
+    });
+    caixa.appendChild(opcoes);
+
+    if (respondida) {
+      const escolhida = q.opcoes.filter((o) => o.texto === estado.mol.primeiraResposta)[0];
+      const acertou = escolhida && escolhida.correta;
+      const veredito = criar("div", { className: "veredito " + (acertou ? "certo" : "diagnosticado") });
+      veredito.innerHTML =
+        `<span class="selo">${acertou ? "CERTO" : "QUASE"}</span>` +
+        `<p>${acertou
+          ? "Isso mesmo. Você acabou de usar a ideia central do MOLBOX — e ela já vale como acerto no seu progresso."
+          : (escolhida && escolhida.diagnostico) || "Releia o quadro acima com calma."}</p>`;
+      caixa.appendChild(veredito);
+
+      if (!acertou) {
+        const tentar = criar("button", { type: "button", className: "botao secundario", textContent: "Tentar de novo" });
+        tentar.addEventListener("click", () => { estado.mol.primeiraResposta = null; desenharMol(); });
+        caixa.appendChild(criar("div", { className: "acoes" })).appendChild(tentar);
+      }
+    }
+
+    alvo.appendChild(caixa);
+  }
+
   /* ---------------- teste rápido do fim da tela ---------------- */
 
   /* Uma rodada fechada de cinco perguntas, com começo, meio e fim — diferente
@@ -448,6 +585,7 @@
     const total = m.rodada.length;
 
     if (m.indiceRodada >= total) {
+      ganharDente("degrau");
       const acertos = m.acertosRodada;
       const pct = Math.round((acertos / total) * 100);
       let titulo, texto;
@@ -559,6 +697,7 @@
     if (document.getElementById("onboarding")) return;
 
     const overlay = criar("div", { id: "onboarding", className: "onboarding" });
+    if (!jaViuOnboarding()) overlay.dataset.primeiroAcesso = "1";
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-labelledby", "onboarding-titulo");
@@ -597,10 +736,12 @@
     const el = document.getElementById("onboarding");
     if (!el) return;
     el.classList.add("saindo");
+    const eraPrimeiroAcesso = el.dataset.primeiroAcesso === "1";
     marcarOnboardingVisto();
     if (el.parentNode) el.parentNode.removeChild(el);
-    // agora sim a gaveta aparece no celular, para o aluno ver por onde navegar
-    if (estreita()) abrirMenu();
+    // no primeiro acesso a gaveta aparece em seguida, para o aluno ver por onde
+    // navegar; quando ele reabre pelo menu, não faz sentido reabrir a gaveta
+    if (eraPrimeiroAcesso && estreita()) abrirMenu();
   }
 
 
@@ -1625,6 +1766,8 @@
     resumo.appendChild(ficha);
     alvo.appendChild(resumo);
 
+    desenharSeguranca(alvo, r, analise);
+
     const roteiro = criar("div", { className: "cartao" });
     roteiro.innerHTML = `<h2 style="margin-top:0">A ordem das operações</h2>`;
     const lista = criar("ol", { className: "roteiro" });
@@ -1642,6 +1785,75 @@
       listaDeAvisos(cuidados, r.avisos);
       alvo.appendChild(cuidados);
     }
+  }
+
+
+  /* A segurança entra antes do roteiro, e não como rodapé: um alerta lido
+     depois de o aluno já ter pesado e aberto o frasco não serviu para nada. */
+  function desenharSeguranca(alvo, r, analise) {
+    const s = avaliarSeguranca({
+      formula: analise.normalizada,
+      ehLiquido: r.ehLiquido,
+      massaReagente: r.massaReagente,
+      volumeReagenteML: r.volumeReagenteML,
+      volumeFinalML: r.volumeFinalML,
+      concentracaoMolar: r.concentracaoMolar,
+      concentracaoDoFrasco: r.concentracaoDoFrasco,
+    });
+
+    const cartao = criar("div", { className: "cartao cartao-seguranca" });
+    cartao.innerHTML = `<h2 style="margin-top:0">Antes de encostar no frasco</h2>`;
+
+    const faixa = criar("div", { className: "faixa-epi" });
+    const marcas = [];
+    if (s.exigeCapela) marcas.push({ icone: "🌬️", texto: "Capela" });
+    if (s.exigeBanhoDeGelo) marcas.push({ icone: "🧊", texto: "Banho de gelo" });
+    marcas.push({ icone: "🥽", texto: "Óculos" });
+    marcas.push({ icone: "🧤", texto: "Luvas" });
+    marcas.push({ icone: "🥼", texto: "Jaleco" });
+    for (const m of marcas) {
+      const sel = criar("span", { className: "selo-epi" });
+      sel.innerHTML = `<span aria-hidden="true">${m.icone}</span> ${m.texto}`;
+      faixa.appendChild(sel);
+    }
+    cartao.appendChild(faixa);
+
+    cartao.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "Proteção recomendada para este reagente: " + s.epi.join("; ") + ".",
+    }));
+
+    if (!s.temPerfil) {
+      cartao.appendChild(criar("div", {
+        className: "risco info",
+        innerHTML: `<span class="selo-risco">SEM PERFIL CADASTRADO</span>` +
+          `<p>Não tenho perfil de risco específico para ${formatarFormula(analise.normalizada)}. ` +
+          `Isso não significa que ele seja inofensivo: significa que você precisa ler a FISPQ do lote antes de manipular.</p>`,
+      }));
+    }
+
+    for (const a of s.avisos) {
+      const caixa = criar("div", { className: "risco " + a.nivel });
+      caixa.innerHTML = `<span class="selo-risco">${niveisDeRisco()[a.nivel].rotulo}</span>` +
+        `<p class="titulo-risco">${a.titulo}</p><p>${a.texto}</p>`;
+      cartao.appendChild(caixa);
+    }
+
+    const gerais = criar("details", { className: "gerais-seguranca" });
+    gerais.appendChild(criar("summary", { textContent: "Vale para qualquer preparo" }));
+    for (const g of s.gerais) {
+      const item = criar("div", { className: "risco info" });
+      item.innerHTML = `<p class="titulo-risco">${g.titulo}</p><p>${g.texto}</p>`;
+      gerais.appendChild(item);
+    }
+    cartao.appendChild(gerais);
+
+    cartao.appendChild(criar("p", {
+      className: "ajuda",
+      textContent: "Estas informações vêm de fichas de segurança e de manuais de boas práticas, e servem para lembrar do que costuma ser esquecido. Elas não substituem a FISPQ do lote que está na sua prateleira nem as normas do seu laboratório.",
+    }));
+
+    alvo.appendChild(cartao);
   }
 
   /* ---------------- tela: ácidos e bases ---------------- */
@@ -2589,7 +2801,17 @@
     $("#equacao").addEventListener("input", balancearAtual);
     $("#busca").addEventListener("input", (ev) => filtrarTabela(ev.target.value));
     for (const b of document.querySelectorAll(".menu .item")) {
-      b.addEventListener("click", () => mostrarTela(b.dataset.tela));
+      b.addEventListener("click", () => {
+        // "Como usar" reabre as boas-vindas em vez de trocar de tela: serve ao
+        // aluno que voltou depois de semanas e ao professor que vai apresentar
+        // o aplicativo à turma
+        if (b.dataset.acao === "rever-onboarding") {
+          if (estreita()) fecharMenu();
+          mostrarOnboarding();
+          return;
+        }
+        mostrarTela(b.dataset.tela);
+      });
     }
     $("#menuBtn").addEventListener("click", abrirMenu);
     $("#fecharMenu").addEventListener("click", fecharMenu);

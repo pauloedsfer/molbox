@@ -200,3 +200,47 @@ function elementosDaVitrine() { return ELEMENTOS_VITRINE; }
 function aplicacoesProfissionais() { return APLICACOES; }
 
 function videoDaAula() { return VIDEO; }
+
+/* ---------------- os dentes da chave ----------------
+
+   A metáfora da chave só funciona se ela mudar de forma. Aqui ela ganha
+   dentes conforme o aluno avança — recompensa visível, sem porta fechada.
+
+   Deliberadamente NÃO existe cadeado sobre a explicação. Travar conteúdo
+   puniria justamente quem está com dificuldade: quem trava é quem não
+   entendeu, e a resposta do aplicativo seria negar a ele o texto que
+   explica. O que se tranca é prática (os degraus do treino), nunca
+   explicação.
+
+   Cada dente é uma ação concreta, não rolagem de tela. Rolar não é sinal de
+   compreensão, e uma barra que enche sozinha não recompensa nada.
+*/
+const DENTES_DA_CHAVE = [
+  { id: "chegou",   rotulo: "Você pegou a chave",        dica: "Abrir esta tela" },
+  { id: "pacote",   rotulo: "Entendeu o pacote",         dica: "Comparar a dúzia com o mol" },
+  { id: "primeira", rotulo: "Acertou a primeira",        dica: "Responder a pergunta da dúzia" },
+  { id: "tamanho",  rotulo: "Sentiu o tamanho",          dica: "Ver um mol de alguma coisa" },
+  { id: "degrau",   rotulo: "Fechou o Degrau 0",         dica: "Concluir o teste rápido" },
+];
+
+function dentesDaChave() { return DENTES_DA_CHAVE; }
+
+/* Desenha a chave com os dentes já conquistados. O corpo é sempre o mesmo;
+   o que muda é quantos dentes existem. */
+function svgDaChave(conquistados) {
+  const total = DENTES_DA_CHAVE.length;
+  const dentes = DENTES_DA_CHAVE.map((d, i) => {
+    const tem = conquistados.indexOf(d.id) >= 0;
+    const x = 78 + i * 15;
+    return `<rect x="${x}" y="30" width="9" height="${8 + (i % 2) * 6}" rx="2" ` +
+      `class="${tem ? "dente ativo" : "dente"}" />`;
+  }).join("");
+
+  return `<svg viewBox="0 0 160 60" class="chave-svg" role="img" ` +
+    `aria-label="Chave com ${conquistados.length} de ${total} dentes">` +
+    `<circle cx="30" cy="30" r="18" class="anel" />` +
+    `<circle cx="30" cy="30" r="8" class="furo" />` +
+    `<rect x="46" y="26" width="106" height="8" rx="4" class="haste" />` +
+    dentes +
+    `</svg>`;
+}

@@ -133,6 +133,7 @@ function engano(valor, mensagem) { return { valor, mensagem }; }
 
 const PERGUNTAS_DA_IDEIA = [
   {
+    id: "tamanho-do-pacote",
     enunciado: "Uma dúzia é um pacote de 12. Uma resma é um pacote de 500. O <strong>mol</strong> é um pacote de quantas unidades?",
     opcoes: [
       { texto: "6,02×10²³", correta: true },
@@ -144,6 +145,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Pense no número que aparece o tempo todo na tela de abertura, com vinte e três zeros.",
   },
   {
+    id: "por-que-existe",
     enunciado: "Por que o mol existe?",
     opcoes: [
       { texto: "Porque átomos são pequenos e numerosos demais para contar um a um", correta: true },
@@ -155,6 +157,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Volte à primeira frase da tela de abertura.",
   },
   {
+    id: "volume-de-um-mol",
     enunciado: "Um mol de <strong>gotas</strong> de água encheria cerca de 2% de todos os oceanos. E um mol de <strong>moléculas</strong> de água, quanto ocupa?",
     opcoes: [
       { texto: "Cerca de uma colher de sopa", correta: true },
@@ -166,6 +169,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Um mol de água pesa 18 g, e a densidade da água é 1 g/mL.",
   },
   {
+    id: "tabela-periodica",
     enunciado: "Na tabela periódica, embaixo do carbono está escrito <strong>12,011</strong>. O que esse número significa?",
     opcoes: [
       { texto: "Um átomo pesa 12,011 u e um mol de átomos pesa 12,011 g", correta: true },
@@ -177,6 +181,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "É o mesmo número dos dois lados da ponte, mudando só a unidade.",
   },
   {
+    id: "onde-esta-a-massa",
     enunciado: "Quase toda a massa de um átomo está em qual parte?",
     opcoes: [
       { texto: "No núcleo, nos prótons e nêutrons", correta: true },
@@ -188,6 +193,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Compare o peso de um próton com o de um elétron.",
   },
   {
+    id: "proporcao-da-reacao",
     enunciado: "Numa reação, o hidrogênio e o oxigênio se combinam na proporção de <strong>2 para 1</strong>. Essa proporção é contada em quê?",
     opcoes: [
       { texto: "Em número de moléculas, ou seja, em mols", correta: true },
@@ -199,6 +205,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Moléculas reagem com moléculas. A balança é que fala outra língua.",
   },
   {
+    id: "atomos-por-mol",
     enunciado: "Quantos átomos existem em <strong>1 mol</strong> de ferro?",
     opcoes: [
       { texto: "6,02×10²³", correta: true },
@@ -210,6 +217,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Uma dúzia de ovos e uma dúzia de melancias têm a mesma quantidade — só o peso muda.",
   },
   {
+    id: "tempo-de-contagem",
     enunciado: "Se você contasse átomos um por segundo, sem parar nunca, quanto tempo levaria para contar 1 mol?",
     opcoes: [
       { texto: "Mais de um milhão de vezes a idade do universo", correta: true },
@@ -221,6 +229,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Um ano tem cerca de 3×10⁷ segundos. Divida o número de Avogadro por isso.",
   },
   {
+    id: "dobro-de-mols",
     enunciado: "Um mol de água pesa 18 g. Quanto pesam <strong>2 mols</strong> de água?",
     opcoes: [
       { texto: "36 g", correta: true },
@@ -232,6 +241,7 @@ const PERGUNTAS_DA_IDEIA = [
     dica: "Se um pacote pesa 18 g, quanto pesam dois pacotes?",
   },
   {
+    id: "massa-fracionaria",
     enunciado: "Por que a massa do cloro na tabela periódica é <strong>35,45</strong> e não um número inteiro?",
     opcoes: [
       { texto: "Porque é a média das massas dos isótopos que existem na natureza", correta: true },
@@ -253,6 +263,7 @@ function montarPerguntaDaIdeia(base) {
     [opcoes[i], opcoes[j]] = [opcoes[j], opcoes[i]];
   }
   const q = {
+    id: base.id,
     degrau: 0, tipo: "ideiaDoMol", formato: "escolha", formulas: [],
     enunciado: base.enunciado,
     opcoes, unidade: "", resposta: null, sig: 3, erros: [],
@@ -753,3 +764,12 @@ function rodadaDaIdeia(quantas = 5) {
 }
 
 function quantasPerguntasDaIdeia() { return PERGUNTAS_DA_IDEIA.length; }
+
+/* Devolve uma pergunta específica do degrau 0. A vitória antecipada da tela de
+   abertura precisa perguntar exatamente aquilo que o aluno acabou de ler —
+   sortear ali seria cruel, porque poderia cair uma pergunta sobre um trecho
+   que ainda está lá embaixo. */
+function perguntaDaIdeiaPorId(id) {
+  const base = PERGUNTAS_DA_IDEIA.filter((p) => p.id === id)[0];
+  return base ? montarPerguntaDaIdeia(base) : null;
+}

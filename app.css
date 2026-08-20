@@ -910,3 +910,129 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
 .resultado-rodada h3 { font-size: var(--mb-t-titulo-3); }
 .resultado-rodada p { margin: 0; max-width: none; }
 #teste-rapido .enunciado { margin-top: var(--mb-e3); }
+
+/* ---------- segurança no preparo ---------- */
+
+.cartao-seguranca { border-left: 4px solid var(--mb-erro); }
+
+.faixa-epi {
+  display: flex; flex-wrap: wrap; gap: var(--mb-e2);
+  margin-bottom: var(--mb-e3);
+}
+.selo-epi {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px;
+  background: var(--mb-superficie-2); border: 1px solid var(--mb-borda);
+  font-size: var(--mb-t-legenda); white-space: nowrap;
+}
+
+.risco {
+  border-left: 4px solid var(--mb-borda-forte);
+  background: var(--mb-superficie-2);
+  padding: var(--mb-e3) var(--mb-e4);
+  margin-bottom: var(--mb-e3);
+  border-radius: 0 var(--mb-raio) var(--mb-raio) 0;
+}
+.risco p { margin: 0; max-width: 62ch; }
+.risco .titulo-risco { font-weight: 500; margin-bottom: 4px; }
+.selo-risco {
+  display: inline-block; margin-bottom: 6px;
+  font-size: 11px; letter-spacing: 0.08em; font-weight: 500;
+}
+
+.risco.critico {
+  border-left-color: var(--mb-erro); background: var(--mb-erro-bg);
+  border-left-width: 6px;
+}
+.risco.critico .selo-risco { color: var(--mb-erro); }
+.risco.critico .titulo-risco { font-size: var(--mb-t-titulo-3); }
+
+.risco.alto { border-left-color: var(--mb-atencao); background: var(--mb-atencao-bg); }
+.risco.alto .selo-risco { color: var(--mb-atencao); }
+
+.risco.medio { border-left-color: var(--mb-interacao); background: var(--mb-interacao-bg); }
+.risco.medio .selo-risco { color: var(--mb-interacao); }
+
+.risco.info { border-left-color: var(--mb-borda-forte); }
+.risco.info .selo-risco { color: var(--mb-texto-2); }
+
+.gerais-seguranca {
+  margin-top: var(--mb-e4); padding-top: var(--mb-e3);
+  border-top: 1px solid var(--mb-borda);
+}
+.gerais-seguranca summary {
+  cursor: pointer; font-size: var(--mb-t-apoio); font-weight: 500;
+  color: var(--mb-interacao); min-height: 32px; padding: 6px 0;
+}
+.gerais-seguranca .risco { margin-top: var(--mb-e2); }
+
+@media print {
+  .cartao-seguranca { break-inside: avoid; border-left-color: #000; }
+  .gerais-seguranca[open] summary { display: none; }
+}
+
+/* ---------- o emblema da chave ---------- */
+
+.emblema-chave {
+  display: flex; align-items: center; gap: var(--mb-e4);
+  flex-wrap: wrap;
+  background: var(--mb-superficie-2); border-radius: var(--mb-raio-card);
+  padding: var(--mb-e4); margin-bottom: var(--mb-e4);
+  border-left: 4px solid var(--mb-energia);
+}
+.arte-chave { flex-shrink: 0; }
+.chave-svg { width: 150px; height: 56px; display: block; }
+.chave-svg .anel, .chave-svg .haste { fill: var(--mb-energia); }
+.chave-svg .furo { fill: var(--mb-superficie-2); }
+.chave-svg .dente { fill: var(--mb-borda-forte); }
+.chave-svg .dente.ativo { fill: var(--mb-energia); }
+
+.texto-chave { flex: 1; min-width: 200px; }
+.contagem-chave {
+  margin: 0 0 2px; font-family: var(--mb-fonte-marca); font-style: italic;
+  font-weight: 600; font-size: var(--mb-t-titulo-3); color: var(--mb-estrutura);
+}
+.texto-chave .ajuda { margin: 0 0 var(--mb-e3); }
+
+.dentes-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.dentes-lista li {
+  display: flex; align-items: center; gap: 8px;
+  font-size: var(--mb-t-legenda); color: var(--mb-texto-2);
+}
+.dentes-lista .marca {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid var(--mb-borda-forte);
+}
+.dentes-lista li.conquistado { color: var(--mb-texto); }
+.dentes-lista li.conquistado .marca {
+  background: var(--mb-energia); border-color: var(--mb-energia);
+}
+
+/* ---------- a primeira pergunta ---------- */
+
+.primeira-pergunta {
+  margin-top: var(--mb-e4); padding: var(--mb-e4);
+  border-radius: var(--mb-raio-card);
+  background: var(--mb-interacao-bg); border: 1px solid var(--mb-interacao);
+}
+.rot-primeira {
+  margin: 0 0 6px; font-size: 11px; letter-spacing: 0.1em;
+  color: var(--mb-interacao); font-weight: 500;
+}
+.primeira-pergunta .enunciado { margin: 0 0 var(--mb-e3); max-width: 62ch; }
+.primeira-pergunta .alternativa { background: var(--mb-superficie); }
+
+/* ---------- a seção opcional ---------- */
+
+.secao-opcional { padding-top: var(--mb-e4); }
+.aprofundamento > summary {
+  cursor: pointer; padding: 6px 0; min-height: var(--mb-toque);
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+}
+.aprofundamento > summary::marker { color: var(--mb-interacao); }
+.titulo-opcional {
+  font-family: var(--mb-fonte-marca); font-style: italic; font-weight: 600;
+  font-size: var(--mb-t-titulo-2); color: var(--mb-estrutura); line-height: 1.25;
+}
+.ajuda-opcional { font-size: var(--mb-t-legenda); color: var(--mb-texto-2); }
+.aprofundamento[open] > summary { margin-bottom: var(--mb-e3); }
