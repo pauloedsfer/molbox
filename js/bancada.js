@@ -80,13 +80,55 @@ const PARES_DE_TITULACAO = [
   },
 ];
 
-function paresDeTitulacao() { return PARES_DE_TITULACAO; }
-function parDeTitulacao(id) { return PARES_DE_TITULACAO.filter((p) => p.id === id)[0] || null; }
+/* ---------------- titulação inversa ----------------
+
+   Ácido na bureta, base no béquer. É o outro metade do laboratório, e a curva
+   desce em vez de subir.
+
+   O pH sai por espelhamento, não por uma segunda implementação: o balanço de
+   cargas de uma base fraca titulada com ácido forte é o mesmo de um ácido
+   fraco titulado com base forte, trocando [H+] por [OH-] e Ka por Kb. Então
+   calculamos o pOH com o motor que já existe, usando os Kb como se fossem Ka,
+   e devolvemos pKw menos o resultado. Uma segunda rotina de pH acabaria
+   discordando da primeira em algum caso de borda.
+*/
+const PARES_INVERSOS = [
+  {
+    id: "naoh-hcl", inverso: true,
+    analito: { formula: "NaOH", nome: "hidróxido de sódio", forte: true, Kbs: [], protons: 1 },
+    titulante: { formula: "HCl", nome: "ácido clorídrico", forte: true },
+    equacao: "NaOH + HCl → NaCl + H2O",
+    proporcao: 1,
+    indicadorSugerido: "Alaranjado de metila",
+    contexto: "Base forte no béquer, ácido forte na bureta. A curva desce de pH 13 para pH 1, e a equivalência continua em pH 7 — mas agora o indicador vira de trás para frente.",
+  },
+  {
+    id: "nh3-hcl", inverso: true,
+    analito: { formula: "NH3", nome: "amônia", forte: false, Kbs: [1.8e-5], protons: 1 },
+    titulante: { formula: "HCl", nome: "ácido clorídrico", forte: true },
+    equacao: "NH3 + HCl → NH4Cl",
+    proporcao: 1,
+    indicadorSugerido: "Vermelho de metila",
+    contexto: "Base fraca com ácido forte: a equivalência cai em pH ácido, perto de 5,3, porque o amônio formado é um ácido. Fenolftaleína viraria muito antes e daria erro enorme.",
+  },
+  {
+    id: "na2co3-hcl", inverso: true,
+    analito: { formula: "Na2CO3", nome: "carbonato de sódio", forte: false, Kbs: [2.13e-4, 2.25e-8], protons: 2 },
+    titulante: { formula: "HCl", nome: "ácido clorídrico", forte: true },
+    equacao: "Na2CO3 + 2 HCl → 2 NaCl + H2O + CO2",
+    proporcao: 2,
+    indicadorSugerido: "Alaranjado de metila",
+    contexto: "Base diprótica: tem dois saltos. O primeiro, em fenolftaleína, marca a passagem a bicarbonato; o segundo, em alaranjado de metila, marca a neutralização completa. É a base da análise de alcalinidade.",
+  },
+];
+
+function paresDeTitulacao() { return PARES_DE_TITULACAO.concat(PARES_INVERSOS); }
+function parDeTitulacao(id) { return paresDeTitulacao().filter((p) => p.id === id)[0] || null; }
 
 /* ---------------- estado da bancada ---------------- */
 
 function novaBancada(cfg) {
-  return {
+  const b = {
     parId: cfg.parId,
     indicador: cfg.indicador,
     cAnalito: cfg.cAnalito,
@@ -96,7 +138,10 @@ function novaBancada(cfg) {
     gotas: 0,
     historico: [],
     viradaVistaEm: null,   // volume em que a cor mudou, se já mudou
+    faseInicial: null,     // preenchido logo abaixo, na primeira leitura
   };
+  b.faseInicial = lerBancada(b).fase;
+  return b;
 }
 
 /* ---------------- leitura instantânea ---------------- */
@@ -111,17 +156,13 @@ function lerBancada(b) {
 
   const volumeAdicionado = b.gotas * ML_POR_GOTA;
 
-  // mesma função que alimenta o gráfico da tela de titulação: duas contas de
-  // pH diferentes acabariam discordando entre si na frente do aluno
-  const pH = pontoDeTitulacao({
-    cAnalito: b.cAnalito, vAnalito: b.vAnalito,
-    cTitulante: b.cTitulante, vTitulante: volumeAdicionado,
-    Kas: par.analito.Kas, analitoForte: par.analito.forte,
-  });
+  const pH = phDaBancada(par, b, volumeAdicionado);
 
   const vEquivalencia = (b.cAnalito * b.vAnalito * par.proporcao) / b.cTitulante;
 
-  // qual cor o béquer mostra agora
+  // qual cor o béquer mostra agora — o rótulo "ácida" e "básica" se refere ao
+  // lado do indicador, não ao sentido da titulação
+
   let fase, corAtual;
   if (pH < ind.inicio) { fase = "acida"; corAtual = ind.corAcida; }
   else if (pH > ind.fim) { fase = "basica"; corAtual = ind.corBasica; }
@@ -147,6 +188,24 @@ function lerBancada(b) {
 
 /* `quantidade` em gotas. Devolve o que mudou, para a tela poder reagir ao
    momento exato da virada em vez de ficar comparando estados. */
+/* Espelhamento descrito acima. Para o sentido direto, chama o motor de
+   sempre; para o inverso, calcula o pOH e devolve o complemento. */
+function phDaBancada(par, b, volumeAdicionado) {
+  if (!par.inverso) {
+    return pontoDeTitulacao({
+      cAnalito: b.cAnalito, vAnalito: b.vAnalito,
+      cTitulante: b.cTitulante, vTitulante: volumeAdicionado,
+      Kas: par.analito.Kas, analitoForte: par.analito.forte,
+    });
+  }
+  const pOH = pontoDeTitulacao({
+    cAnalito: b.cAnalito, vAnalito: b.vAnalito,
+    cTitulante: b.cTitulante, vTitulante: volumeAdicionado,
+    Kas: par.analito.Kbs, analitoForte: par.analito.forte,
+  });
+  return pOH === null ? null : PKW_25 - pOH;
+}
+
 function pingar(b, gotas) {
   const antes = lerBancada(b);
   const cabem = Math.max(0, Math.round((b.volumeBureta - antes.volumeAdicionado) * GOTAS_POR_ML));
@@ -154,7 +213,9 @@ function pingar(b, gotas) {
   b.gotas += efetivas;
 
   const depois = lerBancada(b);
-  const virou = antes.fase === "acida" && depois.fase !== "acida";
+  // na titulação inversa a curva desce, então a virada não é "sair do ácido":
+  // é sair da fase em que a titulação começou
+  const virou = antes.fase === b.faseInicial && depois.fase !== b.faseInicial;
   if (virou && b.viradaVistaEm === null) b.viradaVistaEm = depois.volumeAdicionado;
 
   b.historico.push({ volume: depois.volumeAdicionado, pH: depois.pH });

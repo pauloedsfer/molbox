@@ -1481,9 +1481,13 @@
 
   /* ---------------- ajudantes de formulário ---------------- */
 
-  function campoTexto(pai, { id, rotulo, valor, dica, aoMudar, placeholder }) {
+  function campoTexto(pai, { id, rotulo, rotuloHtml, valor, dica, aoMudar, placeholder }) {
     const caixa = criar("div");
-    caixa.appendChild(criar("label", { htmlFor: id, textContent: rotulo }));
+    const etiqueta = criar("label", { htmlFor: id });
+    // rotuloHtml existe para que fórmulas apareçam com índice subscrito no
+    // rótulo do campo; textContent não aceitaria a marcação
+    if (rotuloHtml) etiqueta.innerHTML = rotuloHtml; else etiqueta.textContent = rotulo;
+    caixa.appendChild(etiqueta);
     const input = criar("input", {
       type: "text", id, inputMode: "decimal", autocomplete: "off",
       spellcheck: false, value: valor || "", placeholder: placeholder || "",
@@ -1974,64 +1978,119 @@
     const alvo = $("#painel-bancada");
     alvo.innerHTML = "";
 
+    // A tela tem duas partes. As escolhas são montadas uma vez; a cena é
+    // redesenhada a cada gota. Antes tudo era refeito a cada tecla digitada,
+    // o que destruía o campo em foco e fechava o teclado do celular a cada
+    // dígito. Nunca refaça o contêiner dos campos dentro de um `input`.
+    alvo.appendChild(criar("div", { className: "cartao", id: "bancada-escolhas" }));
+    alvo.appendChild(criar("div", { className: "cartao", id: "bancada-cena" }));
+    alvo.appendChild(criar("div", { id: "bancada-avaliacao" }));
+
+    desenharEscolhasBancada();
+    atualizarCenaBancada();
+  }
+
+  function desenharEscolhasBancada() {
+    const st = estado.bancada;
+    const caixa = $("#bancada-escolhas");
+    if (!caixa) return;
+    caixa.innerHTML = `<h2 style="margin-top:0">O que você vai titular</h2>`;
     const par = parDeTitulacao(st.parId);
 
-    /* --- escolhas --- */
-    const escolhas = criar("div", { className: "cartao" });
-    escolhas.innerHTML = `<h2 style="margin-top:0">O que você vai titular</h2>`;
+    const diretos = paresDeTitulacao().filter((p) => !p.inverso);
+    const inversos = paresDeTitulacao().filter((p) => p.inverso);
 
-    const chipsPar = criar("div", { className: "chips" });
-    for (const p of paresDeTitulacao()) {
-      const b = criar("button", { type: "button", className: "chip" + (p.id === st.parId ? " ativo" : "") });
-      b.innerHTML = formatarFormula(p.analito.formula) + " + " + formatarFormula(p.titulante.formula);
-      b.addEventListener("click", () => {
-        st.parId = p.id;
-        st.indicador = p.indicadorSugerido;
-        reiniciarBancada();
-        desenharBancada();
-      });
-      chipsPar.appendChild(b);
-    }
-    escolhas.appendChild(chipsPar);
+    const grupo = (rotulo, lista) => {
+      caixa.appendChild(criar("p", { className: "rot-campo", textContent: rotulo, style: "margin:var(--mb-e3) 0 6px" }));
+      const chips = criar("div", { className: "chips" });
+      for (const p of lista) {
+        const b = criar("button", { type: "button", className: "chip" + (p.id === st.parId ? " ativo" : "") });
+        b.innerHTML = formatarFormula(p.analito.formula) + " + " + formatarFormula(p.titulante.formula);
+        b.addEventListener("click", () => {
+          st.parId = p.id;
+          st.indicador = p.indicadorSugerido;
+          reiniciarBancada();
+          desenharEscolhasBancada();
+          atualizarCenaBancada();
+        });
+        chips.appendChild(b);
+      }
+      caixa.appendChild(chips);
+    };
+    grupo("Base na bureta, ácido no béquer", diretos);
+    grupo("Ácido na bureta, base no béquer", inversos);
 
     const eq = criar("div", { className: "equacao-bancada" });
     eq.innerHTML = formatarEquacaoTexto(par.equacao);
-    escolhas.appendChild(eq);
-    escolhas.appendChild(criar("p", {
+    caixa.appendChild(eq);
+    caixa.appendChild(criar("p", {
       className: "ajuda",
-      textContent: par.proporcao === 1
-        ? "Proporção de 1 para 1: cada mol de ácido consome um mol de base."
-        : `Proporção de 1 para ${par.proporcao}: cada mol de ácido consome ${par.proporcao} mols de base. Esquecer isso divide o resultado por ${par.proporcao}.`,
+      innerHTML: par.proporcao === 1
+        ? "Proporção de 1 para 1: cada mol consome um mol."
+        : `Proporção de 1 para ${par.proporcao}: cada mol de ${formatarFormula(par.analito.formula)} consome ${par.proporcao} mols de ${formatarFormula(par.titulante.formula)}. Esquecer isso divide o resultado por ${par.proporcao}.`,
     }));
-    escolhas.appendChild(criar("p", { textContent: par.contexto }));
+    caixa.appendChild(criar("p", { textContent: par.contexto }));
 
+    caixa.appendChild(criar("p", { className: "rot-campo", textContent: "Indicador", style: "margin:var(--mb-e4) 0 6px" }));
     const chipsInd = criar("div", { className: "chips" });
     for (const i of indicadoresConhecidos()) {
       const b = criar("button", { type: "button", className: "chip chip-indicador" + (i.nome === st.indicador ? " ativo" : "") });
-      b.innerHTML = `<i class="ponto-ind" style="background:${corDeIndicador(i.corBasica)}"></i>${i.nome}`;
-      b.addEventListener("click", () => { st.indicador = i.nome; reiniciarBancada(); desenharBancada(); });
+      // a faixa de viragem na frente do nome: é o dado que decide a escolha
+      b.innerHTML = `<i class="ponto-ind" style="background:${corDeIndicador(i.corBasica)}"></i>` +
+        `<span class="faixa-ind">${formatarNumero(i.inicio, 2)}–${formatarNumero(i.fim, 3)}</span>` +
+        `<span>${i.nome}</span>`;
+      b.addEventListener("click", () => {
+        st.indicador = i.nome;
+        reiniciarBancada();
+        desenharEscolhasBancada();
+        atualizarCenaBancada();
+      });
       chipsInd.appendChild(b);
     }
-    escolhas.appendChild(criar("p", { className: "rot-campo", textContent: "Indicador", style: "margin-bottom:6px" }));
-    escolhas.appendChild(chipsInd);
+    caixa.appendChild(chipsInd);
 
     const campos = criar("div", { className: "grade-campos" });
-    campoTexto(campos, { id: "banc-ca", rotulo: `Concentração do ${par.analito.formula} (mol/L)`, valor: st.cAnalito,
-      aoMudar: (v) => { st.cAnalito = v; reiniciarBancada(); desenharBancada(); } });
-    campoTexto(campos, { id: "banc-va", rotulo: "Volume no béquer (mL)", valor: st.vAnalito,
-      aoMudar: (v) => { st.vAnalito = v; reiniciarBancada(); desenharBancada(); } });
-    campoTexto(campos, { id: "banc-ct", rotulo: `Concentração do ${par.titulante.formula} na bureta (mol/L)`, valor: st.cTitulante,
-      aoMudar: (v) => { st.cTitulante = v; reiniciarBancada(); desenharBancada(); } });
-    escolhas.appendChild(campos);
-    alvo.appendChild(escolhas);
+    const aoDigitar = (campo) => (v) => {
+      estado.bancada[campo] = v;
+      reiniciarBancada();
+      // só a cena é redesenhada: o campo em foco permanece vivo, e o teclado
+      // do celular não se fecha entre um dígito e outro
+      atualizarCenaBancada();
+    };
+    campoTexto(campos, { id: "banc-ca",
+      rotuloHtml: `Concentração de ${formatarFormula(par.analito.formula)} no béquer (mol/L)`,
+      valor: st.cAnalito, aoMudar: aoDigitar("cAnalito") });
+    campoTexto(campos, { id: "banc-va", rotulo: "Volume no béquer (mL)",
+      valor: st.vAnalito, aoMudar: aoDigitar("vAnalito") });
+    campoTexto(campos, { id: "banc-ct",
+      rotuloHtml: `Concentração de ${formatarFormula(par.titulante.formula)} na bureta (mol/L)`,
+      valor: st.cTitulante, aoMudar: aoDigitar("cTitulante") });
+    caixa.appendChild(campos);
+  }
 
-    /* --- a bancada --- */
-    const bancada = criar("div", { className: "cartao" });
+  function atualizarCenaBancada() {
+    const st = estado.bancada;
+    const caixa = $("#bancada-cena");
+    if (!caixa) return;
+    caixa.innerHTML = "";
+    const par = parDeTitulacao(st.parId);
     const leitura = lerBancada(st.motor);
 
+    /* Cada vidraria vem com o rótulo do que há dentro, como numa bancada de
+       verdade: sem o rótulo, o aluno perde de vista quem titula quem — e é
+       justamente isso que muda na titulação inversa. */
     const cena = criar("div", { className: "cena-bancada" });
-    cena.innerHTML = svgDaBancada(leitura);
-    bancada.appendChild(cena);
+    cena.innerHTML =
+      `<div class="rotulo-vidraria rotulo-bureta">` +
+      `<span class="qual">Bureta</span>` +
+      `<span class="reagente">${formatarFormula(par.titulante.formula)}</span>` +
+      `<span class="conc">${formatarNumero(st.motor.cTitulante, 4)} mol/L</span></div>` +
+      svgDaBancada(leitura) +
+      `<div class="rotulo-vidraria rotulo-bequer">` +
+      `<span class="qual">Béquer</span>` +
+      `<span class="reagente">${formatarFormula(par.analito.formula)}</span>` +
+      `<span class="conc">${formatarNumero(st.motor.cAnalito, 4)} mol/L · ${formatarNumero(st.motor.vAnalito, 4)} mL</span></div>`;
+    caixa.appendChild(cena);
 
     const painel = criar("div", { className: "painel-bancada" });
     painel.innerHTML =
@@ -2044,7 +2103,7 @@
       (st.phmetro
         ? `<div class="medida"><span class="rot">pHmetro</span><span class="val">${formatarNumero(leitura.pH, 3)}</span></div>`
         : "");
-    bancada.appendChild(painel);
+    caixa.appendChild(painel);
 
     const controles = criar("div", { className: "controles-bancada" });
 
@@ -2057,45 +2116,51 @@
 
     const umML = criar("button", { type: "button", className: "botao secundario", textContent: "+1 mL" });
     umML.disabled = leitura.buretaVazia;
-    umML.addEventListener("click", () => { aplicarGotas(st, gotasPorML()); });
+    umML.addEventListener("click", () => aplicarGotas(st, gotasPorML()));
     controles.appendChild(umML);
 
     const parar = criar("button", { type: "button", className: "botao secundario", textContent: "Parei aqui" });
     parar.disabled = leitura.gotas === 0;
     parar.addEventListener("click", () => {
       st.avaliacao = avaliarTitulacao(st.motor);
-      desenharBancada();
+      desenharAvaliacaoBancada();
     });
     controles.appendChild(parar);
 
     const limpar = criar("button", { type: "button", className: "botao secundario", textContent: "Recomeçar" });
-    limpar.addEventListener("click", () => { reiniciarBancada(); desenharBancada(); });
+    limpar.addEventListener("click", () => { reiniciarBancada(); atualizarCenaBancada(); desenharAvaliacaoBancada(); });
     controles.appendChild(limpar);
-    bancada.appendChild(controles);
+    caixa.appendChild(controles);
 
     const opcao = criar("label", { className: "opcao-phmetro" });
-    const caixa = criar("input", { type: "checkbox", id: "banc-phmetro" });
-    caixa.checked = st.phmetro;
-    caixa.addEventListener("change", () => { st.phmetro = caixa.checked; desenharBancada(); });
-    opcao.appendChild(caixa);
+    const marcar = criar("input", { type: "checkbox", id: "banc-phmetro" });
+    marcar.checked = st.phmetro;
+    marcar.addEventListener("change", () => { st.phmetro = marcar.checked; atualizarCenaBancada(); });
+    opcao.appendChild(marcar);
     opcao.appendChild(criar("span", { textContent: "Ligar o pHmetro (numa titulação real você só enxerga a cor)" }));
-    bancada.appendChild(opcao);
+    caixa.appendChild(opcao);
 
     if (leitura.buretaVazia) {
-      bancada.appendChild(criar("div", {
+      caixa.appendChild(criar("div", {
         className: "dica-caixa",
         textContent: "A bureta acabou. Numa bancada de verdade você completaria a bureta e anotaria as duas leituras — aqui, recomece.",
       }));
     }
-    alvo.appendChild(bancada);
+  }
 
-    if (st.avaliacao) desenharAvaliacao(alvo, st.avaliacao, par);
+  function desenharAvaliacaoBancada() {
+    const alvo = $("#bancada-avaliacao");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const st = estado.bancada;
+    if (st.avaliacao) desenharAvaliacao(alvo, st.avaliacao, parDeTitulacao(st.parId));
   }
 
   function aplicarGotas(st, quantas) {
     const efeito = pingar(st.motor, quantas);
     st.avaliacao = null;
-    desenharBancada();
+    atualizarCenaBancada();
+    desenharAvaliacaoBancada();
     return efeito;
   }
 
@@ -2462,7 +2527,7 @@
     }
     grafico.appendChild(criar("p", {
       className: "ajuda", style: "text-align:center;margin:var(--mb-e2) 0 0",
-      textContent: `${analito.formula} ${formatarNumero(cfg.cAnalito, 3)} mol/L, ${formatarNumero(cfg.vAnalito, 3)} mL, titulado com base forte ${formatarNumero(cfg.cTitulante, 3)} mol/L. Faixa central: viragem da ${indicador.nome.toLowerCase()}.`,
+      innerHTML: `${formatarFormula(analito.formula)} ${formatarNumero(cfg.cAnalito, 3)} mol/L, ${formatarNumero(cfg.vAnalito, 3)} mL, titulado com base forte ${formatarNumero(cfg.cTitulante, 3)} mol/L. Faixa central: viragem da ${indicador.nome.toLowerCase()}.`,
     }));
     alvo.appendChild(grafico);
 
@@ -2523,7 +2588,9 @@
       const tr = criar("tr");
       if (a.adequado) tr.className = "adequado";
       tr.innerHTML =
-        `<td>${a.indicador.nome}<br><span class="ajuda">${a.indicador.corAcida} → ${a.indicador.corBasica}</span></td>` +
+        `<td><span class="nome-ind"><i class="ponto-ind" style="background:${corDeIndicador(a.indicador.corBasica)}"></i>` +
+        `${a.indicador.nome}</span><br><span class="ajuda">viragem ${formatarNumero(a.indicador.inicio, 2)}–${formatarNumero(a.indicador.fim, 3)} · ` +
+        `${a.indicador.corAcida} → ${a.indicador.corBasica}</span></td>` +
         `<td class="num">${formatarNumero(a.indicador.inicio, 3)}–${formatarNumero(a.indicador.fim, 3)}</td>` +
         `<td class="num">${formatarNumero(a.vFinal, 5)} mL</td>` +
         `<td class="num erro-val">${a.erro > 0 ? "+" : ""}${formatarNumero(a.erro, 3)}%</td>`;

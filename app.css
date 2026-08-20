@@ -1163,3 +1163,40 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
 .avaliacao-titulacao.excelente { border-left-color: var(--mb-acerto); }
 .avaliacao-titulacao.bom { border-left-color: var(--mb-interacao); }
 .avaliacao-titulacao.passou, .avaliacao-titulacao.faltou { border-left-color: var(--mb-atencao); }
+
+/* ---------- rótulos das vidrarias e faixa do indicador ---------- */
+
+.cena-bancada {
+  display: grid; align-items: center; justify-items: center;
+  grid-template-columns: 1fr; gap: var(--mb-e2);
+}
+@media (min-width: 560px) {
+  .cena-bancada { grid-template-columns: 1fr auto 1fr; }
+  .rotulo-bureta { justify-self: end; align-self: start; margin-top: 22px; text-align: right; }
+  .rotulo-bequer { justify-self: start; align-self: end; margin-bottom: 26px; text-align: left; }
+}
+.rotulo-vidraria {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 12px; border-radius: var(--mb-raio);
+  background: var(--mb-superficie-2); max-width: 190px;
+}
+.rotulo-vidraria .qual {
+  font-size: var(--mb-t-legenda); letter-spacing: 0.06em; color: var(--mb-texto-2);
+}
+.rotulo-vidraria .reagente {
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3);
+  font-weight: 500; color: var(--mb-estrutura);
+}
+.rotulo-vidraria .conc {
+  font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums;
+  font-size: var(--mb-t-legenda); color: var(--mb-texto-2);
+}
+
+.faixa-ind {
+  font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums;
+  font-size: var(--mb-t-legenda); color: var(--mb-texto-2);
+  background: var(--mb-superficie); border-radius: 4px; padding: 0 5px;
+  border: 1px solid var(--mb-borda);
+}
+.chip.ativo .faixa-ind { color: var(--mb-texto-2); }
+.nome-ind { display: inline-flex; align-items: center; gap: 6px; }
