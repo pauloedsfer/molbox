@@ -154,7 +154,24 @@ function volumesDeEquivalencia({ cAnalito, vAnalito, cTitulante, prótons }) {
   return lista;
 }
 
+/* Curva no sentido inverso: base no erlenmeyer, ácido forte na bureta.
+
+   O pH sai por espelhamento do mesmo motor, e não de uma segunda rotina: o
+   balanço de cargas de uma base fraca titulada com ácido forte é idêntico ao
+   de um ácido fraco titulado com base forte, trocando [H+] por [OH-] e Ka por
+   Kb. Calculamos o pOH usando os Kb no lugar dos Ka e devolvemos pKw menos o
+   resultado. Duas implementações divergiriam em algum caso de borda, e o
+   aplicativo acabaria discordando de si mesmo na frente da turma. */
+function pontoDeTitulacaoInversa({ cAnalito, vAnalito, cTitulante, vTitulante, Kbs, analitoForte }) {
+  const pOH = pontoDeTitulacao({
+    cAnalito, vAnalito, cTitulante, vTitulante,
+    Kas: Kbs, analitoForte,
+  });
+  return pOH === null ? null : PKW_25 - pOH;
+}
+
 function curvaDeTitulacao(cfg, pontos = 400) {
+  if (cfg.inversa) return curvaDeTitulacaoInversa(cfg, pontos);
   const prótons = cfg.analitoForte ? 1 : cfg.Kas.length;
   const equivalencias = volumesDeEquivalencia({ ...cfg, prótons });
   const vFinal = Math.max(equivalencias[equivalencias.length - 1] * 1.6, equivalencias[0] * 2);
@@ -304,3 +321,45 @@ const BASES = [
 
 function indicadoresConhecidos() { return INDICADORES; }
 function coresDeIndicador() { return CORES_DE_INDICADOR; }
+
+function curvaDeTitulacaoInversa(cfg, pontos = 400) {
+  /* Base forte com mais de uma hidroxila não tem etapas: o Ca(OH)2 já está
+     todo dissociado, então 0,05 mol/L dele são 0,10 mol/L de OH-, e existe um
+     único ponto de equivalência. Tratá-lo como diprótico produziria dois
+     saltos que não existem e um pH inicial errado. Por isso a concentração é
+     escalada e a titulação vira monobásica. */
+  const forte = cfg.analitoForte;
+  const hidroxilas = forte ? (cfg.hidroxilas || 1) : cfg.Kbs.length;
+  const base = forte
+    ? { ...cfg, cAnalito: cfg.cAnalito * hidroxilas }
+    : cfg;
+  const etapas = forte ? 1 : hidroxilas;
+  const equivalencias = volumesDeEquivalencia({ ...base, prótons: etapas });
+  const vFinal = Math.max(equivalencias[equivalencias.length - 1] * 1.6, equivalencias[0] * 2);
+
+  const dados = [];
+  const avaliar = (v) => {
+    const pH = pontoDeTitulacaoInversa({ ...base, vTitulante: v });
+    if (pH !== null && isFinite(pH)) dados.push({ v, pH });
+  };
+  for (let i = 0; i <= pontos; i++) avaliar((vFinal * i) / pontos);
+  for (const ve of equivalencias) {
+    const janela = Math.max(ve * 0.06, 0.05);
+    for (let i = 0; i <= 80; i++) {
+      const v = ve - janela + (2 * janela * i) / 80;
+      if (v >= 0) avaliar(v);
+    }
+  }
+  dados.sort((a, b) => a.v - b.v);
+  return { dados, equivalencias, vFinal, inversa: true };
+}
+
+/* Bases que servem de analito na curva inversa. As fortes usam o número de
+   hidroxilas; as fracas, o Kb. Poliácidos e polibases entram como lista. */
+function basesDeTitulacao() {
+  return BASES.map((b) => ({
+    ...b,
+    Kbs: b.forte ? [] : [b.Kb],
+    hidroxilas: b.hidroxilas || 1,
+  }));
+}

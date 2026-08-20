@@ -27,7 +27,8 @@
     preparo: { formula: "NaOH", volume: "500", concentracao: "0,1", pureza: "97", densidade: "" },
     ph: { modo: "acidoFraco", indice: 4, concentracao: "0,1",
           tampaoAcido: "0,1", tampaoBase: "0,1" },
-    titulacao: { indice: 4, cAnalito: "0,1", vAnalito: "25", cTitulante: "0,1", indicador: 6 },
+    titulacao: {
+      inversa: false, indice: 4, cAnalito: "0,1", vAnalito: "25", cTitulante: "0,1", indicador: 6 },
     degrau: 0,
     exercicio: null,
     tipoAnterior: null,
@@ -93,7 +94,7 @@
     "tela-preparo": "Preparo",
     "tela-ph": "Ácidos e bases",
     "tela-bancada": "Titulação virtual",
-    "tela-titulacao": "Titulação",
+    "tela-titulacao": "Curvas de titulação",
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
     "tela-tabela": "Tabela periódica",
@@ -124,7 +125,7 @@
       if (b.dataset.tela && b.dataset.tela === id) b.setAttribute("aria-current", "page");
       else b.removeAttribute("aria-current");
     }
-    $("#tituloPagina").textContent = TITULOS[id] || "MOLBOX";
+    $("#tituloPagina").textContent = TITULOS[id] || "SUPER MOLBOX";
     if (typeof window.scrollTo === "function") { try { window.scrollTo(0, 0); } catch (e) {} }
     if (estreita()) fecharMenu();
 
@@ -540,7 +541,7 @@
       veredito.innerHTML =
         `<span class="selo">${acertou ? "CERTO" : "QUASE"}</span>` +
         `<p>${acertou
-          ? "Isso mesmo. Você acabou de usar a ideia central do MOLBOX — e ela já vale como acerto no seu progresso."
+          ? "Isso mesmo. Você acabou de usar a ideia central do SUPER MOLBOX — e ela já vale como acerto no seu progresso."
           : (escolhida && escolhida.diagnostico) || "Releia o quadro acima com calma."}</p>`;
       caixa.appendChild(veredito);
 
@@ -767,7 +768,7 @@
 
     const painel = criar("div", { className: "onboarding-painel" });
     painel.innerHTML =
-      `<p class="onboarding-badge">Bem-vindo ao MOLBOX</p>` +
+      `<p class="onboarding-badge">Bem-vindo ao SUPER MOLBOX</p>` +
       `<h2 id="onboarding-titulo">Do átomo ao mol, do mol à bancada</h2>` +
       `<ol class="onboarding-passos">` +
       `<li><strong>Comece pela chave.</strong> A tela “Mol: A Chave” mostra por que o mol destrava o trabalho do químico — e usa a analogia da dúzia para fazer o número de Avogadro caber na cabeça.</li>` +
@@ -2370,6 +2371,14 @@
   /* ---------------- tela: titulação ---------------- */
 
   function analitosDeTitulacao() {
+    if (estado.titulacao.inversa) {
+      return basesDeTitulacao().map((b) => ({
+        ...b,
+        rotulo: `${b.formula} — ${b.nome}${b.forte
+          ? (b.hidroxilas > 1 ? ` (forte, ${b.hidroxilas} OH)` : " (forte)")
+          : ""}`,
+      }));
+    }
     return ACIDOS.map((a) => ({
       ...a,
       rotulo: `${a.formula} — ${a.nome}${a.forte ? " (forte)" : a.Kas.length > 1 ? ` (${a.Kas.length} prótons)` : ""}`,
@@ -2387,7 +2396,10 @@
         vAnalito: lerNumero(st.vAnalito),
         cTitulante: lerNumero(st.cTitulante),
         analitoForte: analito.forte,
-        Kas: analito.Kas,
+        Kas: analito.Kas || [],
+        Kbs: analito.Kbs || [],
+        hidroxilas: analito.hidroxilas || 1,
+        inversa: !!st.inversa,
       },
     };
   }
@@ -2398,25 +2410,67 @@
     const st = estado.titulacao;
 
     const entrada = criar("div", { className: "cartao" });
-    entrada.innerHTML = `<h2 style="margin-top:0">O experimento</h2>` +
-      `<p class="ajuda">Analito no erlenmeyer, base forte na bureta.</p>`;
+    entrada.innerHTML = `<h2 style="margin-top:0">O experimento</h2>`;
+
+    /* O sentido vem antes de tudo: ele decide quais analitos a lista oferece
+       e para que lado a curva anda. */
+    const sentidos = criar("div", { className: "chips", style: "margin-bottom:var(--mb-e3)" });
+    for (const opcao of [
+      { inversa: false, texto: "Ácido no erlenmeyer, base na bureta" },
+      { inversa: true,  texto: "Base no erlenmeyer, ácido na bureta" },
+    ]) {
+      const b = criar("button", { type: "button",
+        className: "chip" + (!!st.inversa === opcao.inversa ? " ativo" : "") });
+      b.textContent = opcao.texto;
+      b.addEventListener("click", () => {
+        if (!!st.inversa === opcao.inversa) return;
+        st.inversa = opcao.inversa;
+        st.indice = 0;   // as listas de ácidos e bases não se correspondem
+        desenharTitulacao();
+      });
+      sentidos.appendChild(b);
+    }
+    entrada.appendChild(sentidos);
 
     const g1 = criar("div", { className: "grelha-2" });
     campoSelecao(g1, {
-      id: "tit-analito", rotulo: "Analito", valor: st.indice,
+      id: "tit-analito", rotulo: st.inversa ? "Base no erlenmeyer" : "Ácido no erlenmeyer",
+      valor: st.indice,
       opcoes: analitosDeTitulacao().map((a, i) => ({ valor: i, rotulo: a.rotulo })),
       aoMudar: (v) => { st.indice = Number(v); desenharTitulacao(); },
     });
-    campoTexto(g1, { id: "tit-c-analito", rotulo: "Concentração do analito (mol/L)", valor: st.cAnalito,
+    campoTexto(g1, { id: "tit-c-analito",
+      rotulo: `Concentração da ${st.inversa ? "base" : "ácido"} (mol/L)`.replace("da ácido", "do ácido"),
+      valor: st.cAnalito,
       aoMudar: (v) => { st.cAnalito = v; atualizarTitulacao(); } });
     entrada.appendChild(g1);
 
     const g2 = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e3)" });
-    campoTexto(g2, { id: "tit-v-analito", rotulo: "Volume do analito (mL)", valor: st.vAnalito,
+    campoTexto(g2, { id: "tit-v-analito", rotulo: "Volume no erlenmeyer (mL)", valor: st.vAnalito,
       aoMudar: (v) => { st.vAnalito = v; atualizarTitulacao(); } });
-    campoTexto(g2, { id: "tit-c-titulante", rotulo: "Concentração do titulante (mol/L)", valor: st.cTitulante,
+    campoTexto(g2, { id: "tit-c-titulante",
+      rotulo: st.inversa ? "Concentração do ácido na bureta (mol/L)" : "Concentração da base na bureta (mol/L)",
+      valor: st.cTitulante,
       aoMudar: (v) => { st.cTitulante = v; atualizarTitulacao(); } });
     entrada.appendChild(g2);
+
+    /* O indicador fica aqui, junto dos reagentes, e não lá embaixo: ele é uma
+       escolha do experimento, não uma leitura do resultado. Antes o aluno
+       montava a titulação, rolava a tela inteira e só então descobria que
+       precisava escolher o indicador. */
+    entrada.appendChild(criar("p", { className: "rot-campo",
+      textContent: "Indicador", style: "margin:var(--mb-e4) 0 6px" }));
+    const chipsInd = criar("div", { className: "chips" });
+    INDICADORES.forEach((ind, i) => {
+      const b = criar("button", { type: "button",
+        className: "chip chip-indicador" + (i === st.indicador ? " ativo" : "") });
+      b.innerHTML = `<i class="ponto-ind" style="background:${corDeIndicador(ind.corBasica)}"></i>` +
+        `<span class="faixa-ind">${formatarNumero(ind.inicio, 2)}–${formatarNumero(ind.fim, 3)}</span>` +
+        `<span>${ind.nome}</span>`;
+      b.addEventListener("click", () => { st.indicador = i; desenharTitulacao(); });
+      chipsInd.appendChild(b);
+    });
+    entrada.appendChild(chipsInd);
     alvo.appendChild(entrada);
 
     alvo.appendChild(criar("div", { id: "saida-titulacao" }));
@@ -2527,7 +2581,7 @@
     }
     grafico.appendChild(criar("p", {
       className: "ajuda", style: "text-align:center;margin:var(--mb-e2) 0 0",
-      innerHTML: `${formatarFormula(analito.formula)} ${formatarNumero(cfg.cAnalito, 3)} mol/L, ${formatarNumero(cfg.vAnalito, 3)} mL, titulado com base forte ${formatarNumero(cfg.cTitulante, 3)} mol/L. Faixa central: viragem da ${indicador.nome.toLowerCase()}.`,
+      innerHTML: `${formatarFormula(analito.formula)} ${formatarNumero(cfg.cAnalito, 3)} mol/L, ${formatarNumero(cfg.vAnalito, 3)} mL, titulado com ${cfg.inversa ? "ácido forte" : "base forte"} ${formatarNumero(cfg.cTitulante, 3)} mol/L. Faixa central: viragem da ${indicador.nome.toLowerCase()}.`,
     }));
     alvo.appendChild(grafico);
 
@@ -2573,12 +2627,8 @@
 
     // ---- indicadores ----
     const escolha = criar("div", { className: "cartao" });
-    escolha.innerHTML = `<h2 style="margin-top:0">Qual indicador usar</h2>`;
-    campoSelecao(escolha, {
-      id: "tit-indicador", rotulo: "Indicador destacado no gráfico", valor: st.indicador,
-      opcoes: INDICADORES.map((ind, i) => ({ valor: i, rotulo: `${ind.nome} (${formatarNumero(ind.inicio, 3)}–${formatarNumero(ind.fim, 3)})` })),
-      aoMudar: (v) => { st.indicador = Number(v); atualizarTitulacao(); },
-    });
+    escolha.innerHTML = `<h2 style="margin-top:0">Qual indicador usar</h2>` +
+      `<p class="ajuda">Compare o erro de cada um. Para trocar o destacado no gráfico, use os botões lá em cima.</p>`;
 
     const avaliados = melhorIndicador(cfg, primeira);
     const t2 = criar("table", { className: "lista-indicadores", style: "margin-top:var(--mb-e3)" });
