@@ -7,20 +7,21 @@
 
 const AUTOR = {
   nome: "Prof. Paulo Fernandes",
-  titulo: "Farmacêutico e docente de Química",
+  titulo: "Químico Industrial, Farmacêutico e Docente de Química",
   // ATENÇÃO: confirme o endereço do canal antes de publicar. Este link aponta
   // para o vídeo que já está no aplicativo, não para a página do canal.
   canal: {
-    url: "https://www.youtube.com/watch?v=FC1jvXZXAgI",
+    url: "https://www.youtube.com/@pauloedsfer",
     rotulo: "Canal no YouTube",
     aviso: true,
   },
   apresentacao: [
     "Farmacêutico de formação, professor por escolha. Atua no ensino técnico de Química, " +
     "onde o desafio diário é o mesmo que deu origem a este aplicativo: fazer o estudante " +
-    "entender o mol de verdade, e não decorar uma fórmula que ele esquece na semana seguinte.",
+    "entender de verdade, e não decorar uma fórmula que ele esquece na semana seguinte.",
 
-    "A experiência em farmácia hospitalar e em controle de qualidade aparece em cada tela. " +
+    "A experiência em farmácia hospitalar, farmácia de manipulação e em controle de qualidade " +
+    "aparece em cada tela. " +
     "As contas do aplicativo são as contas da bancada, e os avisos de segurança são os que " +
     "se aprende trabalhando, não os que se lê num manual.",
   ],
