@@ -240,7 +240,7 @@
     /* --- abertura: a chave --- */
     const capa = criar("div", { className: "cartao capa-mol" });
     capa.innerHTML =
-      `<h1 style="margin:0 0 var(--mb-e3)">Mol: A Chave 🔑</h1>` +
+      `<h1 style="margin:0 0 var(--mb-e3)">Mol: A Chave</h1>` +
       `<p class="lede-mol">Pegue aqui <strong>A Chave</strong> 🔑 para destravar sua vida profissional com a Química.</p>` +
       `<p>Sem o mol você não controla reação, dose, rendimento nem laudo. ` +
       `Com o mol, a Tabela Periódica vira instrumento de bancada e a balança passa a “contar” partículas.</p>` +
@@ -2031,7 +2031,7 @@
       `<p class="sobretitulo">UMA UNIDADE ANTIGA QUE VOCÊ VAI ENCONTRAR</p>` +
       `<h1 style="margin:0 0 var(--mb-e3)">Equivalente e normalidade</h1>` +
       `<p>A IUPAC recomenda desde 1971 abandonar o equivalente-grama e a normalidade, ` +
-      `e os livros escolares os eliminaram. A crítica é justa, e vale entender qual é:</p>` +
+      `e os livros escolares os eliminaram. Vamos entender:</p>` +
       `<p class="fecho-mol">O equivalente <strong>não é propriedade da substância</strong>. ` +
       `É propriedade da reação.</p>` +
       `<p>A mesma substância tem equivalentes diferentes conforme o que acontece com ela. ` +
