@@ -16,8 +16,8 @@ const AUTOR = {
     aviso: true,
   },
   apresentacao: [
-    "Farmacêutico de formação, professor por escolha. Atua no ensino técnico de Química, " +
-    "onde o desafio diário é o mesmo que deu origem a este aplicativo: fazer o estudante " +
+    "Químico Industrial e Farmacêutico de formação, Professor por escolha. Atua no ensino " +
+    "da Química, onde o desafio diário é o mesmo que deu origem a este aplicativo: fazer o estudante " +
     "entender de verdade, e não decorar uma fórmula que ele esquece na semana seguinte.",
 
     "A experiência em farmácia hospitalar, farmácia de manipulação e em controle de qualidade " +
