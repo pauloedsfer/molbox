@@ -44,7 +44,7 @@ body {
   display: flex; align-items: center; gap: var(--mb-e2);
   padding: var(--mb-e4) var(--mb-e4) var(--mb-e2);
 }
-.sidebar-topo img { height: 30px; width: auto; }
+.sidebar-topo img { height: 60px; width: auto; }
 .sidebar .fechar {
   appearance: none; border: 0; background: rgba(255,255,255,0.12); color: #FFFFFF;
   cursor: pointer; font: inherit; font-size: 15px; line-height: 1;
