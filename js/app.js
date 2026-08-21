@@ -15,6 +15,10 @@
     elementoAberto: null,
     telaAtual: "tela-mol",
     bancada: null,
+    eq: { formula: "H2SO4", k: "2", funcao: "acido", normalidade: "0,1", volume: "1",
+          eletrolito: "K+", valorEletrolito: "4,0", unidadeEletrolito: "mEqPorL",
+          vAcido: "12,0", nAcido: "0,02", vAmostra: "100",
+          vEdta: "8,0", cEdta: "0,01", vAmostraDureza: "100" },
     mol: { pacote: 5, comparacao: 0, elemento: "C", copoAgua: "180",
            dentes: [], primeiraResposta: null, tecnicaAberta: false,
            rodada: null, indiceRodada: 0, acertosRodada: 0, respondidaRodada: false, escolhaRodada: null },
@@ -93,6 +97,7 @@
     "tela-solucoes": "Concentração",
     "tela-preparo": "Preparo",
     "tela-ph": "Ácidos e bases",
+    "tela-equivalente": "Equivalente e normalidade",
     "tela-bancada": "Titulação virtual",
     "tela-titulacao": "Titulação (Curvas)",
     "tela-sobre": "Sobre",
@@ -137,6 +142,7 @@
     if (id === "tela-solucoes") desenharSolucoes();
     if (id === "tela-preparo") desenharPreparo();
     if (id === "tela-ph") desenharAcidoBase();
+    if (id === "tela-equivalente") desenharEquivalente();
     if (id === "tela-bancada") desenharBancada();
     if (id === "tela-titulacao") desenharTitulacao();
     if (id === "tela-treino") entrarNoTreino();
@@ -2009,6 +2015,307 @@
       if (m) return `<span class="termo-eq"><b class="coef">${m[1]}</b> ${formatarFormula(m[2])}</span>`;
       return `<span class="termo-eq">${formatarFormula(parte.trim())}</span>`;
     }).join("");
+  }
+
+
+  /* ---------------- tela: equivalente e normalidade ---------------- */
+
+  function desenharEquivalente() {
+    const alvo = $("#painel-equivalente");
+    alvo.innerHTML = "";
+    const st = estado.eq;
+
+    /* --- abertura: a ressalva vem antes, não depois --- */
+    const capa = criar("div", { className: "cartao capa-eq" });
+    capa.innerHTML =
+      `<p class="sobretitulo">UMA UNIDADE ANTIGA QUE VOCÊ VAI ENCONTRAR</p>` +
+      `<h1 style="margin:0 0 var(--mb-e3)">Equivalente e normalidade</h1>` +
+      `<p>A IUPAC recomenda desde 1971 abandonar o equivalente-grama e a normalidade, ` +
+      `e os livros escolares os eliminaram. A crítica é justa, e vale entender qual é:</p>` +
+      `<p class="fecho-mol">O equivalente <strong>não é propriedade da substância</strong>. ` +
+      `É propriedade da reação.</p>` +
+      `<p>A mesma substância tem equivalentes diferentes conforme o que acontece com ela. ` +
+      `Um número que muda de valor sem que a substância mude é um mau número — e foi por isso ` +
+      `que o mol o substituiu.</p>` +
+      `<div class="dica-caixa">Só que a unidade não morreu onde você vai trabalhar. Laudo de ` +
+      `eletrólitos vem em mEq/L. Alcalinidade de água vem em mg/L de CaCO₃. O laboratório vai ` +
+      `pedir NaOH 0,1 N e esperar que você saiba pesar. Esta tela ensina a ler, converter e usar — ` +
+      `sempre deixando à vista qual reação está por trás do número.</div>`;
+    alvo.appendChild(capa);
+
+    /* --- o fator k --- */
+    const sK = criar("div", { className: "cartao" });
+    sK.innerHTML = `<h2 style="margin-top:0">Tudo se resume a achar o k</h2>` +
+      `<p>A conta é simples: <strong>E = M ÷ k</strong>, onde M é a massa molar. ` +
+      `A dificuldade inteira está em saber quanto vale k — e isso depende da função química ` +
+      `e da reação pretendida.</p>`;
+    const chipsFuncao = criar("div", { className: "chips" });
+    for (const f of funcoesDoEquivalente()) {
+      const b = criar("button", { type: "button", className: "chip" + (f.id === st.funcao ? " ativo" : "") });
+      b.textContent = f.nome;
+      b.addEventListener("click", () => { st.funcao = f.id; desenharEquivalente(); });
+      chipsFuncao.appendChild(b);
+    }
+    sK.appendChild(chipsFuncao);
+    const f = funcoesDoEquivalente().filter((x) => x.id === st.funcao)[0];
+    const quadroK = criar("div", { className: "quadro-k" });
+    quadroK.innerHTML =
+      `<p class="regra-k">${f.comoAcharK}</p>` +
+      `<p class="ajuda"><strong>Exemplo:</strong> ${f.exemplo}</p>` +
+      `<p class="ajuda alerta-k"><strong>Armadilha:</strong> ${f.armadilha}</p>`;
+    sK.appendChild(quadroK);
+
+    // calculadora do equivalente
+    const grade = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e4)" });
+    campoTexto(grade, { id: "eq-formula", rotulo: "Fórmula", valor: st.formula,
+      aoMudar: (v) => { st.formula = v; atualizarEquivalente(); } });
+    campoTexto(grade, { id: "eq-k", rotulo: "k (da reação pretendida)", valor: st.k,
+      aoMudar: (v) => { st.k = v; atualizarEquivalente(); } });
+    sK.appendChild(grade);
+    sK.appendChild(criar("div", { id: "saida-eq" }));
+    alvo.appendChild(sK);
+
+    /* --- a armadilha, com números --- */
+    const sArm = criar("div", { className: "cartao" });
+    sArm.innerHTML = `<h2 style="margin-top:0">Por que a IUPAC desaconselha</h2>` +
+      `<p>Veja o mesmo ácido fosfórico, na mesma solução de 0,1 mol/L. Só muda até onde a ` +
+      `titulação vai:</p>`;
+    const tArm = criar("table");
+    tArm.innerHTML = `<thead><tr><th>Até onde reage</th><th>k</th><th>E (g)</th><th>Normalidade</th></tr></thead>`;
+    const corpoArm = criar("tbody");
+    for (const e of armadilhaDoFosforico(0.1, analisar("H3PO4").massaMolar)) {
+      const tr = criar("tr");
+      tr.innerHTML = `<td>${e.ate}<br><span class="ajuda">forma ${formatarFormula(e.produto)}</span></td>` +
+        `<td class="num">${e.k}</td>` +
+        `<td class="num">${formatarNumero(e.equivalenteGrama, 4)}</td>` +
+        `<td class="num" style="color:var(--mb-energia);font-weight:500">${formatarNumero(e.normalidade, 3)} N</td>`;
+      corpoArm.appendChild(tr);
+    }
+    tArm.appendChild(corpoArm);
+    sArm.appendChild(tArm);
+    sArm.appendChild(criar("div", { className: "motivo",
+      innerHTML: `Uma solução, três normalidades. Em mol/L ela é <strong>0,1 mol/L</strong> e ponto final — ` +
+        `a estequiometria entra depois, na equação balanceada, onde ela é visível. ` +
+        `É essa transparência que se perde ao usar normalidade.` }));
+    alvo.appendChild(sArm);
+
+    /* --- preparar em normalidade --- */
+    const sPrep = criar("div", { className: "cartao" });
+    sPrep.innerHTML = `<h2 style="margin-top:0">Preparar uma solução em normalidade</h2>` +
+      `<p class="ajuda">É o que vão pedir no laboratório. Use a fórmula e o k definidos acima.</p>`;
+    const gPrep = criar("div", { className: "grelha-2" });
+    campoTexto(gPrep, { id: "eq-n", rotulo: "Normalidade desejada (N)", valor: st.normalidade,
+      aoMudar: (v) => { st.normalidade = v; atualizarEquivalente(); } });
+    campoTexto(gPrep, { id: "eq-v", rotulo: "Volume final (L)", valor: st.volume,
+      aoMudar: (v) => { st.volume = v; atualizarEquivalente(); } });
+    sPrep.appendChild(gPrep);
+    sPrep.appendChild(criar("div", { id: "saida-preparo-eq" }));
+    alvo.appendChild(sPrep);
+
+    /* --- eletrólitos --- */
+    const sEle = criar("div", { className: "cartao" });
+    sEle.innerHTML = `<h2 style="margin-top:0">Eletrólitos em mEq/L</h2>` +
+      `<p>O laudo clínico fala esta língua. Aqui o k é simplesmente a carga do íon, ` +
+      `e por isso não há ambiguidade nenhuma — este é o uso mais legítimo da unidade.</p>`;
+    const chipsEle = criar("div", { className: "chips" });
+    for (const io of eletrolitosConhecidos()) {
+      const b = criar("button", { type: "button", className: "chip" + (io.formula === st.eletrolito ? " ativo" : "") });
+      b.innerHTML = formatarFormula(io.formula);
+      b.addEventListener("click", () => { st.eletrolito = io.formula; desenharEquivalente(); });
+      chipsEle.appendChild(b);
+    }
+    sEle.appendChild(chipsEle);
+    const gEle = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e3)" });
+    campoTexto(gEle, { id: "eq-valor", rotulo: "Valor", valor: st.valorEletrolito,
+      aoMudar: (v) => { st.valorEletrolito = v; atualizarEquivalente(); } });
+    campoSelecao(gEle, { id: "eq-unidade", rotulo: "Unidade", valor: st.unidadeEletrolito,
+      opcoes: [{ valor: "mEqPorL", rotulo: "mEq/L" }, { valor: "mgPorL", rotulo: "mg/L" },
+               { valor: "mmolPorL", rotulo: "mmol/L" }],
+      aoMudar: (v) => { st.unidadeEletrolito = v; desenharEquivalente(); } });
+    sEle.appendChild(gEle);
+    sEle.appendChild(criar("div", { id: "saida-eletrolito" }));
+    alvo.appendChild(sEle);
+
+    /* --- alcalinidade e dureza --- */
+    const sAgua = criar("div", { className: "cartao" });
+    sAgua.innerHTML = `<h2 style="margin-top:0">Alcalinidade e dureza como CaCO₃</h2>` +
+      `<p>O resultado sai em miligramas de carbonato de cálcio por litro <em>mesmo quando não há ` +
+      `carbonato de cálcio nenhum na amostra</em>. É uma convenção: expressar tudo numa substância ` +
+      `de referência permite comparar laudos de laboratórios diferentes.</p>` +
+      `<p class="ajuda">O CaCO₃ tem massa molar ${formatarNumero(100.087, 6)} e k = 2, ` +
+      `então um equivalente pesa ${formatarNumero(equivalenteDoCaCO3(), 4)} mg. ` +
+      `É daí que vem o fator 50 000 das planilhas de estação de tratamento.</p>`;
+    const gAlc = criar("div", { className: "grelha-3" });
+    campoTexto(gAlc, { id: "eq-vacido", rotulo: "Ácido gasto (mL)", valor: st.vAcido,
+      aoMudar: (v) => { st.vAcido = v; atualizarEquivalente(); } });
+    campoTexto(gAlc, { id: "eq-nacido", rotulo: "Normalidade do ácido", valor: st.nAcido,
+      aoMudar: (v) => { st.nAcido = v; atualizarEquivalente(); } });
+    campoTexto(gAlc, { id: "eq-vamostra", rotulo: "Amostra (mL)", valor: st.vAmostra,
+      aoMudar: (v) => { st.vAmostra = v; atualizarEquivalente(); } });
+    sAgua.appendChild(criar("p", { className: "rot-campo", textContent: "Alcalinidade, por titulação com ácido" }));
+    sAgua.appendChild(gAlc);
+    sAgua.appendChild(criar("div", { id: "saida-alcalinidade" }));
+
+    const gDur = criar("div", { className: "grelha-3", style: "margin-top:var(--mb-e3)" });
+    campoTexto(gDur, { id: "eq-vedta", rotulo: "EDTA gasto (mL)", valor: st.vEdta,
+      aoMudar: (v) => { st.vEdta = v; atualizarEquivalente(); } });
+    campoTexto(gDur, { id: "eq-cedta", rotulo: "EDTA (mol/L)", valor: st.cEdta,
+      aoMudar: (v) => { st.cEdta = v; atualizarEquivalente(); } });
+    campoTexto(gDur, { id: "eq-vamostra-dureza", rotulo: "Amostra (mL)", valor: st.vAmostraDureza,
+      aoMudar: (v) => { st.vAmostraDureza = v; atualizarEquivalente(); } });
+    sAgua.appendChild(criar("p", { className: "rot-campo", style: "margin-top:var(--mb-e4)",
+      textContent: "Dureza, por titulação com EDTA" }));
+    sAgua.appendChild(gDur);
+    sAgua.appendChild(criar("div", { id: "saida-dureza" }));
+    alvo.appendChild(sAgua);
+
+    /* --- o atalho --- */
+    const sAtalho = criar("div", { className: "cartao" });
+    sAtalho.innerHTML = `<h2 style="margin-top:0">Por que N₁V₁ = N₂V₂ funciona</h2>` +
+      `<p>Porque a normalidade já embute a estequiometria: por construção, um equivalente sempre ` +
+      `reage com um equivalente. Foi essa comodidade que manteve a unidade viva no laboratório ` +
+      `industrial — dispensa recalcular a proporção a cada análise.</p>` +
+      `<p>Veja a mesma titulação pelos dois caminhos: 25,0 mL de NaOH 0,1 mol/L neutralizando ` +
+      `25,0 mL de H₂SO₄.</p>`;
+    const cam = compararCaminhos({ cTitulante: 0.1, vTitulante: 25, vAmostra: 25, kTitulante: 1, kAmostra: 2 });
+    const tCam = criar("table");
+    tCam.innerHTML = `<tbody>` +
+      `<tr><td>Pelo atalho da normalidade</td><td class="num">${formatarNumero(cam.porNormalidade, 4)} mol/L</td></tr>` +
+      `<tr><td>Pelo caminho do mol</td><td class="num">${formatarNumero(cam.porMol, 4)} mol/L</td></tr>` +
+      `</tbody>`;
+    sAtalho.appendChild(tCam);
+    sAtalho.appendChild(criar("div", { className: "risco alto",
+      innerHTML: `<span class="selo-risco">ONDE ELE MENTE</span>` +
+        `<p class="titulo-risco">Quando o k assumido não é o k da reação</p>` +
+        `<p>Se você tratar o H₂SO₄ como k = 1 porque "é um ácido", o resultado sai pela metade — ` +
+        `e nada no cálculo avisa. O caminho pelo mol obriga a escrever a equação balanceada, ` +
+        `e a equação não deixa você esquecer a proporção.</p>` }));
+    alvo.appendChild(sAtalho);
+
+    /* --- onde se usa --- */
+    const sOnde = criar("div", { className: "cartao" });
+    sOnde.innerHTML = `<h2 style="margin-top:0">Onde a unidade continua viva</h2>`;
+    const lista = criar("div", { className: "aplicacoes" });
+    for (const o of ondeSeUsaEquivalente()) {
+      const item = criar("div", { className: "aplicacao" });
+      item.innerHTML = `<p class="area"><span class="emoji-area" aria-hidden="true">${o.emoji}</span> ${o.area}</p><p>${o.texto}</p>`;
+      lista.appendChild(item);
+    }
+    sOnde.appendChild(lista);
+    alvo.appendChild(sOnde);
+
+    atualizarEquivalente();
+  }
+
+  function atualizarEquivalente() {
+    const st = estado.eq;
+
+    // --- equivalente-grama ---
+    const alvoEq = $("#saida-eq");
+    if (alvoEq) {
+      alvoEq.innerHTML = "";
+      let analise = null;
+      try { analise = analisar(st.formula); } catch (e) { analise = null; }
+      const k = lerNumero(st.k);
+      if (!analise) {
+        alvoEq.innerHTML = `<p class="ajuda">Informe uma fórmula válida.</p>`;
+      } else if (!(k > 0)) {
+        alvoEq.innerHTML = `<p class="ajuda">Informe o k da reação pretendida.</p>`;
+      } else {
+        const E = equivalenteGrama(analise.massaMolar, k);
+        alvoEq.innerHTML =
+          `<div class="quadro-eq"><p class="conta-eq">E = ${formatarNumero(analise.massaMolar, 6)} ÷ ${formatarNumero(k, 3)}</p>` +
+          `<p class="valor-eq">${formatarNumero(E, 5)} g</p>` +
+          `<p class="ajuda">um equivalente-grama de ${formatarFormula(analise.normalizada)}, ` +
+          `considerando k = ${formatarNumero(k, 3)}</p></div>`;
+      }
+
+      // --- preparo em N ---
+      const alvoPrep = $("#saida-preparo-eq");
+      if (alvoPrep) {
+        alvoPrep.innerHTML = "";
+        const N = lerNumero(st.normalidade), V = lerNumero(st.volume);
+        if (analise && k > 0 && N > 0 && V > 0) {
+          const r = massaParaNormalidade(N, V, analise.massaMolar, k);
+          const t = criar("table", { style: "margin-top:var(--mb-e3)" });
+          t.innerHTML = `<tbody>` +
+            `<tr><td>Equivalente-grama</td><td class="num">${formatarNumero(r.equivalenteGrama, 5)} g</td></tr>` +
+            `<tr><td>Equivalentes necessários</td><td class="num">${formatarNumero(r.numeroDeEquivalentes, 4)} eq</td></tr>` +
+            `<tr><td><strong>Massa a pesar</strong></td><td class="num" style="color:var(--mb-energia);font-weight:500">${formatarNumero(r.massa, 5)} g</td></tr>` +
+            `<tr><td>A mesma solução, em mol/L</td><td class="num">${formatarNumero(r.concentracaoMolar, 4)} mol/L</td></tr>` +
+            `</tbody>`;
+          alvoPrep.appendChild(t);
+          alvoPrep.appendChild(criar("p", { className: "ajuda",
+            textContent: `Rotule o frasco com as duas: ${formatarNumero(N, 3)} N e ` +
+              `${formatarNumero(r.concentracaoMolar, 4)} mol/L. Quem pegar o frasco depois pode ` +
+              `não saber qual k você assumiu.` }));
+        } else {
+          alvoPrep.innerHTML = `<p class="ajuda">Preencha a normalidade e o volume.</p>`;
+        }
+      }
+    }
+
+    // --- eletrólito ---
+    const alvoEle = $("#saida-eletrolito");
+    if (alvoEle) {
+      alvoEle.innerHTML = "";
+      const io = eletrolitosConhecidos().filter((e) => e.formula === st.eletrolito)[0];
+      const valor = lerNumero(st.valorEletrolito);
+      const entrada = {};
+      entrada[st.unidadeEletrolito] = valor;
+      const r = io && valor >= 0 ? converterEletrolito(io, entrada) : null;
+      if (r) {
+        const t = criar("table");
+        t.innerHTML = `<tbody>` +
+          `<tr><td>Em mEq/L</td><td class="num">${formatarNumero(r.mEqPorL, 4)}</td></tr>` +
+          `<tr><td>Em mg/L</td><td class="num">${formatarNumero(r.mgPorL, 4)}</td></tr>` +
+          `<tr><td>Em mmol/L</td><td class="num">${formatarNumero(r.mmolPorL, 4)}</td></tr>` +
+          `</tbody>`;
+        alvoEle.appendChild(t);
+        alvoEle.appendChild(criar("p", { className: "ajuda",
+          innerHTML: `Um miliequivalente de ${formatarFormula(io.formula)} pesa ` +
+            `${formatarNumero(r.equivalenteEmMg, 5)} mg, porque a carga é ${io.carga}. ` +
+            `Referência de plasma: ${io.referencia}.` }));
+      } else {
+        alvoEle.innerHTML = `<p class="ajuda">Informe um valor.</p>`;
+      }
+    }
+
+    // --- alcalinidade ---
+    const alvoAlc = $("#saida-alcalinidade");
+    if (alvoAlc) {
+      alvoAlc.innerHTML = "";
+      const r = alcalinidadeComoCaCO3({
+        volumeAcidoML: lerNumero(st.vAcido), normalidadeAcido: lerNumero(st.nAcido),
+        volumeAmostraML: lerNumero(st.vAmostra),
+      });
+      if (r) {
+        alvoAlc.innerHTML =
+          `<div class="quadro-eq"><p class="valor-eq">${formatarNumero(r.mgPorLCaCO3, 4)} mg/L de CaCO₃</p>` +
+          `<p class="ajuda">equivale a ${formatarNumero(r.mEqPorL, 4)} mEq/L</p></div>`;
+      } else {
+        alvoAlc.innerHTML = `<p class="ajuda">Preencha os três campos.</p>`;
+      }
+    }
+
+    // --- dureza ---
+    const alvoDur = $("#saida-dureza");
+    if (alvoDur) {
+      alvoDur.innerHTML = "";
+      const r = durezaComoCaCO3({
+        volumeEdtaML: lerNumero(st.vEdta), molaridadeEdta: lerNumero(st.cEdta),
+        volumeAmostraML: lerNumero(st.vAmostraDureza),
+      });
+      if (r) {
+        alvoDur.innerHTML =
+          `<div class="quadro-eq"><p class="valor-eq">${formatarNumero(r.mgPorLCaCO3, 4)} mg/L de CaCO₃</p>` +
+          `<p class="ajuda">água ${r.classificacao} · ${formatarNumero(r.mmolPorL, 4)} mmol/L de Ca²⁺ e Mg²⁺</p>` +
+          `<p class="ajuda">O EDTA reage 1:1 com o cálcio, então aqui a conta é molar. ` +
+          `A expressão em CaCO₃ é só linguagem de laudo.</p></div>`;
+      } else {
+        alvoDur.innerHTML = `<p class="ajuda">Preencha os três campos.</p>`;
+      }
+    }
   }
 
   /* ---------------- tela: titulação virtual ----------------

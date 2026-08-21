@@ -1271,3 +1271,35 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
 .colaborador .quem {
   font-weight: 500; color: var(--mb-estrutura); margin-bottom: 4px !important;
 }
+
+/* ---------- equivalente e normalidade ---------- */
+
+.capa-eq { border-left: 4px solid var(--mb-atencao); }
+.capa-eq h1 { font-size: var(--mb-t-titulo-1); }
+.capa-eq p { max-width: 62ch; }
+
+.grelha-3 { display: grid; gap: var(--mb-e3); grid-template-columns: 1fr; }
+@media (min-width: 620px) { .grelha-3 { grid-template-columns: repeat(3, 1fr); } }
+
+.quadro-k {
+  margin-top: var(--mb-e3); padding: var(--mb-e3) var(--mb-e4);
+  background: var(--mb-superficie-2); border-radius: var(--mb-raio);
+}
+.regra-k { margin: 0 0 var(--mb-e2); font-weight: 500; max-width: 62ch; }
+.quadro-k .ajuda { margin: 0 0 4px; max-width: 62ch; }
+.alerta-k { color: var(--mb-atencao); }
+
+.quadro-eq {
+  margin-top: var(--mb-e3); padding: var(--mb-e4);
+  background: var(--mb-superficie-2); border-radius: var(--mb-raio-card);
+  text-align: center;
+}
+.conta-eq {
+  margin: 0 0 6px; font-family: var(--mb-fonte-dado);
+  font-size: var(--mb-t-legenda); color: var(--mb-texto-2);
+}
+.valor-eq {
+  margin: 0 0 6px; font-family: var(--mb-fonte-dado); font-variant-numeric: tabular-nums;
+  font-size: var(--mb-t-titulo-1); font-weight: 500; color: var(--mb-energia); line-height: 1.15;
+}
+.quadro-eq .ajuda { margin: 0 auto; max-width: 52ch; }

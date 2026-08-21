@@ -41,6 +41,7 @@
     <button type="button" class="item" data-tela="tela-solucoes"><span class="glifo" aria-hidden="true">&#8776;</span><span class="rotulo">Concentração</span></button>
     <button type="button" class="item" data-tela="tela-preparo"><span class="glifo" aria-hidden="true">&#9707;</span><span class="rotulo">Preparo</span></button>
     <button type="button" class="item" data-tela="tela-ph"><span class="glifo" aria-hidden="true">pH</span><span class="rotulo">Ácidos e bases</span></button>
+    <button type="button" class="item" data-tela="tela-equivalente"><span class="glifo" aria-hidden="true">N</span><span class="rotulo">Equivalente e normalidade</span></button>
     <button type="button" class="item" data-tela="tela-bancada"><span class="glifo" aria-hidden="true">&#9662;</span><span class="rotulo">Titulação virtual</span></button>
     <button type="button" class="item" data-tela="tela-titulacao"><span class="glifo" aria-hidden="true">&#8735;</span><span class="rotulo">Titulação (Curvas)</span></button>
     <p class="grupo">Prática</p>
@@ -50,7 +51,7 @@
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
     <p class="autoria">Criado pelo <strong>Prof. Paulo Fernandes</strong><br>Farmacêutico e docente de Química</p>
-    <p class="versao">SUPER MOLBOX v0.14 &middot; funciona sem internet</p>
+    <p class="versao">SUPER MOLBOX v0.15 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -149,6 +150,10 @@
     <div id="painel-ph"></div>
   </section>
 
+  <section id="tela-equivalente" hidden>
+    <div id="painel-equivalente"></div>
+  </section>
+
   <section id="tela-bancada" hidden>
     <div id="painel-bancada"></div>
   </section>
@@ -192,7 +197,7 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>SUPER MOLBOX v0.14 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>SUPER MOLBOX v0.15 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
 </main>
 
@@ -208,6 +213,7 @@
 <script src="js/seguranca.js"></script>
 <script src="js/acidobase.js"></script>
 <script src="js/bancada.js"></script>
+<script src="js/equivalente.js"></script>
 <script src="js/mol.js"></script>
 <script src="js/sobre.js"></script>
 <script src="js/exercicios.js"></script>
