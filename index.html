@@ -37,6 +37,7 @@
     <p class="grupo">Reações</p>
     <button type="button" class="item" data-tela="tela-balancear"><span class="glifo" aria-hidden="true">&#8646;</span><span class="rotulo">Balancear</span></button>
     <button type="button" class="item" data-tela="tela-esteq"><span class="glifo" aria-hidden="true">&#8721;</span><span class="rotulo">Estequiometria</span></button>
+    <button type="button" class="item" data-tela="tela-treino-balanceamento"><span class="glifo" aria-hidden="true">&#9878;</span><span class="rotulo">Treino: Balanceamento</span></button>
     <p class="grupo">Soluções</p>
     <button type="button" class="item" data-tela="tela-solucoes"><span class="glifo" aria-hidden="true">&#8776;</span><span class="rotulo">Concentração</span></button>
     <button type="button" class="item" data-tela="tela-preparo"><span class="glifo" aria-hidden="true">&#9707;</span><span class="rotulo">Preparo</span></button>
@@ -51,7 +52,7 @@
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
     <p class="autoria">Criado pelo <strong>Prof. Paulo Fernandes</strong><br>Químico Industrial, Farmacêutico e Docente de Química</p>
-    <p class="versao">SUPER MOLBOX v0.16 &middot; funciona sem internet</p>
+    <p class="versao">SUPER MOLBOX v0.17 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -83,6 +84,7 @@
              placeholder="Ca(OH)2" aria-describedby="ajuda-formula">
       <p class="ajuda" id="ajuda-formula">Entende parênteses e colchetes aninhados, hidratos com ponto (CuSO4&middot;5H2O), índices em subscrito e cargas de íons (SO4^2-).</p>
       <div class="chips" id="exemplos"></div>
+      <button type="button" class="botao secundario botao-banco" data-alvo="formula">Escolher do banco de espécies</button>
       <div id="erro-formula" role="alert"></div>
     </div>
 
@@ -152,6 +154,16 @@
     <div id="erro-equacao" role="alert"></div>
 
     <div id="resultado-equacao" aria-live="polite"></div>
+  </section>
+
+  <section id="tela-treino-balanceamento" hidden>
+    <h1>Treino: Balanceamento</h1>
+    <p class="intro">Uma equação desbalanceada por vez. Ajuste os coeficientes até que todos os
+      elementos fechem dos dois lados. Vale XP, e está liberado desde o começo — não depende
+      de degrau.</p>
+
+    <div class="cartao" id="painel-treino-bal"></div>
+    <div class="cartao" id="placar-treino-bal"></div>
   </section>
 
   <section id="tela-esteq" hidden>
@@ -225,8 +237,22 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>SUPER MOLBOX v0.16 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>SUPER MOLBOX v0.17 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
+
+  <div id="seletor-especies" class="onboarding" hidden role="dialog" aria-modal="true"
+       aria-labelledby="seletor-titulo">
+    <div class="onboarding-painel painel-seletor">
+      <h2 id="seletor-titulo">Banco de espécies</h2>
+      <label for="busca-seletor">Procurar por nome ou fórmula</label>
+      <input type="search" id="busca-seletor" autocomplete="off" autocapitalize="off"
+             spellcheck="false" placeholder="soda cáustica, KMnO4, vinagre…">
+      <div class="chips" id="cat-seletor"></div>
+      <div class="grade-especies" id="grade-seletor"></div>
+      <button type="button" class="botao secundario" id="fechar-seletor">Fechar</button>
+    </div>
+  </div>
+
 </main>
 
 <script src="js/elementos.js"></script>

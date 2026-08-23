@@ -1429,3 +1429,58 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
 @media (max-width: 719px) {
   .grade-especies { max-height: 46vh; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
 }
+
+/* ---------------- treino de balanceamento ---------------- */
+
+.cabeca-desafio { display: flex; align-items: center; gap: var(--mb-e3); flex-wrap: wrap; }
+.etiqueta-dif {
+  font-size: var(--mb-t-legenda); font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 3px var(--mb-e3); border-radius: 999px;
+}
+.etiqueta-dif.dif-1 { background: var(--mb-acerto-bg); color: var(--mb-acerto); }
+.etiqueta-dif.dif-2 { background: var(--mb-interacao-bg); color: var(--mb-interacao); }
+.etiqueta-dif.dif-3 { background: var(--mb-energia-bg); color: var(--mb-energia); }
+
+.equacao-desafio {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--mb-e2);
+  padding: var(--mb-e3); border-radius: var(--mb-raio);
+  background: var(--mb-superficie-2); border: 1px solid var(--mb-borda);
+}
+.sep-mais, .sep-seta {
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3); color: var(--mb-texto-3);
+  padding: 0 var(--mb-e1);
+}
+.sep-seta { color: var(--mb-interacao); }
+
+.coef-caixa { display: inline-flex; align-items: center; gap: var(--mb-e1); }
+.coef-passo {
+  width: var(--mb-toque); height: var(--mb-toque); flex: 0 0 auto;
+  border: 1px solid var(--mb-borda-forte); border-radius: var(--mb-raio);
+  background: var(--mb-superficie); color: var(--mb-interacao);
+  font-size: var(--mb-t-titulo-3); line-height: 1; cursor: pointer;
+}
+.coef-passo[disabled] { opacity: 0.35; cursor: default; }
+.coef-campo {
+  width: 52px; min-height: var(--mb-toque); text-align: center;
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-corpo);
+  border: 1px solid var(--mb-borda-forte); border-radius: var(--mb-raio);
+  background: var(--mb-superficie); color: var(--mb-texto); padding: 0;
+}
+.coef-formula {
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3);
+  color: var(--mb-texto); padding-left: var(--mb-e1);
+}
+
+.devolutiva-desafio { margin-top: var(--mb-e4); }
+.veredito { margin: 0 0 var(--mb-e3); font-size: var(--mb-t-corpo); font-weight: 500; }
+.veredito.certo { color: var(--mb-acerto); }
+.veredito.quase { color: var(--mb-interacao); }
+.veredito.errado { color: var(--mb-energia); }
+.uso-reacao { margin-top: var(--mb-e3); }
+
+/* ---------------- seletor de espécies ---------------- */
+.painel-seletor { max-width: 620px; width: 100%; text-align: left; }
+.painel-seletor h2 { margin: 0 0 var(--mb-e3); }
+.painel-seletor .grade-especies { max-height: 44vh; }
+.painel-seletor #fechar-seletor { margin-top: var(--mb-e4); width: 100%; }
+.botao-banco { margin-top: var(--mb-e3); width: 100%; }

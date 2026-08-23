@@ -26,6 +26,8 @@
     balanceada: null,
     montagem: { reagentes: [], produtos: [], lado: "reagentes",
                 modo: "montar", categoria: "usadas", receita: null },
+    treinoBal: { receita: null, balanceada: null, coefs: [], respondido: false,
+                 acertou: false, contou: false, rodada: 0, feitos: 0, seguidos: 0 },
     esteq: { unidade: "g", quantidades: {}, purezas: {}, produtoRendimento: 0, massaObtida: "" },
     solucao: { formula: "NaCl", unidade: "molar", valor: "1,0", densidade: "1,00",
                dil: { c1: "1,0", v1: "", c2: "0,1", v2: "250" },
@@ -96,6 +98,7 @@
     "tela-ponte": "Ponte do mol",
     "tela-balancear": "Balancear",
     "tela-esteq": "Estequiometria",
+    "tela-treino-balanceamento": "Treino: Balanceamento",
     "tela-solucoes": "Concentração",
     "tela-preparo": "Preparo",
     "tela-ph": "Ácidos e bases",
@@ -141,6 +144,7 @@
     if (id === "tela-mol") desenharMol();
     if (id === "tela-ponte") desenharPonte();
     if (id === "tela-esteq") desenharEstequiometria();
+    if (id === "tela-treino-balanceamento") entrarNoTreinoBal();
     if (id === "tela-solucoes") desenharSolucoes();
     if (id === "tela-preparo") desenharPreparo();
     if (id === "tela-ph") desenharAcidoBase();
@@ -1632,6 +1636,424 @@
     alvo.appendChild(acao);
   }
 
+  /* ---------------- seletor de espécies (Massa molar, Soluções, Preparo) ----
+
+     O mesmo problema que tornava o Balanceamento ruim no celular estava em
+     mais três telas: todas pediam a fórmula digitada à mão. No Preparo é o
+     pior caso, porque é a tela usada de pé na bancada, de luva, e é a fórmula
+     que decide qual aviso de segurança aparece.
+
+     Por que um diálogo e não uma grade embutida: Soluções e Preparo redesenham
+     o painel inteiro a cada mudança de campo. Uma grade dentro deles seria
+     destruída a cada tecla — o mesmo bug do teclado da bancada. O diálogo é
+     montado uma vez, fora desses painéis, e sobrevive a qualquer redesenho. */
+
+  let aoEscolherEspecie = null;
+  let categoriaDoSeletor = "usadas";
+
+  function montarSeletorEspecies() {
+    const busca = $("#busca-seletor");
+    busca.addEventListener("input", desenharGradeSeletor);
+
+    const caixa = $("#cat-seletor");
+    for (const cat of categoriasDeEspecie()) {
+      const b = criar("button", { type: "button", className: "chip", textContent: cat.nome });
+      b.dataset.cat = cat.id;
+      b.addEventListener("click", () => {
+        categoriaDoSeletor = cat.id;
+        busca.value = "";
+        for (const o of caixa.querySelectorAll(".chip")) o.classList.toggle("ativo", o.dataset.cat === cat.id);
+        desenharGradeSeletor();
+      });
+      caixa.appendChild(b);
+    }
+    for (const o of caixa.querySelectorAll(".chip")) o.classList.toggle("ativo", o.dataset.cat === categoriaDoSeletor);
+
+    $("#fechar-seletor").addEventListener("click", fecharSeletorEspecies);
+    $("#seletor-especies").addEventListener("click", (e) => {
+      if (e.target.id === "seletor-especies") fecharSeletorEspecies();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("#seletor-especies").hidden) fecharSeletorEspecies();
+    });
+
+    for (const b of document.querySelectorAll(".botao-banco")) {
+      b.addEventListener("click", () => {
+        const campo = $("#" + b.dataset.alvo);
+        abrirSeletorEspecies((formula) => {
+          campo.value = formula;
+          campo.dispatchEvent(new Event("input"));
+        });
+      });
+    }
+
+    desenharGradeSeletor();
+  }
+
+  function abrirSeletorEspecies(aoEscolher) {
+    aoEscolherEspecie = aoEscolher;
+    $("#seletor-especies").hidden = false;
+    $("#busca-seletor").value = "";
+    desenharGradeSeletor();
+    /* O foco vai para a busca: no computador dá para digitar direto, e no
+       celular o aluno vê de imediato que dá para procurar. */
+    try { $("#busca-seletor").focus(); } catch (e) {}
+  }
+
+  function fecharSeletorEspecies() {
+    $("#seletor-especies").hidden = true;
+    aoEscolherEspecie = null;
+  }
+
+  function desenharGradeSeletor() {
+    const alvo = $("#grade-seletor");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const achadas = buscarEspecies($("#busca-seletor").value, categoriaDoSeletor);
+    if (!achadas.length) {
+      alvo.appendChild(criar("p", { className: "ajuda", style: "margin:0",
+        textContent: "Nenhuma espécie com esse nome. Tente a fórmula, ou parte dela — o banco tem " +
+          quantasEspecies() + " espécies. Você também pode fechar e digitar à mão." }));
+      return;
+    }
+    for (const e of achadas) {
+      const b = criar("button", { type: "button", className: "especie" });
+      b.innerHTML = `<span class="especie-f">${formatarFormula(e.f)}</span>` +
+                    `<span class="especie-n">${e.n}</span>`;
+      b.setAttribute("aria-label", `Usar ${e.n}, ${e.f}`);
+      b.addEventListener("click", () => {
+        if (aoEscolherEspecie) aoEscolherEspecie(e.f);
+        fecharSeletorEspecies();
+      });
+      alvo.appendChild(b);
+    }
+  }
+
+  /* ---------------- tela: treino de balanceamento ----------------
+
+     Treino extra: dá XP e não mexe na escada. Está liberado desde o primeiro
+     acesso porque balancear é anterior à estequiometria — trancá-lo atrás do
+     degrau 4 obrigaria o aluno a atravessar a ponte do mol para exercitar algo
+     que ele precisa antes disso.
+
+     O formato de resposta é novo. O treino da escada só sabia duas coisas:
+     escolher uma alternativa ou digitar um número. Aqui o aluno define vários
+     coeficientes de uma vez, então a conferência também é nova. */
+
+  const TREINO_BAL = "balanceamento";
+
+  function entrarNoTreinoBal() {
+    if (!estado.treinoBal.receita) sortearDesafioBal();
+    else desenharTreinoBal();
+    desenharPlacarTreinoBal();
+  }
+
+  /* Dificuldade calculada, nunca decorada: um número escrito à mão ao lado da
+     reação divergiria no dia em que a equação mudasse. */
+  function dificuldadeDoDesafio(b) {
+    const maior = Math.max(...b.especies.map((e) => e.coeficiente));
+    const soma = b.especies.reduce((t, e) => t + e.coeficiente, 0);
+    if (maior <= 2 && b.especies.length <= 4) return { nome: "Aquecimento", n: 1 };
+    if (maior <= 4 && soma <= 12) return { nome: "Firme", n: 2 };
+    return { nome: "Osso duro", n: 3 };
+  }
+
+  /* Oito das reações do banco já fecham com todos os coeficientes em 1 —
+     neutralização simples, calcinação do calcário e outras. Elas são ótimas no
+     montador, mas como exercício são XP de graça: o treino começa com tudo em
+     1, então o aluno acertaria clicando em "Conferir" sem fazer nada. Ficam
+     fora do sorteio.
+
+     O filtro é calculado, não uma lista escrita à mão: reação nova entra ou
+     sai sozinha conforme o balanceamento dela. */
+  function desafiosPossiveis() {
+    return receitasDeAula().filter((r) => {
+      try {
+        return balancear(textoDaMontagem(r.reagentes, r.produtos))
+          .especies.some((e) => e.coeficiente > 1);
+      } catch (e) { return false; }
+    });
+  }
+
+  function sortearDesafioBal() {
+    const receitas = desafiosPossiveis();
+    let escolhida = null;
+    /* Não repetir a reação anterior: cair duas vezes na mesma logo em seguida
+       faz o aluno achar que o banco é pequeno. */
+    for (let i = 0; i < 30; i++) {
+      const r = receitas[Math.floor(Math.random() * receitas.length)];
+      if (!estado.treinoBal.receita || r.nome !== estado.treinoBal.receita.nome) { escolhida = r; break; }
+    }
+    if (!escolhida) escolhida = receitas[0];
+
+    const b = balancear(textoDaMontagem(escolhida.reagentes, escolhida.produtos));
+    estado.treinoBal = {
+      receita: escolhida, balanceada: b,
+      coefs: b.especies.map(() => 1),
+      respondido: false, acertou: false, contou: false,
+      rodada: estado.treinoBal.rodada + 1,
+      feitos: estado.treinoBal.feitos,
+      seguidos: estado.treinoBal.seguidos,
+    };
+    desenharTreinoBal();
+  }
+
+  function desenharTreinoBal() {
+    const alvo = $("#painel-treino-bal");
+    alvo.innerHTML = "";
+    const t = estado.treinoBal;
+    if (!t.balanceada) return;
+
+    const dif = dificuldadeDoDesafio(t.balanceada);
+    const cabeca = criar("div", { className: "cabeca-desafio" });
+    cabeca.innerHTML = `<span class="etiqueta-dif dif-${dif.n}">${dif.nome}</span>` +
+      `<span class="ajuda">${t.receita.grupo}</span>`;
+    alvo.appendChild(cabeca);
+
+    alvo.appendChild(criar("p", { className: "enunciado", style: "margin:var(--mb-e3) 0",
+      textContent: "Ajuste os coeficientes até que a equação feche." }));
+
+    /* a equação, com um seletor de coeficiente por espécie */
+    const linha = criar("div", { className: "equacao-desafio" });
+    t.balanceada.especies.forEach((esp, i) => {
+      const doLado = t.balanceada.reagentes.indexOf(esp);
+      if (i > 0) {
+        const antes = t.balanceada.especies[i - 1];
+        const virouLado = t.balanceada.reagentes.includes(antes) && doLado === -1;
+        linha.appendChild(criar("span", {
+          className: virouLado ? "sep-seta" : "sep-mais",
+          innerHTML: virouLado ? "&#8594;" : "+",
+        }));
+      }
+      linha.appendChild(caixaDeCoeficiente(i, esp));
+    });
+    alvo.appendChild(linha);
+
+    /* contagem de átomos: escondida por padrão, porque revelada de saída o
+       exercício vira tentativa e erro até tudo ficar verde */
+    if (t.contou && !t.respondido) alvo.appendChild(contagemComCoeficientes());
+
+    const acoes = criar("div", { className: "montador-acoes" });
+    if (!t.respondido) {
+      const conferir = criar("button", { type: "button", className: "botao", textContent: "Conferir" });
+      conferir.addEventListener("click", conferirDesafioBal);
+      acoes.appendChild(conferir);
+      if (!t.contou) {
+        const contar = criar("button", { type: "button", className: "botao secundario",
+          textContent: "Contar átomos" });
+        contar.title = "Mostra a contagem por elemento, e reduz o XP deste exercício";
+        contar.addEventListener("click", () => { estado.treinoBal.contou = true; desenharTreinoBal(); });
+        acoes.appendChild(contar);
+      }
+    } else {
+      const proximo = criar("button", { type: "button", className: "botao", textContent: "Próxima equação" });
+      proximo.addEventListener("click", () => { sortearDesafioBal(); desenharPlacarTreinoBal(); });
+      acoes.appendChild(proximo);
+    }
+    alvo.appendChild(acoes);
+
+    if (t.respondido) alvo.appendChild(devolutivaDesafioBal());
+  }
+
+  function caixaDeCoeficiente(i, esp) {
+    const t = estado.treinoBal;
+    const caixa = criar("div", { className: "coef-caixa" });
+
+    const menos = criar("button", { type: "button", className: "coef-passo", textContent: "−" });
+    menos.setAttribute("aria-label", `Diminuir o coeficiente de ${esp.formula}`);
+    menos.disabled = t.respondido || t.coefs[i] <= 1;
+    menos.addEventListener("click", () => mudarCoeficiente(i, -1));
+
+    const campo = criar("input", { type: "text", inputMode: "numeric", className: "coef-campo",
+      value: String(t.coefs[i]) });
+    campo.setAttribute("aria-label", `Coeficiente de ${esp.formula}`);
+    campo.disabled = t.respondido;
+    /* Só o valor muda; o campo não é recriado, para o teclado do celular não
+       fechar a cada dígito. */
+    campo.addEventListener("input", () => {
+      const n = parseInt(campo.value.replace(/\D/g, ""), 10);
+      estado.treinoBal.coefs[i] = isNaN(n) || n < 1 ? 1 : Math.min(99, n);
+      atualizarContagemDoDesafio();
+    });
+
+    const mais = criar("button", { type: "button", className: "coef-passo", textContent: "+" });
+    mais.setAttribute("aria-label", `Aumentar o coeficiente de ${esp.formula}`);
+    mais.disabled = t.respondido || t.coefs[i] >= 99;
+    mais.addEventListener("click", () => mudarCoeficiente(i, +1));
+
+    const formula = criar("span", { className: "coef-formula", innerHTML: formatarFormula(esp.formula) });
+
+    caixa.appendChild(menos);
+    caixa.appendChild(campo);
+    caixa.appendChild(mais);
+    caixa.appendChild(formula);
+    return caixa;
+  }
+
+  function mudarCoeficiente(i, passo) {
+    const t = estado.treinoBal;
+    t.coefs[i] = Math.max(1, Math.min(99, t.coefs[i] + passo));
+    desenharTreinoBal();
+  }
+
+  /* Redesenha só a contagem, nunca a equação: a equação contém os campos, e
+     recriá-los enquanto o aluno digita fecharia o teclado. */
+  function atualizarContagemDoDesafio() {
+    const antiga = $("#painel-treino-bal").querySelector(".contagem-desafio");
+    if (!antiga) return;
+    antiga.replaceWith(contagemComCoeficientes());
+  }
+
+  function contarComCoeficientes() {
+    const t = estado.treinoBal;
+    const lado = (especies) => {
+      const atomos = {};
+      let carga = 0;
+      for (const esp of especies) {
+        const i = t.balanceada.especies.indexOf(esp);
+        const c = t.coefs[i];
+        const a = analisar(esp.formula);
+        for (const [el, q] of Object.entries(a.composicao)) atomos[el] = (atomos[el] || 0) + q * c;
+        carga += (a.carga || 0) * c;
+      }
+      return { atomos, carga };
+    };
+    const esq = lado(t.balanceada.reagentes);
+    const dir = lado(t.balanceada.produtos);
+    const els = [...new Set([...Object.keys(esq.atomos), ...Object.keys(dir.atomos)])].sort();
+    const linhas = els.map((el) => ({
+      elemento: el, antes: esq.atomos[el] || 0, depois: dir.atomos[el] || 0,
+      fecha: (esq.atomos[el] || 0) === (dir.atomos[el] || 0),
+    }));
+    if (esq.carga !== 0 || dir.carga !== 0) {
+      linhas.push({ elemento: "carga", antes: esq.carga, depois: dir.carga, fecha: esq.carga === dir.carga });
+    }
+    return { linhas, fechaTudo: linhas.every((l) => l.fecha) };
+  }
+
+  function contagemComCoeficientes() {
+    const r = contarComCoeficientes();
+    const caixa = criar("div", { className: "contagem-montador contagem-desafio" });
+    const pilhas = criar("div", { className: "pilhas-atomo" });
+    for (const l of r.linhas) {
+      const p = criar("span", { className: "pilha-atomo" + (l.fecha ? " fecha" : " falha") });
+      p.innerHTML = `<span class="pilha-el">${l.elemento}</span>` +
+                    `<span class="pilha-num">${l.antes} : ${l.depois}</span>`;
+      pilhas.appendChild(p);
+    }
+    caixa.appendChild(pilhas);
+    caixa.appendChild(criar("p", { className: "ajuda", style: "margin:var(--mb-e2) 0 0",
+      textContent: "Antes : depois, já com os coeficientes que você escolheu." }));
+    return caixa;
+  }
+
+  function conferirDesafioBal() {
+    const t = estado.treinoBal;
+    const certos = t.balanceada.especies.map((e) => e.coeficiente);
+    const fecha = contarComCoeficientes().fechaTudo;
+    const igual = t.coefs.every((c, i) => c === certos[i]);
+
+    t.respondido = true;
+    t.acertou = igual;
+    /* Balanceada mas não simplificada não é acerto nem engano comum: é um
+       múltiplo. O aluno entendeu o método e errou o pedido. */
+    t.multiplo = fecha && !igual;
+
+    const r = registrarTreinoExtra(progresso, TREINO_BAL, igual, t.contou);
+    t.ganho = r.ganho;
+    t.feitos += 1;
+    t.seguidos = igual ? t.seguidos + 1 : 0;
+
+    t.medalhasNovas = r.medalhasNovas;
+
+    desenharTreinoBal();
+    desenharPlacarTreinoBal();
+    atualizarResumoLateral();
+  }
+
+  function devolutivaDesafioBal() {
+    const t = estado.treinoBal;
+    const caixa = criar("div", { className: "devolutiva-desafio" });
+
+    const veredito = criar("p", { className: "veredito" });
+    if (t.acertou) {
+      veredito.classList.add("certo");
+      veredito.textContent = `Fechou. +${t.ganho} XP.`;
+    } else if (t.multiplo) {
+      veredito.classList.add("quase");
+      const fator = t.coefs[0] / t.balanceada.especies[0].coeficiente;
+      veredito.textContent = "Está balanceada — os átomos fecham dos dois lados. Só não está " +
+        "nos menores números inteiros" +
+        (Number.isInteger(fator) && fator > 1 ? `: divida tudo por ${fator}.` : ".");
+    } else {
+      veredito.classList.add("errado");
+      const falhou = contarComCoeficientes().linhas.filter((l) => !l.fecha).map((l) => l.elemento);
+      veredito.textContent = falhou.length
+        ? `Ainda não fecha em ${falhou.join(", ")}. Compare os dois lados desses elementos.`
+        : "Ainda não fecha.";
+    }
+    caixa.appendChild(veredito);
+
+    caixa.appendChild(criar("p", { className: "resolucao",
+      innerHTML: `A resposta é <strong>${t.balanceada.equacaoTexto}</strong>.` }));
+
+    /* O uso industrial não é enfeite: é o que faz a equação deixar de ser um
+       quebra-cabeça de números e virar uma coisa que existe no mundo. */
+    const uso = criar("div", { className: "dica-caixa uso-reacao" });
+    uso.innerHTML = `<strong>${t.receita.nome}</strong><br>${t.receita.uso}` +
+      (t.receita.nota ? `<br><span class="ajuda">${t.receita.nota}</span>` : "");
+    caixa.appendChild(uso);
+
+    const levar = criar("button", { type: "button", className: "botao secundario",
+      style: "margin-top:var(--mb-e3)", textContent: "Abrir no Balancear" });
+    levar.addEventListener("click", () => {
+      estado.montagem.reagentes = t.receita.reagentes.slice();
+      estado.montagem.produtos = t.receita.produtos.slice();
+      aplicarMontagem();
+      estado.montagem.receita = t.receita;
+      balancearAtual();
+      desenharBandejas();
+      mostrarTela("tela-balancear");
+    });
+    /* Mesmo padrão da escada: a medalha é anunciada dentro da devolutiva, sem
+       interromper o aluno com um aviso que ocupa a tela. */
+    for (const m of (t.medalhasNovas || [])) {
+      caixa.appendChild(criar("p", { style: "margin-top:4px;font-weight:500",
+        textContent: `Medalha conquistada: ${m.nome}.` }));
+    }
+
+    caixa.appendChild(levar);
+    return caixa;
+  }
+
+  function desenharPlacarTreinoBal() {
+    const alvo = $("#placar-treino-bal");
+    alvo.innerHTML = "";
+    const t = estado.treinoBal;
+    const rend = rendimentoDoTreino(progresso, TREINO_BAL);
+
+    const painel = criar("div", { className: "painel-bancada" });
+    painel.innerHTML =
+      `<div class="medida"><span class="rot">Nesta sessão</span><span class="val">${t.feitos}</span></div>` +
+      `<div class="medida"><span class="rot">Seguidos</span><span class="val">${t.seguidos}</span></div>` +
+      `<div class="medida"><span class="rot">Acertos no treino</span><span class="val">${rend.acertos}</span></div>`;
+    alvo.appendChild(painel);
+
+    /* O mesmo aviso da escada: o aluno merece saber que o rendimento cai antes
+       de descobrir sozinho e se sentir enganado. */
+    if (rend.saturado) {
+      alvo.appendChild(criar("p", { className: "ajuda", style: "margin:var(--mb-e3) 0 0",
+        textContent: "Você já domina este treino: cada acerto vale 20% do XP. " +
+          "O Treino da escada tem outros tipos de exercício esperando." }));
+    } else if (rend.caindo) {
+      alvo.appendChild(criar("p", { className: "ajuda", style: "margin:var(--mb-e3) 0 0",
+        textContent: "O XP por acerto vai diminuindo neste treino, para valorizar o que você ainda não domina." }));
+    } else {
+      alvo.appendChild(criar("p", { className: "ajuda", style: "margin:var(--mb-e3) 0 0",
+        textContent: `Faltam ${rend.restamCheios} acertos com XP integral neste treino.` }));
+    }
+  }
+
   /* ---------------- tela: estequiometria ---------------- */
 
   function desenharEstequiometria() {
@@ -1852,7 +2274,7 @@
 
   /* ---------------- ajudantes de formulário ---------------- */
 
-  function campoTexto(pai, { id, rotulo, rotuloHtml, valor, dica, aoMudar, placeholder }) {
+  function campoTexto(pai, { id, rotulo, rotuloHtml, valor, dica, aoMudar, placeholder, comBanco }) {
     const caixa = criar("div");
     const etiqueta = criar("label", { htmlFor: id });
     // rotuloHtml existe para que fórmulas apareçam com índice subscrito no
@@ -1866,6 +2288,18 @@
     input.addEventListener("input", () => aoMudar(input.value));
     caixa.appendChild(input);
     if (dica) caixa.appendChild(criar("p", { className: "ajuda", textContent: dica }));
+    /* `comBanco` abre o seletor de espécies para este campo. O botão é criado
+       junto com o campo, e não em HTML fixo, porque estes painéis são
+       redesenhados por código a cada mudança. */
+    if (comBanco) {
+      const bot = criar("button", { type: "button", className: "botao secundario botao-banco",
+        textContent: "Escolher do banco de espécies" });
+      bot.addEventListener("click", () => abrirSeletorEspecies((formula) => {
+        input.value = formula;
+        aoMudar(formula);
+      }));
+      caixa.appendChild(bot);
+    }
     pai.appendChild(caixa);
     return input;
   }
@@ -1906,7 +2340,7 @@
     const grade = criar("div", { className: "grelha-3" });
 
     campoTexto(grade, {
-      id: "sol-formula", rotulo: "Soluto", valor: st.formula, placeholder: "NaCl",
+      id: "sol-formula", rotulo: "Soluto", valor: st.formula, placeholder: "NaCl", comBanco: true,
       aoMudar: (v) => { st.formula = v; desenharSaidaSolucao(); },
     });
     campoSelecao(grade, {
@@ -2111,7 +2545,7 @@
     entrada.innerHTML = `<h2 style="margin-top:0">O que você quer preparar</h2>`;
 
     const g1 = criar("div", { className: "grelha-3" });
-    campoTexto(g1, { id: "prep-formula", rotulo: "Reagente", valor: st.formula, placeholder: "NaOH",
+    campoTexto(g1, { id: "prep-formula", rotulo: "Reagente", valor: st.formula, placeholder: "NaOH", comBanco: true,
       aoMudar: (v) => { st.formula = v; atualizarPreparo(); } });
     campoTexto(g1, { id: "prep-volume", rotulo: "Volume final (mL)", valor: st.volume,
       aoMudar: (v) => { st.volume = v; atualizarPreparo(); } });
@@ -3937,6 +4371,7 @@
     montarExemplos();
     $("#equacao").value = estado.equacao;
     montarTelaBalancear();
+    montarSeletorEspecies();
     sincronizarBandejasComTexto();
     desenharBandejas();
     balancearAtual();

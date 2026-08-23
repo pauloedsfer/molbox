@@ -57,31 +57,21 @@ const DEGRAUS = [
   { n: 4, nome: "Reação",   resumo: "coeficientes, proporção entre substâncias e reagente limitante" },
 ];
 
-/* Reações usadas nos exercícios do degrau 4. Ficam aqui sem coeficientes: o
-   próprio balanceador os calcula na hora, então não há número decorado no
-   código que possa divergir do que o aplicativo ensina. */
-const REACOES = [
-  "CH4 + O2 -> CO2 + H2O",
-  "H2 + O2 -> H2O",
-  "N2 + H2 -> NH3",
-  "Fe + O2 -> Fe2O3",
-  "C3H8 + O2 -> CO2 + H2O",
-  "Al + HCl -> AlCl3 + H2",
-  "CaCO3 -> CaO + CO2",
-  "NaOH + H2SO4 -> Na2SO4 + H2O",
-  "Zn + HCl -> ZnCl2 + H2",
-  "C2H5OH + O2 -> CO2 + H2O",
-  "KClO3 -> KCl + O2",
-  "Mg + O2 -> MgO",
-  "NH3 + O2 -> NO + H2O",
-  "Ca(OH)2 + HCl -> CaCl2 + H2O",
-  "C6H12O6 + O2 -> CO2 + H2O",
-  "Na + H2O -> NaOH + H2",
-];
+/* As reações dos exercícios vêm de `especies.js`, que é a mesma fonte do
+   montador e do treino de balanceamento. Havia duas listas com o mesmo
+   propósito; a que ficava aqui não recebia as reações novas, e o aluno via no
+   montador uma reação que o treino nunca cobrava. Uma lista só resolve isso,
+   pelo mesmo motivo que existe um banco só de perguntas do degrau 0.
+
+   Elas ficam sem coeficientes: o próprio balanceador os calcula na hora, então
+   não há número decorado no código que possa divergir do que o app ensina. */
+function reacoesDoTreino() {
+  return receitasDeAula().map((r) => textoDaMontagem(r.reagentes, r.produtos));
+}
 
 function sortearReacao(minimoReagentes) {
   for (let tentativa = 0; tentativa < 30; tentativa++) {
-    const bruta = sortear(REACOES);
+    const bruta = sortear(reacoesDoTreino());
     try {
       const b = balancear(bruta);
       if (minimoReagentes && b.reagentes.length < minimoReagentes) continue;

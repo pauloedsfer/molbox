@@ -41,6 +41,7 @@ function progressoVazio() {
     melhorOfensiva: 0,
     ultimoDia: null,
     medalhas: [],
+    extras: {},          // { treino: { acertos, erros } } — fora da escada
   };
 }
 
@@ -63,6 +64,7 @@ function carregarProgresso() {
     // garante a forma esperada mesmo se o dado guardado for de uma versão anterior
     for (const d of DEGRAUS) if (!p.porDegrau[d.n]) p.porDegrau[d.n] = { acertos: 0, erros: 0 };
     if (!p.porTipo) p.porTipo = {};
+    if (!p.extras) p.extras = {};   // progresso salvo antes dos treinos extras
     if (!Array.isArray(p.medalhas)) p.medalhas = [];
     return p;
   } catch (e) {
@@ -191,6 +193,68 @@ function registrarResposta(p, exercicio, acertou, usouDica) {
 }
 
 /* Os tipos com maior taxa de erro, para o mapa de dificuldades. */
+/* Treinos extras dão XP e não mexem na escada.
+
+   Por que não reaproveitar `registrarResposta`: ela grava em `porDegrau`, e
+   `porDegrau` é o que libera degrau. Um aluno que treinasse balanceamento
+   destravaria o degrau da reação sem nunca ter feito estequiometria, e a
+   escada deixaria de significar o que promete. O treino extra é paralelo por
+   decisão, não por descuido.
+
+   O que ele compartilha com a escada: XP, sequência, ofensiva e medalhas — é o
+   mesmo aluno se esforçando. O que ele não compartilha: desbloqueio. */
+function registrarTreinoExtra(p, treino, acertou, usouDica) {
+  if (!p.extras) p.extras = {};
+  if (!p.extras[treino]) p.extras[treino] = { acertos: 0, erros: 0 };
+  p.totalTentativas += 1;
+
+  let ganho = 0;
+  const antes = p.medalhas.slice();
+
+  if (acertou) {
+    p.totalAcertos += 1;
+    p.extras[treino].acertos += 1;
+    p.sequencia += 1;
+    p.melhorSequencia = Math.max(p.melhorSequencia, p.sequencia);
+    if (!usouDica) p.acertosSemDica += 1;
+
+    /* Mesma saturação da escada, contada dentro do próprio treino: repetir
+       cem balanceamentos fáceis não pode valer o mesmo que os cinco
+       primeiros. */
+    ganho = Math.round(
+      (10 + (usouDica ? 0 : 5) + Math.min(10, Math.floor(p.sequencia / 3) * 2))
+      * fatorDeSaturacao(p.extras[treino].acertos)
+    );
+    p.xp += ganho;
+  } else {
+    p.extras[treino].erros += 1;
+    p.sequencia = 0;
+  }
+
+  const novas = [];
+  for (const m of MEDALHAS) {
+    if (!p.medalhas.includes(m.id) && m.condicao(p)) {
+      p.medalhas.push(m.id);
+      novas.push(m);
+    }
+  }
+
+  salvarProgresso(p);
+  return { ganho, medalhasNovas: novas, subiuDegrau: null };
+}
+
+/* Quanto o aluno ainda ganha por acerto neste treino extra. */
+function rendimentoDoTreino(p, treino) {
+  const acertos = p.extras && p.extras[treino] ? p.extras[treino].acertos : 0;
+  const fator = fatorDeSaturacao(acertos + 1);
+  return {
+    fator, acertos,
+    saturado: fator <= PISO_DE_GANHO + 1e-9,
+    caindo: fator < 1,
+    restamCheios: Math.max(0, ACERTOS_COM_VALOR_CHEIO - acertos),
+  };
+}
+
 function pontosFracos(p, minimo = 2) {
   const lista = [];
   for (const tipo in p.porTipo) {
