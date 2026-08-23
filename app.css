@@ -131,6 +131,12 @@ main { padding: var(--mb-e4); }
 main > section, .rodape { max-width: 760px; margin-left: auto; margin-right: auto; }
 #tela-tabela { max-width: 1180px; }
 section[hidden] { display: none; }
+/* O `hidden` do navegador tem prioridade baixa: qualquer regra de autor que
+   defina `display` o atropela. Foi o que aconteceu com o seletor de espécies,
+   que é `.onboarding { display: flex }` e por isso abria sozinho por cima de
+   todas as telas, com o botão Fechar sem efeito. Esta regra vale para o
+   documento inteiro para que o problema não volte em outro elemento. */
+[hidden] { display: none !important; }
 
 h1 {
   font-family: var(--mb-fonte-marca); font-style: italic; font-weight: 600;
