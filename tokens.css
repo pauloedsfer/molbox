@@ -41,6 +41,15 @@
   --mb-atencao:      #8A5200;  /* 5.9:1  */
   --mb-atencao-bg:   #FDF3E2;
 
+  /* Os dois lados de uma equação. Existem separados de --mb-erro e de
+     --mb-energia de propósito: na tela Balancear a bandeja de produtos fica
+     colorida ao lado das pilhas de contagem, e se produto e "não fecha"
+     usassem o mesmo tom o aluno leria erro onde não há. */
+  --mb-reagente-bg:  #EEF3F8;
+  --mb-reagente-bd:  #C6D6E4;
+  --mb-produto-bg:   #FBEBEB;
+  --mb-produto-bd:   #E3B9B9;
+
   /* ---- tipografia ---- */
   --mb-fonte-marca:  "Exo 2", system-ui, sans-serif;
   --mb-fonte-texto:  "Inter", system-ui, -apple-system, sans-serif;
@@ -89,6 +98,10 @@
     --mb-acerto-bg:    #0E2A18;
     --mb-erro:         #FF8A80;  /* 8.2:1  */
     --mb-erro-bg:      #2E1211;
+    --mb-reagente-bg:  #16202B;
+    --mb-reagente-bd:  #2F4457;
+    --mb-produto-bg:   #2B1618;
+    --mb-produto-bd:   #5C3033;
     --mb-atencao:      #E8B341;
     --mb-atencao-bg:   #2C2008;
   }

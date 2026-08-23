@@ -1501,7 +1501,7 @@
     });
     caixa.appendChild(cabeca);
 
-    const bandeja = criar("div", { className: "bandeja" });
+    const bandeja = criar("div", { className: "bandeja bandeja-" + lado });
     if (!formulas.length) {
       bandeja.appendChild(criar("span", { className: "bandeja-vazia", textContent: "vazio" }));
     }
@@ -1813,21 +1813,18 @@
     alvo.appendChild(criar("p", { className: "enunciado", style: "margin:var(--mb-e3) 0",
       textContent: "Ajuste os coeficientes até que a equação feche." }));
 
-    /* a equação, com um seletor de coeficiente por espécie */
-    const linha = criar("div", { className: "equacao-desafio" });
-    t.balanceada.especies.forEach((esp, i) => {
-      const doLado = t.balanceada.reagentes.indexOf(esp);
-      if (i > 0) {
-        const antes = t.balanceada.especies[i - 1];
-        const virouLado = t.balanceada.reagentes.includes(antes) && doLado === -1;
-        linha.appendChild(criar("span", {
-          className: virouLado ? "sep-seta" : "sep-mais",
-          innerHTML: virouLado ? "&#8594;" : "+",
-        }));
-      }
-      linha.appendChild(caixaDeCoeficiente(i, esp));
-    });
-    alvo.appendChild(linha);
+    /* A equação em dois quadros empilhados, reagentes em cima e produtos
+       embaixo, com a seta apontando para baixo. É a mesma leitura da tela
+       Balancear, e no celular empilhar cabe onde uma linha só não cabe.
+
+       Os botões de mais e menos saíram: o aluno digita o número. Eram dois
+       alvos de toque por espécie para um valor que quase sempre tem um dígito,
+       e o "+" do seletor ficava colado no "+" que separa as espécies. */
+    alvo.appendChild(quadroDeUmLado("reagentes", "Reagentes", t.balanceada.reagentes));
+    const seta = criar("div", { className: "seta-baixo", innerHTML: "&#8595;" });
+    seta.setAttribute("aria-hidden", "true");
+    alvo.appendChild(seta);
+    alvo.appendChild(quadroDeUmLado("produtos", "Produtos", t.balanceada.produtos));
 
     /* contagem de átomos: escondida por padrão, porque revelada de saída o
        exercício vira tentativa e erro até tudo ficar verde */
@@ -1855,45 +1852,48 @@
     if (t.respondido) alvo.appendChild(devolutivaDesafioBal());
   }
 
-  function caixaDeCoeficiente(i, esp) {
+  function quadroDeUmLado(lado, rotulo, especies) {
     const t = estado.treinoBal;
-    const caixa = criar("div", { className: "coef-caixa" });
+    const quadro = criar("div", { className: "quadro-lado quadro-" + lado });
+    quadro.appendChild(criar("p", { className: "rotulo-lado", textContent: rotulo }));
 
-    const menos = criar("button", { type: "button", className: "coef-passo", textContent: "−" });
-    menos.setAttribute("aria-label", `Diminuir o coeficiente de ${esp.formula}`);
-    menos.disabled = t.respondido || t.coefs[i] <= 1;
-    menos.addEventListener("click", () => mudarCoeficiente(i, -1));
-
-    const campo = criar("input", { type: "text", inputMode: "numeric", className: "coef-campo",
-      value: String(t.coefs[i]) });
-    campo.setAttribute("aria-label", `Coeficiente de ${esp.formula}`);
-    campo.disabled = t.respondido;
-    /* Só o valor muda; o campo não é recriado, para o teclado do celular não
-       fechar a cada dígito. */
-    campo.addEventListener("input", () => {
-      const n = parseInt(campo.value.replace(/\D/g, ""), 10);
-      estado.treinoBal.coefs[i] = isNaN(n) || n < 1 ? 1 : Math.min(99, n);
-      atualizarContagemDoDesafio();
+    const linha = criar("div", { className: "linha-especies" });
+    especies.forEach((esp, k) => {
+      if (k > 0) linha.appendChild(criar("span", { className: "sep-mais", textContent: "+" }));
+      linha.appendChild(itemDeCoeficiente(t.balanceada.especies.indexOf(esp), esp));
     });
-
-    const mais = criar("button", { type: "button", className: "coef-passo", textContent: "+" });
-    mais.setAttribute("aria-label", `Aumentar o coeficiente de ${esp.formula}`);
-    mais.disabled = t.respondido || t.coefs[i] >= 99;
-    mais.addEventListener("click", () => mudarCoeficiente(i, +1));
-
-    const formula = criar("span", { className: "coef-formula", innerHTML: formatarFormula(esp.formula) });
-
-    caixa.appendChild(menos);
-    caixa.appendChild(campo);
-    caixa.appendChild(mais);
-    caixa.appendChild(formula);
-    return caixa;
+    quadro.appendChild(linha);
+    return quadro;
   }
 
-  function mudarCoeficiente(i, passo) {
+  function itemDeCoeficiente(i, esp) {
     const t = estado.treinoBal;
-    t.coefs[i] = Math.max(1, Math.min(99, t.coefs[i] + passo));
-    desenharTreinoBal();
+    const item = criar("span", { className: "item-coef" });
+
+    const campo = criar("input", { type: "text", inputMode: "numeric", className: "coef-campo",
+      value: String(t.coefs[i]), maxLength: 2, autocomplete: "off" });
+    campo.setAttribute("aria-label", `Coeficiente de ${esp.formula}`);
+    campo.disabled = t.respondido;
+
+    /* Nada de redesenhar a equação aqui: só o valor muda. Recriar o campo a
+       cada dígito fecharia o teclado do celular, que foi o bug da bancada. */
+    campo.addEventListener("input", () => {
+      const limpo = campo.value.replace(/\D/g, "").slice(0, 2);
+      if (campo.value !== limpo) campo.value = limpo;
+      const n = parseInt(limpo, 10);
+      estado.treinoBal.coefs[i] = isNaN(n) || n < 1 ? 1 : n;
+      atualizarContagemDoDesafio();
+    });
+    /* Campo vazio ou zerado volta a 1 ao sair, para o aluno não conferir uma
+       equação com um coeficiente que ele não escolheu. */
+    campo.addEventListener("blur", () => {
+      const n = parseInt(campo.value, 10);
+      if (isNaN(n) || n < 1) { campo.value = "1"; estado.treinoBal.coefs[i] = 1; atualizarContagemDoDesafio(); }
+    });
+
+    item.appendChild(campo);
+    item.appendChild(criar("span", { className: "coef-formula", innerHTML: formatarFormula(esp.formula) }));
+    return item;
   }
 
   /* Redesenha só a contagem, nunca a equação: a equação contém os campos, e

@@ -1363,6 +1363,10 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
   border: 1px dashed var(--mb-borda-forte); border-radius: var(--mb-raio);
   background: var(--mb-superficie);
 }
+/* Mesmos tons do treino: reagente neutro, produto em vermelho claro. A
+   associação aprendida numa tela vale na outra. */
+.bandeja-reagentes { background: var(--mb-reagente-bg); border-color: var(--mb-reagente-bd); }
+.bandeja-produtos  { background: var(--mb-produto-bg);  border-color: var(--mb-produto-bd); }
 .bandeja-vazia { color: var(--mb-texto-3); font-size: var(--mb-t-apoio); padding: 0 var(--mb-e2); }
 
 .chip-bandeja {
@@ -1447,34 +1451,41 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
 .etiqueta-dif.dif-2 { background: var(--mb-interacao-bg); color: var(--mb-interacao); }
 .etiqueta-dif.dif-3 { background: var(--mb-energia-bg); color: var(--mb-energia); }
 
-.equacao-desafio {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--mb-e2);
-  padding: var(--mb-e3); border-radius: var(--mb-raio);
-  background: var(--mb-superficie-2); border: 1px solid var(--mb-borda);
+/* Os dois lados da equação, empilhados. O tom vermelho claro dos produtos é o
+   mesmo da bandeja de produtos na tela Balancear: o aluno aprende a associação
+   numa tela e a reconhece na outra. */
+.quadro-lado {
+  padding: var(--mb-e3); border-radius: var(--mb-raio); border: 1px solid var(--mb-borda);
 }
-.sep-mais, .sep-seta {
-  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3); color: var(--mb-texto-3);
-  padding: 0 var(--mb-e1);
-}
-.sep-seta { color: var(--mb-interacao); }
+.quadro-reagentes { background: var(--mb-reagente-bg); border-color: var(--mb-reagente-bd); }
+.quadro-produtos  { background: var(--mb-produto-bg);  border-color: var(--mb-produto-bd); }
 
-.coef-caixa { display: inline-flex; align-items: center; gap: var(--mb-e1); }
-.coef-passo {
-  width: var(--mb-toque); height: var(--mb-toque); flex: 0 0 auto;
-  border: 1px solid var(--mb-borda-forte); border-radius: var(--mb-raio);
-  background: var(--mb-superficie); color: var(--mb-interacao);
-  font-size: var(--mb-t-titulo-3); line-height: 1; cursor: pointer;
+.rotulo-lado {
+  margin: 0 0 var(--mb-e2); font-size: var(--mb-t-legenda); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--mb-texto-2);
 }
-.coef-passo[disabled] { opacity: 0.35; cursor: default; }
+.linha-especies { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mb-e2); }
+
+.seta-baixo {
+  text-align: center; font-size: var(--mb-t-titulo-2); line-height: 1;
+  color: var(--mb-interacao); padding: var(--mb-e2) 0;
+}
+
+.item-coef { display: inline-flex; align-items: center; gap: var(--mb-e2); }
 .coef-campo {
-  width: 52px; min-height: var(--mb-toque); text-align: center;
+  width: 48px; min-height: var(--mb-toque); text-align: center; padding: 0;
   font-family: var(--mb-fonte-dado); font-size: var(--mb-t-corpo);
   border: 1px solid var(--mb-borda-forte); border-radius: var(--mb-raio);
-  background: var(--mb-superficie); color: var(--mb-texto); padding: 0;
+  background: var(--mb-superficie); color: var(--mb-texto);
+}
+.coef-campo:focus { outline: 2px solid var(--mb-interacao); outline-offset: 1px; }
+.coef-campo[disabled] { opacity: 0.7; }
+.sep-mais {
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3);
+  color: var(--mb-texto-3); padding: 0 var(--mb-e1);
 }
 .coef-formula {
-  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3);
-  color: var(--mb-texto); padding-left: var(--mb-e1);
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3); color: var(--mb-texto);
 }
 
 .devolutiva-desafio { margin-top: var(--mb-e4); }
