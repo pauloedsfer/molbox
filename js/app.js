@@ -24,6 +24,8 @@
            rodada: null, indiceRodada: 0, acertosRodada: 0, respondidaRodada: false, escolhaRodada: null },
     equacao: "CH4 + O2 -> CO2 + H2O",
     balanceada: null,
+    montagem: { reagentes: [], produtos: [], lado: "reagentes",
+                modo: "montar", categoria: "usadas", receita: null },
     esteq: { unidade: "g", quantidades: {}, purezas: {}, produtoRendimento: 0, massaObtida: "" },
     solucao: { formula: "NaCl", unidade: "molar", valor: "1,0", densidade: "1,00",
                dil: { c1: "1,0", v1: "", c2: "0,1", v2: "250" },
@@ -1268,9 +1270,296 @@
       b.addEventListener("click", () => {
         $("#equacao").value = eq;
         balancearAtual();
+        sincronizarBandejasComTexto();
+        desenharBandejas();
       });
       caixa.appendChild(b);
     }
+  }
+
+  /* ---------------- montador de equações por toque ----------------
+
+     O motivo desta tela existir na sala de aula: digitar
+     "KMnO4 + HCl -> KCl + MnCl2 + H2O + Cl2" no teclado do celular consome
+     a aula inteira e erra em cada maiúscula. Aqui a espécie é um botão.
+
+     A montagem NÃO é uma segunda fonte de verdade. As bandejas escrevem no
+     campo de texto, e o balanceador continua lendo só dele — duas
+     representações paralelas divergiriam, e o aluno veria a bandeja
+     discordando do resultado na frente da turma.
+
+     A divisão em três funções segue a regra que veio do bug do teclado da
+     bancada: `montarTelaBalancear` monta os campos uma única vez e nunca é
+     chamada de novo; `desenharBandejas` e `desenharGradeEspecies` redesenham
+     só o pedaço que mudou. Digitar na busca chama apenas a terceira, então o
+     campo em foco nunca é destruído. */
+
+  function montarTelaBalancear() {
+    montarExemplosEquacao();
+
+    for (const aba of $("#abas-balancear").querySelectorAll(".aba-modo")) {
+      aba.addEventListener("click", () => trocarModoBalancear(aba.dataset.modo));
+    }
+
+    const busca = $("#busca-especie");
+    busca.addEventListener("input", () => {
+      /* Redesenha só a grade. O campo fica fora dela justamente para não ser
+         destruído a cada tecla, que foi o bug relatado na bancada. */
+      desenharGradeEspecies();
+    });
+
+    const caixaCat = $("#cat-especies");
+    for (const cat of categoriasDeEspecie()) {
+      const b = criar("button", { type: "button", className: "chip", textContent: cat.nome });
+      b.dataset.cat = cat.id;
+      b.addEventListener("click", () => {
+        estado.montagem.categoria = cat.id;
+        busca.value = "";
+        marcarCategoriaAtiva();
+        desenharGradeEspecies();
+      });
+      caixaCat.appendChild(b);
+    }
+
+    montarReceitasDeAula();
+    marcarCategoriaAtiva();
+    desenharGradeEspecies();
+    trocarModoBalancear(estado.montagem.modo);
+  }
+
+  function trocarModoBalancear(modo) {
+    estado.montagem.modo = modo;
+    $("#modo-montar").hidden = modo !== "montar";
+    $("#modo-digitar").hidden = modo !== "digitar";
+    for (const aba of $("#abas-balancear").querySelectorAll(".aba-modo")) {
+      const ativa = aba.dataset.modo === modo;
+      aba.classList.toggle("ativo", ativa);
+      aba.setAttribute("aria-selected", ativa ? "true" : "false");
+    }
+    /* Quem digitou no computador e trocou para o montador não pode perder o
+       que escreveu, e vice-versa. */
+    if (modo === "montar") {
+      sincronizarBandejasComTexto();
+      desenharBandejas();
+    }
+  }
+
+  function marcarCategoriaAtiva() {
+    for (const b of $("#cat-especies").querySelectorAll(".chip")) {
+      b.classList.toggle("ativo", b.dataset.cat === estado.montagem.categoria);
+    }
+    const cat = categoriasDeEspecie().find((c) => c.id === estado.montagem.categoria);
+    $("#dica-categoria").textContent = cat ? cat.dica : "";
+  }
+
+  function sincronizarBandejasComTexto() {
+    const lido = lerMontagem($("#equacao").value);
+    if (!lido) return;
+    estado.montagem.reagentes = lido.reagentes;
+    estado.montagem.produtos = lido.produtos;
+  }
+
+  /* Escreve as bandejas no campo de texto e apaga o resultado anterior: uma
+     equação balanceada que continua na tela depois de o aluno mexer nas
+     espécies estaria mentindo sobre o que ele tem montado agora. */
+  function aplicarMontagem() {
+    const m = estado.montagem;
+    $("#equacao").value = textoDaMontagem(m.reagentes, m.produtos);
+    estado.equacao = $("#equacao").value;
+    estado.balanceada = null;
+    $("#resultado-equacao").innerHTML = "";
+    $("#erro-equacao").innerHTML = "";
+    guardar();
+    desenharBandejas();
+  }
+
+  function acrescentarEspecie(formula) {
+    const m = estado.montagem;
+    m.receita = null;
+    m[m.lado] = m[m.lado].concat([formula]);
+    aplicarMontagem();
+  }
+
+  function desenharGradeEspecies() {
+    const alvo = $("#grade-especies");
+    alvo.innerHTML = "";
+    const termo = $("#busca-especie").value;
+    const achadas = buscarEspecies(termo, estado.montagem.categoria);
+
+    if (!achadas.length) {
+      alvo.appendChild(criar("p", { className: "ajuda", style: "margin:0",
+        textContent: "Nenhuma espécie com esse nome. Tente a fórmula, ou parte dela — " +
+          "o banco tem " + quantasEspecies() + " espécies." }));
+      return;
+    }
+
+    for (const e of achadas) {
+      const b = criar("button", { type: "button", className: "especie" });
+      b.innerHTML = `<span class="especie-f">${formatarFormula(e.f)}</span>` +
+                    `<span class="especie-n">${e.n}</span>`;
+      b.setAttribute("aria-label", `Adicionar ${e.n}, ${e.f}`);
+      b.addEventListener("click", () => acrescentarEspecie(e.f));
+      alvo.appendChild(b);
+    }
+  }
+
+  function montarReceitasDeAula() {
+    const alvo = $("#receitas-aula");
+    alvo.innerHTML = `<h2 style="margin-top:0">Reações de aula</h2>` +
+      `<p class="ajuda">Um toque monta e balanceia. São as que mais aparecem em prova, ` +
+      `em aula prática e em rótulo de indústria.</p>`;
+
+    const grupos = [];
+    for (const r of receitasDeAula()) {
+      let g = grupos.find((x) => x.nome === r.grupo);
+      if (!g) { g = { nome: r.grupo, itens: [] }; grupos.push(g); }
+      g.itens.push(r);
+    }
+
+    for (const g of grupos) {
+      alvo.appendChild(criar("p", { className: "rotulo-grupo", textContent: g.nome }));
+      const chips = criar("div", { className: "chips" });
+      for (const r of g.itens) {
+        const b = criar("button", { type: "button", className: "chip", textContent: r.nome });
+        b.addEventListener("click", () => usarReceita(r));
+        chips.appendChild(b);
+      }
+      alvo.appendChild(chips);
+    }
+  }
+
+  function usarReceita(r) {
+    estado.montagem.reagentes = r.reagentes.slice();
+    estado.montagem.produtos = r.produtos.slice();
+    aplicarMontagem();
+    estado.montagem.receita = r;
+    balancearAtual();
+    desenharBandejas();
+  }
+
+  function desenharBandejas() {
+    const alvo = $("#bandejas");
+    if (!alvo) return;
+    alvo.innerHTML = "";
+    const m = estado.montagem;
+
+    const montador = criar("div", { className: "montador" });
+    montador.appendChild(bandejaDeUmLado("reagentes", "Reagentes", m.reagentes));
+    const seta = criar("div", { className: "seta-montador", innerHTML: "&#8594;" });
+    seta.setAttribute("aria-hidden", "true");
+    montador.appendChild(seta);
+    montador.appendChild(bandejaDeUmLado("produtos", "Produtos", m.produtos));
+    alvo.appendChild(montador);
+
+    const vazio = !m.reagentes.length && !m.produtos.length;
+    if (vazio) {
+      alvo.appendChild(criar("p", { className: "ajuda", style: "margin:var(--mb-e3) 0 0",
+        textContent: "Toque numa espécie do banco abaixo para começar. Ela cai no lado " +
+          "marcado como “recebendo”; toque no cabeçalho do outro lado para trocar." }));
+      return;
+    }
+
+    alvo.appendChild(desenharContagemDeAtomos(m.reagentes, m.produtos));
+
+    const acoes = criar("div", { className: "montador-acoes" });
+    const bal = criar("button", { type: "button", className: "botao",
+      textContent: "Balancear" });
+    bal.addEventListener("click", () => { balancearAtual(); rolarParaResultado(); });
+    acoes.appendChild(bal);
+    const limpar = criar("button", { type: "button", className: "botao secundario",
+      textContent: "Limpar tudo" });
+    limpar.addEventListener("click", () => {
+      estado.montagem.reagentes = [];
+      estado.montagem.produtos = [];
+      estado.montagem.lado = "reagentes";
+      aplicarMontagem();
+    });
+    acoes.appendChild(limpar);
+    alvo.appendChild(acoes);
+
+    if (m.receita) {
+      alvo.appendChild(criar("p", { className: "dica-caixa", style: "margin:var(--mb-e3) 0 0",
+        textContent: m.receita.nota }));
+    }
+  }
+
+  function bandejaDeUmLado(lado, rotulo, formulas) {
+    const caixa = criar("div", { className: "lado-montador" });
+    const ativo = estado.montagem.lado === lado;
+
+    const cabeca = criar("button", { type: "button", className: "lado-cabeca" + (ativo ? " ativo" : "") });
+    cabeca.innerHTML = `<span>${rotulo}</span>` +
+      (ativo ? `<span class="marca-lado">recebendo</span>` : "");
+    cabeca.setAttribute("aria-pressed", ativo ? "true" : "false");
+    cabeca.addEventListener("click", () => {
+      estado.montagem.lado = lado;
+      desenharBandejas();
+    });
+    caixa.appendChild(cabeca);
+
+    const bandeja = criar("div", { className: "bandeja" });
+    if (!formulas.length) {
+      bandeja.appendChild(criar("span", { className: "bandeja-vazia", textContent: "vazio" }));
+    }
+    formulas.forEach((f, i) => {
+      const b = criar("button", { type: "button", className: "chip-bandeja" });
+      b.innerHTML = `<span>${formatarFormula(f)}</span><span class="tirar" aria-hidden="true">&times;</span>`;
+      b.setAttribute("aria-label", `Tirar ${f} dos ${rotulo.toLowerCase()}`);
+      b.addEventListener("click", () => {
+        const m = estado.montagem;
+        m.receita = null;
+        m[lado] = m[lado].filter((_, j) => j !== i);
+        aplicarMontagem();
+      });
+      bandeja.appendChild(b);
+    });
+    caixa.appendChild(bandeja);
+    return caixa;
+  }
+
+  /* A contagem conta com todos os coeficientes valendo 1, que é exatamente o
+     que o aluno escreveu. O desencontro que ela mostra é o problema, não a
+     resposta — por isso o texto de apoio diz de onde vêm os números. */
+  function desenharContagemDeAtomos(reagentes, produtos) {
+    const caixa = criar("div", { className: "contagem-montador" });
+    const r = compararLados(reagentes, produtos);
+
+    if (!r.linhas.length) {
+      caixa.appendChild(criar("p", { className: "ajuda", style: "margin:0",
+        textContent: "Falta um dos lados: a equação precisa de reagente e de produto." }));
+      return caixa;
+    }
+
+    const titulo = criar("p", { className: "contagem-titulo" });
+    if (r.fechaTudo) {
+      titulo.classList.add("fecha");
+      titulo.textContent = "Do jeito que está, os átomos já fecham — os coeficientes valem 1.";
+    } else {
+      titulo.textContent = "Contando com os coeficientes ainda em 1, os lados não batem:";
+    }
+    caixa.appendChild(titulo);
+
+    const pilhas = criar("div", { className: "pilhas-atomo" });
+    for (const l of r.linhas) {
+      const p = criar("span", { className: "pilha-atomo" + (l.fecha ? " fecha" : " falha") });
+      const rotulo = l.elemento === "carga" ? "carga" : l.elemento;
+      p.innerHTML = `<span class="pilha-el">${rotulo}</span>` +
+                    `<span class="pilha-num">${l.antes} : ${l.depois}</span>`;
+      p.title = `${rotulo}: ${l.antes} antes, ${l.depois} depois`;
+      pilhas.appendChild(p);
+    }
+    caixa.appendChild(pilhas);
+
+    caixa.appendChild(criar("p", { className: "ajuda", style: "margin:var(--mb-e2) 0 0",
+      textContent: r.usaCarga
+        ? "Antes : depois. Numa equação iônica a carga também precisa fechar."
+        : "Antes : depois. É este desencontro que o balanceamento resolve." }));
+    return caixa;
+  }
+
+  function rolarParaResultado() {
+    const alvo = $("#resultado-equacao");
+    if (alvo && alvo.scrollIntoView) alvo.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function balancearAtual() {
@@ -2030,17 +2319,19 @@
     capa.innerHTML =
       `<p class="sobretitulo">UMA UNIDADE ANTIGA QUE VOCÊ VAI ENCONTRAR</p>` +
       `<h1 style="margin:0 0 var(--mb-e3)">Equivalente e normalidade</h1>` +
-      `<p>A IUPAC recomenda desde 1971 abandonar o equivalente-grama e a normalidade, ` +
-      `e os livros escolares os eliminaram. Vamos entender:</p>` +
-      `<p class="fecho-mol">O equivalente <strong>não é propriedade da substância</strong>. ` +
-      `É propriedade da reação.</p>` +
-      `<p>A mesma substância tem equivalentes diferentes conforme o que acontece com ela. ` +
-      `Um número que muda de valor sem que a substância mude é um mau número — e foi por isso ` +
-      `que o mol o substituiu.</p>` +
-      `<div class="dica-caixa">Só que a unidade não morreu onde você vai trabalhar. Laudo de ` +
-      `eletrólitos vem em mEq/L. Alcalinidade de água vem em mg/L de CaCO₃. O laboratório vai ` +
-      `pedir NaOH 0,1 N e esperar que você saiba pesar. Esta tela ensina a ler, converter e usar — ` +
-      `sempre deixando à vista qual reação está por trás do número.</div>`;
+      `<p>O equivalente-grama e a normalidade organizaram a química analítica por mais de um ` +
+      `século. A IUPAC passou a recomendar o mol como unidade preferencial em 1971, e os livros ` +
+      `escolares seguiram esse caminho — mas na bancada a linguagem antiga continua em uso ` +
+      `diário, e por bons motivos práticos.</p>` +
+      `<p class="fecho-mol">Um equivalente sempre reage com um equivalente. ` +
+      `É essa simplicidade que sustenta a unidade.</p>` +
+      `<p>Trabalhar bem com ela exige uma atenção: <strong>o k é definido pela reação</strong>. ` +
+      `A mesma substância tem equivalentes diferentes conforme o que acontece com ela — e quem ` +
+      `domina isso usa a unidade com segurança, enquanto quem ignora erra o laudo.</p>` +
+      `<div class="dica-caixa">Laudo de eletrólitos vem em mEq/L. Alcalinidade de água vem em ` +
+      `mg/L de CaCO₃. Análise de solo vem em cmolc/kg. O laboratório vai pedir NaOH 0,1 N e ` +
+      `esperar que você saiba pesar. Esta tela ensina a ler, converter e usar — sempre deixando ` +
+      `à vista qual reação está por trás do número.</div>`;
     alvo.appendChild(capa);
 
     /* --- o fator k --- */
@@ -2077,8 +2368,9 @@
 
     /* --- a armadilha, com números --- */
     const sArm = criar("div", { className: "cartao" });
-    sArm.innerHTML = `<h2 style="margin-top:0">Por que a IUPAC desaconselha</h2>` +
-      `<p>Veja o mesmo ácido fosfórico, na mesma solução de 0,1 mol/L. Só muda até onde a ` +
+    sArm.innerHTML = `<h2 style="margin-top:0">O k vem da reação, não do rótulo</h2>` +
+      `<p>Este é o ponto que separa quem usa a unidade com segurança de quem erra o laudo. ` +
+      `Veja o mesmo ácido fosfórico, na mesma solução de 0,1 mol/L. Só muda até onde a ` +
       `titulação vai:</p>`;
     const tArm = criar("table");
     tArm.innerHTML = `<thead><tr><th>Até onde reage</th><th>k</th><th>E (g)</th><th>Normalidade</th></tr></thead>`;
@@ -2094,9 +2386,10 @@
     tArm.appendChild(corpoArm);
     sArm.appendChild(tArm);
     sArm.appendChild(criar("div", { className: "motivo",
-      innerHTML: `Uma solução, três normalidades. Em mol/L ela é <strong>0,1 mol/L</strong> e ponto final — ` +
-        `a estequiometria entra depois, na equação balanceada, onde ela é visível. ` +
-        `É essa transparência que se perde ao usar normalidade.` }));
+      innerHTML: `Uma solução, três normalidades — todas corretas, cada uma para a sua reação. ` +
+        `Por isso a boa prática de bancada é <strong>anotar a reação junto da normalidade</strong>. ` +
+        `Em mol/L a solução é 0,1 mol/L sempre, e a estequiometria aparece depois, na equação ` +
+        `balanceada. São dois jeitos de guardar a mesma informação.` }));
     alvo.appendChild(sArm);
 
     /* --- preparar em normalidade --- */
@@ -2188,8 +2481,8 @@
       innerHTML: `<span class="selo-risco">ONDE ELE MENTE</span>` +
         `<p class="titulo-risco">Quando o k assumido não é o k da reação</p>` +
         `<p>Se você tratar o H₂SO₄ como k = 1 porque "é um ácido", o resultado sai pela metade — ` +
-        `e nada no cálculo avisa. O caminho pelo mol obriga a escrever a equação balanceada, ` +
-        `e a equação não deixa você esquecer a proporção.</p>` }));
+        `e nada no cálculo avisa. O atalho é rápido justamente porque não pergunta nada: quem o ` +
+        `usa precisa ter a reação clara na cabeça antes de aplicá-lo.</p>` }));
     alvo.appendChild(sAtalho);
 
     /* --- onde se usa --- */
@@ -3642,8 +3935,10 @@
     progresso = carregarProgresso();
     $("#formula").value = estado.formula;
     montarExemplos();
-    montarExemplosEquacao();
     $("#equacao").value = estado.equacao;
+    montarTelaBalancear();
+    sincronizarBandejasComTexto();
+    desenharBandejas();
     balancearAtual();
     montarSeletorVolume();
     montarPeriodica();

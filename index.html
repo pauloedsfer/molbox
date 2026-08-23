@@ -51,7 +51,7 @@
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
     <p class="autoria">Criado pelo <strong>Prof. Paulo Fernandes</strong><br>Químico Industrial, Farmacêutico e Docente de Química</p>
-    <p class="versao">SUPER MOLBOX v0.15 &middot; funciona sem internet</p>
+    <p class="versao">SUPER MOLBOX v0.16 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -111,17 +111,45 @@
 
   <section id="tela-balancear" hidden>
     <h1>Balancear</h1>
-    <p class="intro">Escreva a equação e o aplicativo resolve o sistema de equações que ela esconde. A tabela de conferência mostra a prova: os átomos de cada elemento contados antes e depois.</p>
+    <p class="intro">Monte a equação tocando nas espécies, ou digite se preferir. O aplicativo resolve o sistema de equações que ela esconde, e a tabela de conferência mostra a prova: os átomos de cada elemento contados antes e depois.</p>
 
-    <div class="cartao">
-      <label for="equacao">Equação da reação</label>
-      <input type="text" id="equacao" class="formula" value="CH4 + O2 -> CO2 + H2O"
-             autocomplete="off" autocapitalize="off" spellcheck="false"
-             placeholder="H2 + O2 -> H2O" aria-describedby="ajuda-equacao">
-      <p class="ajuda" id="ajuda-equacao">Separe os lados com -&gt; ou =. Coeficientes que você escrever são ignorados. Íons são aceitos: Fe2+, SO42-, MnO4-.</p>
-      <div class="chips" id="exemplos-eq"></div>
-      <div id="erro-equacao" role="alert"></div>
+    <div class="abas-modo" id="abas-balancear" role="tablist" aria-label="Como montar a equação">
+      <button type="button" class="aba-modo" role="tab" data-modo="montar" id="aba-montar"
+              aria-selected="true" aria-controls="modo-montar">Montar por toque</button>
+      <button type="button" class="aba-modo" role="tab" data-modo="digitar" id="aba-digitar"
+              aria-selected="false" aria-controls="modo-digitar">Digitar</button>
     </div>
+
+    <div id="modo-montar" role="tabpanel" aria-labelledby="aba-montar">
+      <div class="cartao" id="bandejas"></div>
+
+      <div class="cartao">
+        <h2 style="margin-top:0">Banco de espécies</h2>
+        <label for="busca-especie">Procurar por nome ou fórmula</label>
+        <input type="search" id="busca-especie" autocomplete="off" autocapitalize="off"
+               spellcheck="false" placeholder="soda cáustica, KMnO4, vinagre…"
+               aria-describedby="ajuda-busca">
+        <p class="ajuda" id="ajuda-busca">A busca ignora acento e vale para todo o banco, não só para a aba aberta.</p>
+        <div class="chips" id="cat-especies"></div>
+        <p class="ajuda" id="dica-categoria"></p>
+        <div class="grade-especies" id="grade-especies"></div>
+      </div>
+
+      <div class="cartao" id="receitas-aula"></div>
+    </div>
+
+    <div id="modo-digitar" role="tabpanel" aria-labelledby="aba-digitar" hidden>
+      <div class="cartao">
+        <label for="equacao">Equação da reação</label>
+        <input type="text" id="equacao" class="formula" value="CH4 + O2 -> CO2 + H2O"
+               autocomplete="off" autocapitalize="off" spellcheck="false"
+               placeholder="H2 + O2 -> H2O" aria-describedby="ajuda-equacao">
+        <p class="ajuda" id="ajuda-equacao">Separe os lados com -&gt; ou =. Coeficientes que você escrever são ignorados. Íons são aceitos: Fe2+, SO42-, MnO4-.</p>
+        <div class="chips" id="exemplos-eq"></div>
+      </div>
+    </div>
+
+    <div id="erro-equacao" role="alert"></div>
 
     <div id="resultado-equacao" aria-live="polite"></div>
   </section>
@@ -197,7 +225,7 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>SUPER MOLBOX v0.15 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>SUPER MOLBOX v0.16 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
 </main>
 
@@ -207,6 +235,7 @@
 <script src="js/balanceador.js"></script>
 <script src="js/estequiometria.js"></script>
 <script src="js/moleculas.js"></script>
+<script src="js/especies.js"></script>
 <script src="js/calculadora.js"></script>
 <script src="js/solucoes.js"></script>
 <script src="js/preparo.js"></script>

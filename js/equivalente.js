@@ -2,14 +2,16 @@
 
    Este módulo existe por uma razão prática, não por nostalgia.
 
-   A IUPAC recomenda desde 1971 abandonar o equivalente-grama, o número de
-   equivalentes e a normalidade, e os livros escolares os eliminaram. A crítica
-   é correta e o aplicativo a repete: **o equivalente não é propriedade da
-   substância, é propriedade da reação**. O mesmo H3PO4 tem três equivalentes
-   diferentes conforme até onde a titulação vá. Um número que muda de valor
-   sem que a substância mude é um mau número.
+   A IUPAC passou a recomendar o mol como unidade preferencial em 1971, e os
+   livros escolares seguiram. O aplicativo não toma partido nessa disputa: ele
+   ensina as duas linguagens, porque as duas são usadas.
 
-   Só que a unidade não morreu onde os alunos vão trabalhar. Laudo clínico de
+   O que ele insiste em deixar visível é um fato técnico, e não uma opinião:
+   **o k é definido pela reação**. O mesmo H3PO4 tem três equivalentes conforme
+   até onde a titulação vá. Quem domina isso usa a unidade com segurança; quem
+   ignora erra o laudo.
+
+   E a unidade está viva onde os alunos vão trabalhar. Laudo clínico de
    eletrólitos vem em mEq/L. Alcalinidade e dureza de água vêm em mg/L de
    CaCO3, e o Standard Methods pede ácido 0,02 N. Análise de solo da Embrapa
    usa cmolc/kg, que é equivalente com outro nome. Laboratório industrial
@@ -86,10 +88,10 @@ function massaParaNormalidade(normalidade, volumeLitros, massaMolar, k) {
   };
 }
 
-/* ---------------- a armadilha do H3PO4 ----------------
+/* ---------------- o k depende da reação ----------------
 
-   O caso que mostra, com números, por que a IUPAC desaconselha: a mesma
-   substância, a mesma solução, três normalidades diferentes conforme a reação.
+   O caso que mostra isso com números: a mesma substância, a mesma solução,
+   três normalidades diferentes — todas corretas, cada uma para a sua reação.
 */
 function armadilhaDoFosforico(concentracaoMolar, massaMolar) {
   const etapas = [
@@ -191,8 +193,9 @@ function classificarDureza(mgPorL) {
    equivalente sempre reage com um equivalente, por construção. É essa
    comodidade que manteve a unidade viva no laboratório industrial.
 
-   E ele mente quando o k assumido não é o k da reação que de fato ocorreu —
-   que é o mesmo defeito de origem, agora com consequência de laudo.
+   E ele falha quando o k assumido não é o k da reação que de fato ocorreu.
+   O atalho é rápido porque não pergunta nada: quem o usa precisa ter a reação
+   clara antes de aplicá-lo.
 */
 function atalhoNormalidade({ n1, v1, n2, v2 }) {
   const dados = { n1, v1, n2, v2 };

@@ -8,22 +8,30 @@
 const AUTOR = {
   nome: "Prof. Paulo Fernandes",
   titulo: "Químico Industrial, Farmacêutico e Docente de Química",
-  // ATENÇÃO: confirme o endereço do canal antes de publicar. Este link aponta
-  // para o vídeo que já está no aplicativo, não para a página do canal.
   canal: {
     url: "https://www.youtube.com/@pauloedsfer",
     rotulo: "Canal no YouTube",
-    aviso: true,
+    aviso: false,
   },
+  /* A pedido do autor, esta apresentação não nomeia empregadores nem
+     instituições. Ela fala do percurso, não do crachá. */
   apresentacao: [
-    "Químico Industrial e Farmacêutico de formação, Professor por escolha. Atua no ensino " +
-    "da Química, onde o desafio diário é o mesmo que deu origem a este aplicativo: fazer o estudante " +
-    "entender de verdade, e não decorar uma fórmula que ele esquece na semana seguinte.",
+    "Químico Industrial e Farmacêutico de formação, professor por escolha. São mais de quinze " +
+    "anos transitando entre a farmácia hospitalar, a manipulação, o processo industrial e a " +
+    "sala de aula — quatro lugares que costumam ser tratados como mundos separados e que, na " +
+    "prática, resolvem o mesmo problema com a mesma conta.",
 
-    "A experiência em farmácia hospitalar, farmácia de manipulação e em controle de qualidade " +
-    "aparece em cada tela. " +
-    "As contas do aplicativo são as contas da bancada, e os avisos de segurança são os que " +
-    "se aprende trabalhando, não os que se lê num manual.",
+    "Mestre em Ciências Aplicadas a Produtos para a Saúde, com especializações em Docência " +
+    "Universitária e em Gestão Hospitalar. No ensino, aposta em metodologia ativa, vivência de " +
+    "laboratório e orientação de projeto: a teoria vale quando o aluno consegue usá-la num " +
+    "problema que existe fora da prova.",
+
+    "Essa dupla vida aparece em cada tela deste aplicativo. As contas aqui são as contas da " +
+    "bancada, os exemplos saem de rótulo e de laudo, e os avisos de segurança são os que se " +
+    "aprende trabalhando — não os que se lê num manual.",
+
+    "O propósito é o mesmo dos dois lados do balcão: fazer o estudante entender o mol de " +
+    "verdade, e não decorar uma fórmula que ele esquece na semana seguinte.",
   ],
 };
 
