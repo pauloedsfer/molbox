@@ -1471,15 +1471,22 @@ tr.limitante td:first-child { border-left: 3px solid var(--mb-energia); }
   color: var(--mb-interacao); padding: var(--mb-e2) 0;
 }
 
-.item-coef { display: inline-flex; align-items: center; gap: var(--mb-e2); }
-.coef-campo {
-  width: 48px; min-height: var(--mb-toque); text-align: center; padding: 0;
-  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-corpo);
+.item-coef { display: inline-flex; align-items: center; gap: var(--mb-e2); flex: 0 0 auto; }
+/* O seletor precisa do `input` na frente. Sem ele, a regra geral
+   `input[type="text"] { width: 100% }` lá de cima é mais específica e vence:
+   o campo de coeficiente esticava até a largura do cartão, com a fonte e o
+   recheio da regra geral. Um campo de dois dígitos não pode ocupar a linha
+   inteira. */
+input.coef-campo {
+  width: 3.2rem; min-width: 3.2rem; flex: 0 0 auto;
+  min-height: var(--mb-toque); text-align: center; padding: 0 6px;
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3);
+  font-variant-numeric: tabular-nums;
   border: 1px solid var(--mb-borda-forte); border-radius: var(--mb-raio);
   background: var(--mb-superficie); color: var(--mb-texto);
 }
-.coef-campo:focus { outline: 2px solid var(--mb-interacao); outline-offset: 1px; }
-.coef-campo[disabled] { opacity: 0.7; }
+input.coef-campo:focus { outline: 2px solid var(--mb-interacao); outline-offset: 1px; }
+input.coef-campo[disabled] { opacity: 0.7; }
 .sep-mais {
   font-family: var(--mb-fonte-dado); font-size: var(--mb-t-titulo-3);
   color: var(--mb-texto-3); padding: 0 var(--mb-e1);
