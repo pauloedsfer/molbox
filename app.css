@@ -1508,3 +1508,13 @@ input.coef-campo[disabled] { opacity: 0.7; }
 .painel-seletor .grade-especies { max-height: 44vh; }
 .painel-seletor #fechar-seletor { margin-top: var(--mb-e4); width: 100%; }
 .botao-banco { margin-top: var(--mb-e3); width: 100%; }
+
+/* ---------------- exportar progresso ---------------- */
+#texto-exportacao {
+  width: 100%; margin-top: var(--mb-e2);
+  font-family: var(--mb-fonte-dado); font-size: var(--mb-t-apoio);
+  padding: var(--mb-e3); border-radius: var(--mb-raio);
+  border: 1px solid var(--mb-borda-forte);
+  background: var(--mb-superficie-2); color: var(--mb-texto);
+  resize: vertical;
+}

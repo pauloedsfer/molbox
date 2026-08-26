@@ -255,6 +255,89 @@ function rendimentoDoTreino(p, treino) {
   };
 }
 
+/* ---------------- exportação do progresso ----------------
+
+   Por que existe: o aplicativo guarda tudo em localStorage, por aparelho, e o
+   professor não tem como saber se a turma usou nem onde ela erra. Sem isso não
+   há evidência de aprendizagem — só impressão.
+
+   Três decisões que não são técnicas:
+
+   1. Nunca sai nome. Sai um código que o próprio aluno inventa, o mesmo da
+      atividade diagnóstica. É o que liga uma coisa à outra sem identificar
+      ninguém.
+   2. O texto é legível, não embaralhado. O aluno (e o responsável) precisa
+      poder ler exatamente o que está mandando antes de mandar. Codificar
+      esconderia o conteúdo de quem tem direito de vê-lo.
+   3. Nada é enviado pelo aplicativo. Ele gera o texto; quem envia é o aluno,
+      pelo meio que quiser. Assim a promessa da tela de Progresso continua
+      verdadeira. */
+
+const MARCA_EXPORTACAO = "MOLBOX1";
+
+function exportarProgresso(p, codigo) {
+  const cod = String(codigo || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  if (cod.length < 4) return null;
+
+  const campos = [
+    MARCA_EXPORTACAO,
+    "cod=" + cod,
+    "xp=" + p.xp,
+    "ac=" + p.totalAcertos,
+    "te=" + p.totalTentativas,
+    "sd=" + p.acertosSemDica,
+    "ms=" + p.melhorSequencia,
+    "dg=" + p.desbloqueado,
+    "mo=" + p.melhorOfensiva,
+    "of=" + p.ofensiva,
+    "ult=" + (p.ultimoDia || "-"),
+  ];
+
+  const bal = p.extras && p.extras.balanceamento ? p.extras.balanceamento : null;
+  if (bal) campos.push("bal=" + bal.acertos + "/" + (bal.acertos + bal.erros));
+
+  const degraus = Object.keys(p.porDegrau).sort()
+    .map((d) => d + ":" + p.porDegrau[d].acertos + "/" + (p.porDegrau[d].acertos + p.porDegrau[d].erros))
+    .filter((t) => !/:0\/0$/.test(t));
+  if (degraus.length) campos.push("deg=" + degraus.join(","));
+
+  const tipos = Object.keys(p.porTipo).sort()
+    .map((t) => t + ":" + p.porTipo[t].acertos + "/" + (p.porTipo[t].acertos + p.porTipo[t].erros));
+  if (tipos.length) campos.push("tip=" + tipos.join(","));
+
+  return campos.join(";");
+}
+
+/* O caminho de volta, usado pelo painel do professor. Devolve null para linha
+   que não seja uma exportação — o professor vai colar um monte de texto de
+   conversa junto, e linha estranha tem de ser ignorada em silêncio. */
+function lerExportacao(linha) {
+  const texto = String(linha || "").trim();
+  if (texto.indexOf(MARCA_EXPORTACAO) !== 0) return null;
+  const dados = { tipos: {}, degraus: {} };
+  for (const parte of texto.split(";").slice(1)) {
+    const i = parte.indexOf("=");
+    if (i < 0) continue;
+    const chave = parte.slice(0, i);
+    const valor = parte.slice(i + 1);
+    if (chave === "cod") dados.codigo = valor;
+    else if (chave === "tip" || chave === "deg") {
+      const destino = chave === "tip" ? dados.tipos : dados.degraus;
+      for (const par of valor.split(",")) {
+        const [nome, fracao] = par.split(":");
+        if (!fracao) continue;
+        const [a, t] = fracao.split("/").map(Number);
+        destino[nome] = { acertos: a || 0, total: t || 0 };
+      }
+    } else if (chave === "bal") {
+      const [a, t] = valor.split("/").map(Number);
+      dados.balanceamento = { acertos: a || 0, total: t || 0 };
+    } else if (chave === "ult") dados.ult = valor;   // data, não número
+    else dados[chave] = Number(valor);
+  }
+  return dados.codigo ? dados : null;
+}
+
 function pontosFracos(p, minimo = 2) {
   const lista = [];
   for (const tipo in p.porTipo) {

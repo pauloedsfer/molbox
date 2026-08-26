@@ -1636,6 +1636,89 @@
     alvo.appendChild(acao);
   }
 
+  /* ---------------- exportar o progresso ----------------
+
+     A tela de Progresso promete que nada sai do aparelho sozinho. Este cartão
+     mantém a promessa: ele gera um texto, mostra o texto inteiro para o aluno
+     ler, e para por aí. Quem envia é ele, se quiser, pelo meio que quiser.
+
+     O código é o mesmo da atividade diagnóstica em papel — é o que liga as duas
+     coisas sem que nome nenhum saia daqui. Fica guardado para não ser
+     redigitado a cada vez. */
+
+  const CHAVE_CODIGO = "molbox.codigo.v1";
+
+  function montarCartaoExportar() {
+    const alvo = $("#cartao-exportar");
+    if (!alvo) return;
+    alvo.innerHTML = `<h2 style="margin-top:0">Enviar meu progresso ao professor</h2>` +
+      `<p class="ajuda">Só faça isto se o seu professor pedir. Nada é enviado pelo aplicativo: ` +
+      `ele monta um texto, você lê, e envia se quiser. Seu nome não aparece.</p>`;
+
+    let guardado = "";
+    try { guardado = localStorage.getItem(CHAVE_CODIGO) || ""; } catch (e) {}
+
+    const rot = criar("label", { htmlFor: "codigo-aluno", textContent: "Seu código (o mesmo da folha de exercício)" });
+    alvo.appendChild(rot);
+    const campo = criar("input", { type: "text", id: "codigo-aluno", value: guardado,
+      placeholder: "MASO07", autocomplete: "off", autocapitalize: "characters", maxLength: 12 });
+    alvo.appendChild(campo);
+    alvo.appendChild(criar("p", { className: "ajuda",
+      textContent: "2 letras do seu primeiro nome + 2 do sobrenome + o dia do seu aniversário." }));
+
+    const acoes = criar("div", { className: "montador-acoes" });
+    const gerar = criar("button", { type: "button", className: "botao", textContent: "Gerar meu resumo" });
+    gerar.addEventListener("click", () => gerarResumo(campo.value));
+    acoes.appendChild(gerar);
+    alvo.appendChild(acoes);
+
+    alvo.appendChild(criar("div", { id: "saida-exportacao" }));
+  }
+
+  function gerarResumo(codigo) {
+    const saida = $("#saida-exportacao");
+    saida.innerHTML = "";
+
+    const linha = exportarProgresso(progresso, codigo);
+    if (!linha) {
+      saida.appendChild(criar("p", { className: "erro",
+        textContent: "O código precisa ter pelo menos 4 letras ou números. Confira com o professor." }));
+      return;
+    }
+    try { localStorage.setItem(CHAVE_CODIGO, codigo.trim().toUpperCase()); } catch (e) {}
+
+    saida.appendChild(criar("p", { className: "ajuda", style: "margin-top:var(--mb-e4)",
+      textContent: "Este é o texto inteiro. Leia antes de enviar — não há nada além do que está aqui." }));
+
+    const caixa = criar("textarea", { id: "texto-exportacao", readOnly: true, rows: 4, value: linha });
+    caixa.setAttribute("aria-label", "Resumo do seu progresso");
+    saida.appendChild(caixa);
+
+    const acoes = criar("div", { className: "montador-acoes" });
+    const copiar = criar("button", { type: "button", className: "botao", textContent: "Copiar" });
+    copiar.addEventListener("click", () => {
+      caixa.select();
+      let deu = false;
+      try { deu = document.execCommand("copy"); } catch (e) {}
+      if (!deu && navigator.clipboard) {
+        navigator.clipboard.writeText(linha).then(() => avisarCopia(true), () => avisarCopia(false));
+        return;
+      }
+      avisarCopia(deu);
+    });
+    acoes.appendChild(copiar);
+    saida.appendChild(acoes);
+    saida.appendChild(criar("p", { className: "ajuda", id: "aviso-copia" }));
+  }
+
+  function avisarCopia(deu) {
+    const p = $("#aviso-copia");
+    if (!p) return;
+    p.textContent = deu
+      ? "Copiado. Agora é só colar onde o professor pediu."
+      : "Não consegui copiar sozinho. Segure o dedo sobre o texto acima e escolha Copiar.";
+  }
+
   /* ---------------- seletor de espécies (Massa molar, Soluções, Preparo) ----
 
      O mesmo problema que tornava o Balanceamento ruim no celular estava em
@@ -4372,6 +4455,7 @@
     $("#equacao").value = estado.equacao;
     montarTelaBalancear();
     montarSeletorEspecies();
+    montarCartaoExportar();
     sincronizarBandejasComTexto();
     desenharBandejas();
     balancearAtual();
