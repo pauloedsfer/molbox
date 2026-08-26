@@ -32,7 +32,8 @@
     solucao: { formula: "NaCl", unidade: "molar", valor: "1,0", densidade: "1,00",
                dil: { c1: "1,0", v1: "", c2: "0,1", v2: "250" },
                mix: [{ c: "0,5", v: "100" }, { c: "0,1", v: "400" }] },
-    preparo: { formula: "NaOH", volume: "500", concentracao: "0,1", pureza: "97", densidade: "" },
+    preparo: { formula: "NaOH", volume: "500", concentracao: "0,1", pureza: "97", densidade: "",
+               unidade: "molar", densSolucao: "1" },
     ph: { modo: "acidoFraco", indice: 4, concentracao: "0,1",
           tampaoAcido: "0,1", tampaoBase: "0,1" },
     titulacao: {
@@ -2619,6 +2620,10 @@
 
   /* ---------------- tela: preparo ---------------- */
 
+  /* Unidades definidas sobre a massa da solução: sem a densidade dela não há
+     como chegar a mol/L. As outras quatro se referem ao volume e dispensam. */
+  const PRECISA_DENSIDADE_SOLUCAO = ["percentMM", "titulo", "molalidade"];
+
   function desenharPreparo() {
     const alvo = $("#painel-preparo");
     alvo.innerHTML = "";
@@ -2632,9 +2637,34 @@
       aoMudar: (v) => { st.formula = v; atualizarPreparo(); } });
     campoTexto(g1, { id: "prep-volume", rotulo: "Volume final (mL)", valor: st.volume,
       aoMudar: (v) => { st.volume = v; atualizarPreparo(); } });
-    campoTexto(g1, { id: "prep-conc", rotulo: "Concentração (mol/L)", valor: st.concentracao,
-      aoMudar: (v) => { st.concentracao = v; atualizarPreparo(); } });
+    campoSelecao(g1, {
+      id: "prep-unidade", rotulo: "Unidade informada",
+      opcoes: Object.keys(UNIDADES_CONCENTRACAO).map((k) => ({ valor: k, rotulo: UNIDADES_CONCENTRACAO[k].rotulo })),
+      valor: st.unidade, aoMudar: (v) => { st.unidade = v; desenharPreparo(); },
+    });
+    campoTexto(g1, {
+      id: "prep-conc",
+      rotulo: `Concentração (${UNIDADES_CONCENTRACAO[st.unidade].unidade || "adimensional"})`,
+      valor: st.concentracao,
+      aoMudar: (v) => { st.concentracao = v; atualizarPreparo(); },
+    });
     entrada.appendChild(g1);
+
+    /* Três das sete unidades são definidas sobre a MASSA da solução, e não
+       sobre o volume: % m/m, título e molalidade. Para elas não há como chegar
+       a mol/L sem a densidade da solução — e essa é a densidade da solução
+       pronta, não a do reagente do frasco, que é outro campo e outra coisa.
+       O campo só aparece quando faz falta, para não pedir número inútil. */
+    if (PRECISA_DENSIDADE_SOLUCAO.includes(st.unidade)) {
+      const gd = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e3)" });
+      campoTexto(gd, { id: "prep-dens-solucao", rotulo: "Densidade da solução pronta (g/mL)",
+        valor: st.densSolucao, placeholder: "1",
+        dica: "Esta unidade se refere à massa da solução, então a conta depende da densidade dela. " +
+              "Para solução aquosa diluída, 1,00 é uma aproximação razoável; para solução concentrada, " +
+              "use o valor do rótulo ou da tabela.",
+        aoMudar: (v) => { st.densSolucao = v; atualizarPreparo(); } });
+      entrada.appendChild(gd);
+    }
 
     const g2 = criar("div", { className: "grelha-2", style: "margin-top:var(--mb-e3)" });
     campoTexto(g2, { id: "prep-pureza", rotulo: "Pureza do rótulo (%)", valor: st.pureza, placeholder: "100",
@@ -2649,9 +2679,15 @@
       ["NaOH 0,1 mol/L · 500 mL", { formula: "NaOH", volume: "500", concentracao: "0,1", pureza: "97", densidade: "" }],
       ["HCl 0,1 mol/L · 1 L", { formula: "HCl", volume: "1000", concentracao: "0,1", pureza: "", densidade: "" }],
       ["H2SO4 0,5 mol/L · 250 mL", { formula: "H2SO4", volume: "250", concentracao: "0,5", pureza: "", densidade: "" }],
-      ["NaCl 0,9% fisiológico", { formula: "NaCl", volume: "1000", concentracao: "0,154", pureza: "99,5", densidade: "" }],
+      /* Antes este atalho guardava 0,154 mol/L: alguém teve de converter os 0,9%
+         do rótulo à mão porque a tela só aceitava mol/L. Agora guarda o que o
+         rótulo diz. */
+      ["NaCl 0,9% fisiológico", { formula: "NaCl", volume: "1000", concentracao: "0,9", unidade: "percentMV", pureza: "99,5", densidade: "" }],
     ];
+    /* Atalho que não repõe a unidade herdaria a que estava selecionada, e o
+       aluno veria "HCl 0,1 mol/L" produzindo a massa de 0,1 ppm. */
     for (const [rotulo, cfg] of exemplos) {
+      if (!cfg.unidade) cfg.unidade = "molar";
       const b = criar("button", { type: "button", className: "chip", textContent: rotulo });
       b.addEventListener("click", () => { Object.assign(st, cfg); desenharPreparo(); });
       atalhos.appendChild(b);
@@ -2673,11 +2709,22 @@
     try { analise = analisar(st.formula); }
     catch (e) { cartaoDeErro(alvo, e.message); return; }
 
+    /* O motor do preparo trabalha em mol/L e continua assim. A unidade
+       informada é convertida aqui, na borda, reusando o mesmo `paraMolar` da
+       tela de Concentração — duas conversões paralelas divergiriam, e o aluno
+       veria as duas telas discordando sobre a mesma solução. */
+    let concentracaoMolar;
+    try {
+      concentracaoMolar = paraMolar(
+        lerNumero(st.concentracao), st.unidade, analise.massaMolar,
+        PRECISA_DENSIDADE_SOLUCAO.includes(st.unidade) ? (lerNumero(st.densSolucao) || 1) : 1);
+    } catch (e) { cartaoDeErro(alvo, e.message); return; }
+
     const r = prepararSolucao({
       formula: analise.normalizada,
       massaMolar: analise.massaMolar,
       volumeFinalML: lerNumero(st.volume),
-      concentracaoMolar: lerNumero(st.concentracao),
+      concentracaoMolar,
       pureza: lerNumero(st.pureza),
       densidadeReagente: lerNumero(st.densidade),
     });
