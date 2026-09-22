@@ -1,4 +1,4 @@
-# MOLBOX v0.5
+# SUPERMOLBOX v0.2
 
 Do átomo ao mol, do mol à bancada.
 
