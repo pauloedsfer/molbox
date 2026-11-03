@@ -135,6 +135,19 @@ O mesmo desenho do Super Organic Box:
 `js/tempo.js`, `js/envio.js` e `js/avatar.js` são convertidos dos módulos do Super Organic
 Box por `ferramentas/converter_modulo.cjs`: mude lá e converta de novo.
 
+## Nomenclatura inorgânica (v0.22)
+
+- Tela **Nomenclatura inorgânica** (`#nomenclatura`): o aluno monta o composto juntando um cátion
+  e um ânion; o app acerta as quantidades pela carga, dá o nome (número romano nos cátions de
+  carga variável, com o nome antigo -oso/-ico ao lado), a função, a classificação do óxido e a
+  regra. Óxidos de não metal (com prefixos) têm uma montagem própria. Sais podem ser hidratados.
+- **Prateleira** de 52 compostos do cotidiano e da bancada na tela Presentes e Troféus, com
+  medalhas da prateleira, `mol=` no resumo do professor e certificado em PDF (todos os compostos
+  e os cinco degraus abertos).
+- Regras em `js/nomenclatura_inorganica.js`, prateleira em `js/compostos_inorganicos.js`, PDF em
+  `js/pdf.js` (convertido do Super Organic Box). Testes: `node testes/rodar.cjs`.
+- Plano e decisões: `docs/planos/2026-11-03-nomenclatura-inorganica.md`.
+
 ## Privacidade
 
 O progresso fica em `localStorage`, neste aparelho. Não há cadastro e não há

@@ -10,7 +10,12 @@ const nomes = exp[1].split(",").map((s) => s.trim()).filter(Boolean).map((s) => 
   const m = s.match(/^(\w+)(?:\s+as\s+(\w+))?$/);
   return { local: m[1], publico: m[2] || m[1] };
 });
-const corpo = texto.replace(exp[0], "").replace(/^import .*$/gm, "").trimEnd();
+// Imports de outros módulos convertidos viram leituras do global deles.
+const GLOBAIS = { "formula_texto.js": "FormulaTexto", "tempo.js": "Tempo", "envio.js": "Envio", "avatar.js": "Avatar", "pdf.js": "Pdf" };
+const corpo = texto.replace(exp[0], "").replace(/^import \{([^}]*)\} from "[^"]*\/([\w.]+)";$/gm, (linha, nomes, arquivo) => {
+  if (!GLOBAIS[arquivo]) throw new Error("import sem global conhecido: " + linha);
+  return `const {${nomes}} = window.${GLOBAIS[arquivo]};`;
+}).replace(/^import .*$/gm, "").trimEnd();
 const saida = `/* ORIGEM: ${rotulo} (Super Organic Box), convertido por ferramentas/converter_modulo.cjs.
    Mude lá e converta de novo: os dois aplicativos usam a mesma lógica. */
 (function () {

@@ -1686,7 +1686,7 @@
     saida.innerHTML = "";
 
     cronometro().gravar();
-    const linha = exportarProgresso(progresso, codigo, { tempoMin: Math.floor(cronometro().dados().total / 60000) });
+    const linha = exportarProgresso(progresso, codigo, { tempoMin: Math.floor(cronometro().dados().total / 60000), moleculas: compostosEncontrados() });
     if (!linha) {
       saida.appendChild(criar("p", { className: "erro",
         textContent: "O código precisa ter pelo menos 4 letras ou números. Confira com o professor." }));
@@ -4603,6 +4603,86 @@
 
   const copiaDoProgresso = () => JSON.parse(JSON.stringify(progresso));
 
+  /* Compostos da prateleira já encontrados (js/compostos_inorganicos.js). */
+  function compostosEncontrados() {
+    const CI = window.CompostosInorganicos;
+    return { encontradas: CI.carregarTrofeus(armazenamentoLocal()).length, total: CI.TROFEUS.length };
+  }
+
+  // Medalhas da prateleira: calculadas na hora a partir dos troféus (não ficam no progresso).
+  const MEDALHAS_PRATELEIRA = [
+    { n: 1, nome: "Primeiro composto", descricao: "montar o primeiro composto da prateleira" },
+    { n: 10, nome: "Dez compostos", descricao: "montar dez compostos da prateleira" },
+    { n: 0, nome: "Prateleira completa", descricao: "montar todos os compostos da prateleira" },
+  ];
+
+  const NOMES_FUNCAO_TROFEU = { acido: "ácido", base: "base", sal: "sal", oxido: "óxido" };
+
+  /* Nome oficial de cada composto da prateleira, montado pelas mesmas regras da tela (uma vez só). */
+  let nomesDaPrateleira = null;
+  function nomeDoTrofeu(formula) {
+    if (!nomesDaPrateleira) {
+      const N = window.NomenclaturaInorganica;
+      nomesDaPrateleira = new Map();
+      for (const f of ["acido", "base", "sal", "oxido"]) for (const c of N.cationsPara(f)) for (const a of N.anionsPara(f)) {
+        for (let aguas = 0; aguas <= N.AGUAS_MAXIMAS; aguas++) {
+          const r = N.montar(c.id, a.id, { aguas });
+          if (r.ok && !nomesDaPrateleira.has(r.formula)) nomesDaPrateleira.set(r.formula, r.nome);
+          if (f !== "sal") break;
+        }
+      }
+      for (const o of N.OXIDOS_MOLECULARES) nomesDaPrateleira.set(o.formula, o.nome);
+    }
+    return nomesDaPrateleira.get(formula) || "";
+  }
+
+  function carregarImagem(svg) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("imagem"));
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    });
+  }
+
+  // A marca entra no PDF como JPEG (o gerador não lê SVG). Sem ela, o PDF sai só com texto.
+  async function marcaParaPdf() {
+    try {
+      const svg = await (await fetch("marca/molbox-principal.svg")).text();
+      const img = await carregarImagem(svg);
+      const canvas = document.createElement("canvas");
+      canvas.width = 231 * 1.5; canvas.height = 91 * 1.5;
+      const c = canvas.getContext("2d");
+      c.fillStyle = "#FFFFFF"; c.fillRect(0, 0, canvas.width, canvas.height);
+      c.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((ok, falha) => canvas.toBlob((b) => (b ? ok(b) : falha(new Error("jpeg"))), "image/jpeg", 0.92));
+      return { tipo: "imagem", jpeg: new Uint8Array(await blob.arrayBuffer()), larguraPx: canvas.width, alturaPx: canvas.height };
+    } catch (e) { return null; }
+  }
+
+  async function baixarCertificado(nome) {
+    const nv = xpParaProximoNivel(progresso.xp);
+    const total = window.CompostosInorganicos.TROFEUS.length;
+    const blocos = [];
+    const marca = await marcaParaPdf();
+    if (marca) blocos.push(marca);
+    blocos.push({ tipo: "titulo", texto: "Certificado" });
+    blocos.push({ tipo: "texto", texto: "Certificamos que" });
+    blocos.push({ tipo: "secao", texto: nome });
+    blocos.push({ tipo: "texto", texto: `montou os ${total} compostos da prateleira de nomenclatura inorgânica do SUPER MOLBOX e abriu os cinco degraus da escada do mol no Treino.` });
+    blocos.push({ tipo: "texto", texto: `Título conquistado: ${window.Presentes.tituloDo(progresso)}.` });
+    blocos.push({ tipo: "texto", texto: `Nível ${nv.nivel}, com ${progresso.xp} XP e ${progresso.totalAcertos} ${progresso.totalAcertos === 1 ? "acerto" : "acertos"} no Treino.` });
+    blocos.push({ tipo: "texto", texto: `Emitido em ${new Date().toLocaleDateString("pt-BR")}.` });
+    blocos.push({ tipo: "texto", texto: "Gerado no aparelho do aluno, sem servidor. O professor pode conferir o progresso pelo resumo enviado na tela Progresso." });
+    const bytes = window.Pdf.gerarPdf({ titulo: `Certificado: ${nome}`, blocos, rodape: "SUPER MOLBOX" });
+    const arquivo = `certificado-super-molbox-${nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "aluno"}.pdf`;
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    const a = criar("a", { href: url, download: arquivo });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+    return arquivo;
+  }
+
   /* ---------------- tela: presentes e troféus ---------------- */
 
   function desenharPresentes() {
@@ -4746,20 +4826,86 @@
     }
 
     // --- medalhas ---
+    const CI = window.CompostosInorganicos;
+    const listaTrofeus = CI.carregarTrofeus(armazenamentoLocal());
+    const achados = new Map(listaTrofeus.map((x) => [x.id, x]));
+    const nTotal = CI.TROFEUS.length;
+
     const medalhas = criar("div", { className: "cartao" });
-    const ganhas = MEDALHAS.filter((m) => progresso.medalhas.includes(m.id)).length;
+    const daPrateleira = MEDALHAS_PRATELEIRA.map((m) => ({ nome: m.nome, descricao: m.descricao, tem: achados.size >= (m.n || nTotal) }));
+    const todas = MEDALHAS.map((m) => ({ nome: m.nome, descricao: m.descricao, tem: progresso.medalhas.includes(m.id) })).concat(daPrateleira);
     medalhas.appendChild(criar("h2", { textContent: "Medalhas", style: "margin-top:0" }));
-    medalhas.appendChild(criar("p", { className: "ajuda", textContent: `${ganhas} de ${MEDALHAS.length} medalhas conquistadas.` }));
+    medalhas.appendChild(criar("p", { className: "ajuda", textContent: `${todas.filter((m) => m.tem).length} de ${todas.length} medalhas conquistadas.` }));
     const gradeM = criar("div", { className: "medalhas" });
-    for (const m of MEDALHAS) {
-      const tem = progresso.medalhas.includes(m.id);
-      const item = criar("div", { className: "medalha " + (tem ? "conquistada" : "pendente") });
+    for (const m of todas) {
+      const item = criar("div", { className: "medalha " + (m.tem ? "conquistada" : "pendente") });
       item.appendChild(criar("strong", { textContent: m.nome }));
-      item.appendChild(document.createTextNode(`${tem ? "Conquistada: " : "Ainda não: "}${m.descricao.charAt(0).toLowerCase()}${m.descricao.slice(1)}.`));
+      item.appendChild(document.createTextNode(`${m.tem ? "Conquistada: " : "Ainda não: "}${m.descricao.charAt(0).toLowerCase()}${m.descricao.slice(1)}.`));
       gradeM.appendChild(item);
     }
     medalhas.appendChild(gradeM);
     alvo.appendChild(medalhas);
+
+    // --- certificado: todos os compostos e os cinco degraus abertos ---
+    const cert = criar("div", { className: "cartao" });
+    cert.appendChild(criar("h2", { textContent: "Certificado", style: "margin-top:0" }));
+    const faltas = [];
+    if (achados.size < nTotal) faltas.push(`Montar mais ${nTotal - achados.size} ${nTotal - achados.size === 1 ? "composto" : "compostos"} da prateleira (${achados.size} de ${nTotal}).`);
+    if (progresso.desbloqueado < 4) faltas.push(`Abrir o degrau Reação no Treino (você está em ${degrauPorNumero(progresso.desbloqueado).nome}).`);
+    if (faltas.length) {
+      cert.appendChild(criar("p", { textContent: "🔒 O certificado abre quando você montar todos os compostos da prateleira e abrir os cinco degraus do Treino. Falta:" }));
+      const ul = criar("ul", { className: "lista-tempo" });
+      for (const f of faltas) ul.appendChild(criar("li", { textContent: f }));
+      cert.appendChild(ul);
+    } else {
+      cert.appendChild(criar("p", { textContent: "🎓 Você montou todos os compostos e abriu os cinco degraus. Parabéns!" }));
+      cert.appendChild(criar("label", { htmlFor: "nome-certificado", textContent: "Nome no certificado (fica só neste aparelho e não vai no resumo do professor)" }));
+      const campo = criar("input", { type: "text", id: "nome-certificado", maxLength: 60, autocomplete: "name", value: preferencias().nome });
+      campo.setAttribute("aria-describedby", "certificado-status");
+      cert.appendChild(campo);
+      const status = criar("p", { className: "ajuda", id: "certificado-status" });
+      status.setAttribute("role", "status");
+      const botao = criar("button", { type: "button", className: "botao", textContent: "Baixar o certificado (PDF)", style: "margin-top:var(--mb-e2)" });
+      botao.addEventListener("click", async () => {
+        const nome = campo.value.trim().replace(/\s+/g, " ");
+        if (!nome) { campo.setAttribute("aria-invalid", "true"); status.textContent = "Escreva o nome que vai no certificado."; campo.focus(); return; }
+        campo.removeAttribute("aria-invalid");
+        guardarPreferencias({ nome });
+        botao.disabled = true;
+        status.textContent = "Preparando o certificado...";
+        try { status.textContent = `Certificado pronto: ${await baixarCertificado(nome)}.`; } catch (e) { status.textContent = "Não consegui gerar o certificado. Tente de novo."; }
+        botao.disabled = false;
+      });
+      cert.appendChild(botao);
+      cert.appendChild(status);
+    }
+    alvo.appendChild(cert);
+
+    // --- prateleira de troféus ---
+    const prat = criar("div", { className: "cartao" });
+    prat.appendChild(criar("h2", { id: "prateleira", textContent: "Prateleira de troféus", style: "margin-top:0" }));
+    prat.appendChild(criar("p", { className: "ajuda", textContent: "Cada composto importante que você monta na Nomenclatura inorgânica vira um troféu. Quem ainda falta mostra só a fórmula: descubra o nome e monte." }));
+    prat.appendChild(criar("p", { className: "contagem-trofeus", textContent: achados.size ? `${achados.size} de ${nTotal} compostos encontrados.` : `Nenhum troféu ainda: faltam ${nTotal} compostos para encontrar.` }));
+    const barraT = criar("progress", { max: nTotal, value: achados.size, className: "barra-trofeus" });
+    barraT.setAttribute("aria-label", "Troféus conquistados");
+    prat.appendChild(barraT);
+    const ul = criar("ul", { className: "prateleira" });
+    const N = window.NomenclaturaInorganica;
+    for (const t of CI.TROFEUS) {
+      const ganho = achados.get(t.id);
+      const li = criar("li", { className: "trofeu" + (ganho ? "" : " trofeu-falta") });
+      const icone = criar("span", { className: "trofeu-icone", textContent: ganho ? "🏆" : "?" });
+      icone.setAttribute("aria-hidden", "true");
+      li.appendChild(icone);
+      const f = criar("span", { className: "trofeu-nome" });
+      f.innerHTML = formatarFormula(t.formula.replace(/[^A-Za-z0-9()·]/g, ""));
+      li.appendChild(f);
+      if (ganho) li.appendChild(criar("span", { className: "trofeu-oficial", textContent: nomeDoTrofeu(t.formula) }));
+      li.appendChild(criar("span", { className: "trofeu-detalhe", textContent: ganho ? t.usual : `Ainda não encontrado (${NOMES_FUNCAO_TROFEU[t.funcao]})` }));
+      ul.appendChild(li);
+    }
+    prat.appendChild(ul);
+    alvo.appendChild(prat);
   }
 
   /* ---------------- tela: progresso ---------------- */
