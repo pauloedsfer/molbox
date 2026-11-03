@@ -109,6 +109,7 @@
     "tela-sobre": "Sobre",
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
+    "tela-presentes": "Presentes e Troféus",
     "tela-tabela": "Tabela periódica",
   };
 
@@ -132,6 +133,7 @@
   function mostrarTela(id) {
     estado.telaAtual = id;
     guardar();
+    cronometro().registrarAcao(id);   // trocar de tela é uma ação: o tempo passa a contar nesta tela
     for (const s of document.querySelectorAll("main > section")) s.hidden = (s.id !== id);
     for (const b of document.querySelectorAll(".menu .item")) {
       if (b.dataset.tela && b.dataset.tela === id) b.setAttribute("aria-current", "page");
@@ -154,6 +156,7 @@
     if (id === "tela-titulacao") desenharTitulacao();
     if (id === "tela-treino") entrarNoTreino();
     if (id === "tela-progresso") desenharProgresso();
+    if (id === "tela-presentes") desenharPresentes();
   }
 
 
@@ -1680,7 +1683,8 @@
     const saida = $("#saida-exportacao");
     saida.innerHTML = "";
 
-    const linha = exportarProgresso(progresso, codigo);
+    cronometro().gravar();
+    const linha = exportarProgresso(progresso, codigo, { tempoMin: Math.floor(cronometro().dados().total / 60000) });
     if (!linha) {
       saida.appendChild(criar("p", { className: "erro",
         textContent: "O código precisa ter pelo menos 4 letras ou números. Confira com o professor." }));
@@ -1710,6 +1714,50 @@
     acoes.appendChild(copiar);
     saida.appendChild(acoes);
     saida.appendChild(criar("p", { className: "ajuda", id: "aviso-copia" }));
+    montarEnvioOnline(saida, linha);
+  }
+
+  /* Envio pela internet para a planilha da turma (js/envio.js): a rede só é
+     usada neste momento, e vai só o texto acima. O app só aceita link de app da
+     Web do Google, para um link falso não desviar o texto do aluno. */
+  function montarEnvioOnline(saida, linha) {
+    const E = window.Envio;
+    const caixa = criar("div", { className: "envio-online" });
+    caixa.appendChild(criar("h3", { textContent: "Enviar pela internet" }));
+    caixa.appendChild(criar("p", { className: "ajuda", textContent: "Se o professor passou o link da planilha da turma, o texto vai direto para ele." }));
+    caixa.appendChild(criar("label", { htmlFor: "link-turma", textContent: "Link da turma" }));
+    const campo = criar("input", { type: "url", id: "link-turma", autocomplete: "off", value: preferencias().linkTurma });
+    campo.setAttribute("aria-describedby", "envio-status");
+    caixa.appendChild(campo);
+    const botao = criar("button", { type: "button", className: "botao", textContent: "Enviar pela internet", style: "margin-top:var(--mb-e2)" });
+    const status = criar("p", { className: "ajuda", id: "envio-status" });
+    status.setAttribute("role", "status");
+    let enviando = false;
+    botao.addEventListener("click", async () => {
+      if (enviando) return;
+      const link = E.lerLinkDaTurma(campo.value);
+      if (!link.ok) { campo.setAttribute("aria-invalid", "true"); status.textContent = link.explicacao; campo.focus(); return; }
+      campo.removeAttribute("aria-invalid");
+      const corpo = E.corpoDoEnvio(linha, MARCA_EXPORTACAO);
+      if (!corpo) { status.textContent = "Gere o resumo de novo antes de enviar."; return; }
+      guardarPreferencias({ linkTurma: link.url });
+      enviando = true;
+      botao.disabled = true;
+      status.textContent = "Enviando...";
+      try {
+        const resp = await fetch(link.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: corpo });
+        let dados = null;
+        try { dados = await resp.json(); } catch (e) { dados = null; }
+        status.textContent = resp.ok ? E.mensagemDaResposta(dados) : "A planilha não respondeu. Confira o link com o professor.";
+      } catch (e) {
+        status.textContent = "Não deu para enviar agora: sem internet ou a planilha está fora do ar. O texto continua aqui para copiar ou enviar depois.";
+      }
+      enviando = false;
+      botao.disabled = false;
+    });
+    caixa.appendChild(botao);
+    caixa.appendChild(status);
+    saida.appendChild(caixa);
   }
 
   function avisarCopia(deu) {
@@ -2043,12 +2091,14 @@
        múltiplo. O aluno entendeu o método e errou o pedido. */
     t.multiplo = fecha && !igual;
 
+    const antesDoRegistro = copiaDoProgresso();
     const r = registrarTreinoExtra(progresso, TREINO_BAL, igual, t.contou);
     t.ganho = r.ganho;
     t.feitos += 1;
     t.seguidos = igual ? t.seguidos + 1 : 0;
 
     t.medalhasNovas = r.medalhasNovas;
+    t.presentesNovos = presentesNovos(antesDoRegistro);
 
     desenharTreinoBal();
     desenharPlacarTreinoBal();
@@ -2104,6 +2154,9 @@
     for (const m of (t.medalhasNovas || [])) {
       caixa.appendChild(criar("p", { style: "margin-top:4px;font-weight:500",
         textContent: `Medalha conquistada: ${m.nome}.` }));
+    }
+    for (const frase of (t.presentesNovos || [])) {
+      caixa.appendChild(criar("p", { style: "margin-top:4px;font-weight:500", textContent: frase }));
     }
 
     caixa.appendChild(levar);
@@ -4248,6 +4301,7 @@
     estado.sessao.total += 1;
     if (acertou) estado.sessao.certas += 1;
 
+    const antesDoRegistro = copiaDoProgresso();
     const efeito = registrarResposta(progresso, q, acertou, estado.usouDica);
     estado.sessao.xp += efeito.ganho;
 
@@ -4273,6 +4327,9 @@
     for (const m of efeito.medalhasNovas) {
       caixa.appendChild(criar("p", { style: "margin-top:4px", textContent: `Medalha conquistada: ${m.nome}.` }));
     }
+    for (const frase of presentesNovos(antesDoRegistro)) {
+      caixa.appendChild(criar("p", { style: "margin-top:4px;font-weight:500", textContent: frase }));
+    }
 
     const alvo = $("#exercicio");
     alvo.insertBefore(caixa, alvo.querySelector(".acoes"));
@@ -4286,6 +4343,262 @@
     atualizarResumoLateral();
   }
 
+  /* ---------------- presentes, avatar e tempo de uso ----------------
+
+     O mesmo desenho do Super Organic Box: presente é enfeite e nunca esconde
+     conteúdo. As regras ficam em js/presentes.js (paletas de indicadores e
+     títulos), js/avatar.js (o avatar e os acessórios) e js/tempo.js (o tempo de
+     uso, que conta entre ações e para 3 minutos depois da última). Aqui só a
+     parte que precisa da página. Tudo fica no aparelho. */
+
+  const CHAVE_TEMPO = "molbox.tempo.v1";
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function armazenamentoLocal() {
+    try { return window.localStorage; } catch (e) { return null; }
+  }
+
+  let relogio = null;
+  function cronometro() {
+    if (!relogio) relogio = window.Tempo.criarCronometro({ chave: CHAVE_TEMPO, armazenamento: armazenamentoLocal() });
+    return relogio;
+  }
+
+  let prefsMemoria = null;   // vale sem armazenamento (modo privativo)
+  function preferencias() {
+    let bruto = prefsMemoria;
+    try {
+      const a = armazenamentoLocal();
+      const t = a && a.getItem(window.Presentes.CHAVE_PREFERENCIAS);
+      if (t !== null && t !== undefined) bruto = t;
+    } catch (e) { /* segue com a memória */ }
+    return window.Presentes.lerPreferencias(bruto);
+  }
+
+  function guardarPreferencias(mudancas) {
+    const novas = Object.assign({}, preferencias(), mudancas);
+    prefsMemoria = JSON.stringify(novas);
+    try { const a = armazenamentoLocal(); if (a) a.setItem(window.Presentes.CHAVE_PREFERENCIAS, prefsMemoria); } catch (e) { /* segue em memória */ }
+    return novas;
+  }
+
+  /* Põe a paleta na página, com a marca da mesma cor. Paleta que não está mais
+     aberta (progresso zerado) volta à institucional. */
+  function aplicarPaleta(id) {
+    const P = window.Presentes;
+    const valida = id !== P.PALETA_PADRAO && P.paletaAberta(id, progresso) ? id : P.PALETA_PADRAO;
+    const raiz = document.documentElement;
+    if (valida === P.PALETA_PADRAO) delete raiz.dataset.paleta;
+    else raiz.dataset.paleta = valida;
+    const marca = document.querySelector(".sidebar-topo img");
+    if (marca) {
+      const src = valida === P.PALETA_PADRAO ? "marca/molbox-negativo.svg" : `marca/molbox-negativo-${valida}.svg`;
+      if (marca.getAttribute("src") !== src) marca.setAttribute("src", src);
+    }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      const cor = getComputedStyle(raiz).getPropertyValue("--mb-barra").trim();
+      if (cor) meta.setAttribute("content", cor);
+    }
+    return valida;
+  }
+
+  function aplicarPaletaGuardada() { return aplicarPaleta(preferencias().paleta); }
+
+  /* O avatar como SVG criado pelo DOM, com descrição em texto. */
+  function svgDoAvatar(av, tamanho) {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 120 140");
+    svg.setAttribute("width", String(tamanho));
+    svg.setAttribute("height", String(Math.round(tamanho * 140 / 120)));
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", window.Avatar.descricaoDoAvatar(av));
+    for (const forma of window.Avatar.formasDoAvatar(av)) {
+      const el = document.createElementNS(SVG_NS, forma.tag);
+      for (const k in forma.atributos) el.setAttribute(k, String(forma.atributos[k]));
+      svg.appendChild(el);
+    }
+    return svg;
+  }
+
+  function avatarAtual() {
+    return window.Avatar.lerAvatar(preferencias().avatar, window.Presentes.indiceDoTitulo(progresso));
+  }
+
+  /* Frases de presente novo, comparando o progresso de antes com o de agora. */
+  function presentesNovos(antes) {
+    const P = window.Presentes;
+    const frases = P.paletasQueAbriram(antes, progresso).map((x) => `Presente novo: a paleta ${x.nome}, em Presentes e Troféus.`);
+    const ia = P.indiceDoTitulo(antes);
+    const id = P.indiceDoTitulo(progresso);
+    if (id > ia) {
+      const novos = window.Avatar.acessoriosDoTitulo(id).map((x) => x.nome.toLowerCase());
+      frases.push(`Título novo: ${P.TITULOS[id]}.${novos.length ? ` Acessório novo para o avatar: ${novos.join(" e ")}.` : ""}`);
+    }
+    return frases;
+  }
+
+  const copiaDoProgresso = () => JSON.parse(JSON.stringify(progresso));
+
+  /* ---------------- tela: presentes e troféus ---------------- */
+
+  function desenharPresentes() {
+    const alvo = $("#painel-presentes");
+    const P = window.Presentes;
+    const A = window.Avatar;
+    alvo.innerHTML = "";
+    const indice = P.indiceDoTitulo(progresso);
+    const av = avatarAtual();
+
+    const anuncio = criar("div", { className: "anuncio-presente" });
+    anuncio.setAttribute("role", "status");
+    alvo.appendChild(anuncio);
+
+    // --- avatar ---
+    const cartaoAvatar = criar("div", { className: "cartao cartao-avatar" });
+    cartaoAvatar.appendChild(criar("h2", { textContent: "Seu avatar", style: "margin-top:0" }));
+    const corpo = criar("div", { className: "corpo-avatar" });
+    const figura = criar("div", { className: "figura-avatar" });
+    figura.appendChild(svgDoAvatar(av, 150));
+    corpo.appendChild(figura);
+    const escolhas = criar("div", { className: "escolhas-avatar" });
+
+    function salvar(mudanca, focar) {
+      guardarPreferencias({ avatar: Object.assign({}, avatarAtual(), mudanca) });
+      desenharPresentes();
+      const b = focar && document.querySelector(focar);
+      if (b) b.focus();
+    }
+    function grupo(titulo, campo, lista, valor, comCor) {
+      const caixa = criar("div", { className: "grupo-avatar" });
+      const rot = criar("p", { className: "titulo-grupo-avatar", id: "avatar-" + campo, textContent: titulo });
+      const linha = criar("div", { className: "opcoes-avatar" });
+      linha.setAttribute("role", "group");
+      linha.setAttribute("aria-labelledby", rot.id);
+      for (const op of lista) {
+        const b = criar("button", { type: "button", className: "chip" });
+        if (comCor) {
+          const bolinha = criar("span", { className: "amostra-cor" });
+          bolinha.setAttribute("aria-hidden", "true");
+          bolinha.style.background = op.cor;
+          b.appendChild(bolinha);
+        }
+        b.appendChild(criar("span", { textContent: op.nome }));
+        b.dataset.campo = campo;
+        b.dataset.valor = op.id;
+        b.setAttribute("aria-pressed", String(op.id === valor));
+        b.addEventListener("click", () => salvar({ [campo]: op.id }, `[data-campo="${campo}"][data-valor="${op.id}"]`));
+        linha.appendChild(b);
+      }
+      caixa.appendChild(rot);
+      caixa.appendChild(linha);
+      return caixa;
+    }
+    escolhas.appendChild(grupo("Pele", "pele", A.PELES, av.pele, true));
+    escolhas.appendChild(grupo("Cabelo", "cabelo", A.CABELOS, av.cabelo, false));
+    if (av.cabelo !== "raspado") escolhas.appendChild(grupo("Cor do cabelo", "corCabelo", A.CORES_CABELO, av.corCabelo, true));
+    escolhas.appendChild(grupo("Cor da gola do jaleco", "gola", A.GOLAS, av.gola, true));
+    const acess = criar("div", { className: "grupo-avatar" });
+    acess.appendChild(criar("p", { className: "titulo-grupo-avatar", id: "avatar-acessorios", textContent: "Acessórios de laboratório" }));
+    acess.appendChild(criar("p", { className: "ajuda", style: "margin:0 0 var(--mb-e2)", textContent: "Cada título novo no Treino abre um acessório. Toque para usar ou tirar." }));
+    const linhaAc = criar("div", { className: "opcoes-avatar" });
+    linhaAc.setAttribute("role", "group");
+    linhaAc.setAttribute("aria-labelledby", "avatar-acessorios");
+    for (const a of A.estadoDosAcessorios(indice, P.TITULOS)) {
+      if (!a.aberto) {
+        linhaAc.appendChild(criar("span", { className: "chip chip-fechado", textContent: `🔒 ${a.nome}: abre com o título ${a.tituloQueAbre}` }));
+        continue;
+      }
+      const usando = av.acessorios.indexOf(a.id) >= 0;
+      const b = criar("button", { type: "button", className: "chip", textContent: a.nome });
+      b.dataset.campo = "acessorio";
+      b.dataset.valor = a.id;
+      b.setAttribute("aria-pressed", String(usando));
+      b.addEventListener("click", () => salvar({ acessorios: usando ? av.acessorios.filter((x) => x !== a.id) : av.acessorios.concat(a.id) },
+        `[data-campo="acessorio"][data-valor="${a.id}"]`));
+      linhaAc.appendChild(b);
+    }
+    acess.appendChild(linhaAc);
+    escolhas.appendChild(acess);
+    corpo.appendChild(escolhas);
+    cartaoAvatar.appendChild(corpo);
+    alvo.appendChild(cartaoAvatar);
+
+    // --- título ---
+    const cartaoTitulo = criar("div", { className: "cartao" });
+    cartaoTitulo.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: "Seu título no Treino" }));
+    cartaoTitulo.appendChild(criar("p", { className: "nivel-numero", style: "margin:0", textContent: P.tituloDo(progresso) }));
+    cartaoTitulo.appendChild(criar("p", { className: "ajuda", textContent: P.proximoTitulo(progresso) || "É o título mais alto do Treino." }));
+    alvo.appendChild(cartaoTitulo);
+
+    // --- paletas ---
+    const cartaoPaletas = criar("div", { className: "cartao" });
+    cartaoPaletas.appendChild(criar("h2", { textContent: "Paletas de indicadores", style: "margin-top:0" }));
+    cartaoPaletas.appendChild(criar("p", { className: "ajuda", textContent: "Cada paleta tem o nome de um indicador ácido-base, o mesmo tipo de substância que muda de cor na titulação. O Tornassol é o presente de boas-vindas; os outros abrem com os degraus do Treino." }));
+    const ativa = aplicarPaleta(preferencias().paleta);
+    const grade = criar("ul", { className: "grade-paletas" });
+    const estados = P.estadoDasPaletas(progresso);
+    for (const e of estados) {
+      const li = criar("li", { className: "paleta" + (e.aberta ? (e.id === ativa ? " ativa" : "") : " falta") });
+      const amostra = criar("span", { className: "amostra-paleta" });
+      amostra.setAttribute("aria-hidden", "true");
+      amostra.dataset.paleta = e.id;
+      li.appendChild(amostra);
+      li.appendChild(criar("strong", { className: "nome-paleta", textContent: e.nome }));
+      li.appendChild(criar("span", { className: "ajuda", textContent: e.descricao }));
+      if (!e.aberta) {
+        li.appendChild(criar("span", { textContent: "🔒 " + e.condicao }));
+      } else {
+        const usar = criar("button", { type: "button", className: "botao secundario", textContent: e.id === ativa ? "Em uso" : "Usar esta paleta" });
+        usar.dataset.usar = e.id;
+        usar.setAttribute("aria-pressed", String(e.id === ativa));
+        usar.setAttribute("aria-label", e.id === ativa ? `Paleta ${e.nome}, em uso` : `Usar a paleta ${e.nome}`);
+        usar.addEventListener("click", () => {
+          guardarPreferencias({ paleta: e.id });
+          desenharPresentes();
+          const b = document.querySelector(`[data-usar="${e.id}"]`);
+          if (b) b.focus();
+        });
+        li.appendChild(usar);
+        if (e.indicador) {
+          const det = criar("details", { className: "pigmento" });
+          det.appendChild(criar("summary", { textContent: `Conhecer o indicador: ${e.nome.toLowerCase()}` }));
+          det.appendChild(criar("p", { textContent: `Em meio ácido: ${e.indicador.acido}. Em meio básico: ${e.indicador.base}. Faixa de viragem: pH ${e.indicador.faixa}.` }));
+          det.appendChild(criar("p", { textContent: e.indicador.texto }));
+          li.appendChild(det);
+        }
+      }
+      grade.appendChild(li);
+    }
+    cartaoPaletas.appendChild(grade);
+    alvo.appendChild(cartaoPaletas);
+
+    // Paleta aberta desde a última visita: anuncia uma vez.
+    const abertas = estados.filter((e) => e.aberta && e.id !== P.PALETA_PADRAO);
+    const vistas = preferencias().vistas;
+    const frases = abertas.slice(vistas).map((e) => `Presente novo: a paleta ${e.nome}.`);
+    if (frases.length) {
+      guardarPreferencias({ vistas: abertas.length });
+      setTimeout(() => { anuncio.textContent = frases.join(" "); }, 100);
+    }
+
+    // --- medalhas ---
+    const medalhas = criar("div", { className: "cartao" });
+    const ganhas = MEDALHAS.filter((m) => progresso.medalhas.includes(m.id)).length;
+    medalhas.appendChild(criar("h2", { textContent: "Medalhas", style: "margin-top:0" }));
+    medalhas.appendChild(criar("p", { className: "ajuda", textContent: `${ganhas} de ${MEDALHAS.length} medalhas conquistadas.` }));
+    const gradeM = criar("div", { className: "medalhas" });
+    for (const m of MEDALHAS) {
+      const tem = progresso.medalhas.includes(m.id);
+      const item = criar("div", { className: "medalha " + (tem ? "conquistada" : "pendente") });
+      item.appendChild(criar("strong", { textContent: m.nome }));
+      item.appendChild(document.createTextNode(`${tem ? "Conquistada: " : "Ainda não: "}${m.descricao.charAt(0).toLowerCase()}${m.descricao.slice(1)}.`));
+      gradeM.appendChild(item);
+    }
+    medalhas.appendChild(gradeM);
+    alvo.appendChild(medalhas);
+  }
+
   /* ---------------- tela: progresso ---------------- */
 
   function desenharProgresso() {
@@ -4295,13 +4608,38 @@
     const taxa = progresso.totalTentativas
       ? Math.round((progresso.totalAcertos / progresso.totalTentativas) * 100) : 0;
 
-    const cartaoNivel = criar("div", { className: "cartao" });
-    cartaoNivel.innerHTML =
+    const cartaoNivel = criar("div", { className: "cartao cartao-nivel" });
+    const miniAvatar = criar("div", { className: "avatar-pequeno" });
+    miniAvatar.appendChild(svgDoAvatar(avatarAtual(), 84));
+    cartaoNivel.appendChild(miniAvatar);
+    const corpoNivel = criar("div", { className: "nivel-corpo" });
+    corpoNivel.innerHTML =
       `<div class="nivel-caixa"><span class="nivel-numero">Nível ${nv.nivel}</span>` +
       `<span class="ajuda" style="margin:0">${progresso.xp} XP acumulados</span></div>` +
       `<div class="xp-trilho"><div class="xp-barra" style="width:${Math.round(nv.atual / nv.necessario * 100)}%"></div></div>` +
       `<p class="ajuda">Faltam ${nv.necessario - nv.atual} XP para o nível ${nv.nivel + 1}.</p>`;
+    corpoNivel.appendChild(criar("p", { style: "margin:0 0 var(--mb-e3)", textContent: `Título: ${window.Presentes.tituloDo(progresso)}` }));
+    const verPresentes = criar("button", { type: "button", className: "botao secundario", textContent: "Ver presentes e troféus" });
+    verPresentes.addEventListener("click", () => mostrarTela("tela-presentes"));
+    corpoNivel.appendChild(verPresentes);
+    cartaoNivel.appendChild(corpoNivel);
     alvo.appendChild(cartaoNivel);
+
+    // Tempo de uso (js/tempo.js): conta entre ações e para 3 minutos depois da última.
+    cronometro().gravar();
+    const tempo = cronometro().dados();
+    const cartaoTempo = criar("div", { className: "cartao" });
+    cartaoTempo.appendChild(criar("h2", { textContent: "Tempo de uso", style: "margin-top:0" }));
+    cartaoTempo.appendChild(criar("p", { className: "nivel-numero", style: "margin:0", textContent: `${window.Tempo.textoDoTempo(tempo.total)} no total` }));
+    cartaoTempo.appendChild(criar("p", { className: "ajuda", textContent: `Hoje: ${window.Tempo.textoDoTempo(cronometro().hoje())}. O tempo conta enquanto você usa o aplicativo e para sozinho depois de 3 minutos sem nenhum toque, tecla ou rolagem.` }));
+    const porTela = Object.keys(tempo.porTela).filter((k) => TITULOS[k] && tempo.porTela[k] >= 60000)
+      .sort((a, b) => tempo.porTela[b] - tempo.porTela[a]).slice(0, 5);
+    if (porTela.length) {
+      const lista = criar("ul", { className: "lista-tempo" });
+      for (const k of porTela) lista.appendChild(criar("li", { textContent: `${TITULOS[k]}: ${window.Tempo.textoDoTempo(tempo.porTela[k])}` }));
+      cartaoTempo.appendChild(lista);
+    }
+    alvo.appendChild(cartaoTempo);
 
     const numeros = criar("div", { className: "cartao" });
     numeros.innerHTML =
@@ -4348,24 +4686,13 @@
     }
     alvo.appendChild(mapa);
 
-    const medalhas = criar("div", { className: "cartao" });
-    medalhas.innerHTML = `<h2 style="margin-top:0">Medalhas</h2>`;
-    const grade = criar("div", { className: "medalhas" });
-    for (const m of MEDALHAS) {
-      const tem = progresso.medalhas.includes(m.id);
-      const item = criar("div", { className: "medalha " + (tem ? "conquistada" : "pendente") });
-      item.innerHTML = `<strong>${m.nome}</strong>${m.descricao}`;
-      grade.appendChild(item);
-    }
-    medalhas.appendChild(grade);
-    alvo.appendChild(medalhas);
-
     const zerar = criar("div", { className: "cartao" });
     zerar.innerHTML = `<h2 style="margin-top:0">Recomeçar</h2><p class="ajuda">Apaga XP, medalhas, degraus liberados e o mapa de dificuldades deste aparelho. Não dá para desfazer.</p>`;
     const botaoZerar = criar("button", { className: "botao secundario", type: "button", textContent: "Zerar meu progresso" });
     botaoZerar.addEventListener("click", () => {
       if (!window.confirm("Apagar todo o progresso guardado neste aparelho?")) return;
       progresso = zerarProgresso();
+      aplicarPaletaGuardada();   // paleta que dependia do progresso volta à institucional
       estado.degrau = 1;
       estado.exercicio = null;
       estado.sessao = { certas: 0, total: 0, xp: 0 };
@@ -4497,6 +4824,20 @@
   function iniciar() {
     recuperar();
     progresso = carregarProgresso();
+    aplicarPaletaGuardada();   // antes da primeira tela, para não piscar a paleta institucional
+
+    // Tempo de uso: cada toque, tecla ou rolagem é uma ação; aba escondida ou fechada para a conta.
+    for (const tipo of ["pointerdown", "keydown", "wheel", "touchstart", "scroll"]) {
+      document.addEventListener(tipo, () => cronometro().registrarAcao(), { capture: true, passive: true });
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") cronometro().parar();
+      else cronometro().registrarAcao(estado.telaAtual);
+    });
+    window.addEventListener("pagehide", () => cronometro().parar());
+    window.addEventListener("storage", (ev) => {
+      if (ev.key === window.Presentes.CHAVE_PREFERENCIAS) aplicarPaletaGuardada();   // paleta trocada em outra aba
+    });
     $("#formula").value = estado.formula;
     montarExemplos();
     $("#equacao").value = estado.equacao;
@@ -4514,7 +4855,8 @@
     $("#formula").addEventListener("input", analisarAtual);
     $("#equacao").addEventListener("input", balancearAtual);
     $("#busca").addEventListener("input", (ev) => filtrarTabela(ev.target.value));
-    for (const b of document.querySelectorAll(".menu .item")) {
+    // Os links "Meus aplicativos" são <a> comuns: só os botões trocam de tela aqui.
+    for (const b of document.querySelectorAll(".menu button.item")) {
       b.addEventListener("click", () => {
         // "Como usar" reabre as boas-vindas em vez de trocar de tela: serve ao
         // aluno que voltou depois de semanas e ao professor que vai apresentar
@@ -4543,6 +4885,7 @@
       "#massa-molar": "tela-massa", "#converter": "tela-ponte",
       "#balancear": "tela-balancear", "#estequiometria": "tela-esteq",
       "#treino": "tela-treino", "#progresso": "tela-progresso", "#tabela": "tela-tabela",
+      "#presentes": "tela-presentes",
     }[location.hash];
     if (destino) mostrarTela(destino);
 

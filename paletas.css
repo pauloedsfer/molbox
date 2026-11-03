@@ -1,0 +1,131 @@
+/* Paletas de presente (js/presentes.js). Gerado por ferramentas/gerar_paletas.cjs: mude as cores
+   lá. Este arquivo vem depois de tokens.css; a versão escura de cada paleta vem depois da clara e,
+   com o mesmo seletor, ganha dela no tema escuro. */
+
+/* ---------- tornassol ---------- */
+
+:root[data-paleta="tornassol"] {
+  --mb-fundo: #F7F5FB;
+  --mb-superficie-2: #EFEAF7;
+  --mb-borda: #DCD2EC;
+  --mb-borda-forte: #A99CC4;
+  --mb-estrutura: #4A2C82;
+  --mb-barra: #4A2C82;
+  --mb-interacao: #5B3A99;
+  --mb-interacao-bg: #EEE8F8;
+  --mb-lateral-fundo: #4A2C82;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-paleta="tornassol"] {
+    --mb-fundo: #120E1C;
+    --mb-superficie: #1A1528;
+    --mb-superficie-2: #241D36;
+    --mb-borda: #3A3052;
+    --mb-borda-forte: #5A4C7E;
+    --mb-texto: #EDE8F7;
+    --mb-texto-2: #BDB1D6;
+    --mb-estrutura: #C9B3F2;
+    --mb-barra: #1B1330;
+    --mb-interacao: #C9B3F2;
+    --mb-interacao-bg: #2A2040;
+    --mb-texto-inv: #120E1C;
+    --mb-lateral-fundo: #4A2C82;
+  }
+}
+
+/* ---------- fenolftaleina ---------- */
+
+:root[data-paleta="fenolftaleina"] {
+  --mb-fundo: #FCF4F8;
+  --mb-superficie-2: #F8E6EF;
+  --mb-borda: #ECCBDB;
+  --mb-borda-forte: #C99AB2;
+  --mb-estrutura: #9C1458;
+  --mb-barra: #9C1458;
+  --mb-interacao: #A3195B;
+  --mb-interacao-bg: #FBE7F0;
+  --mb-lateral-fundo: #9C1458;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-paleta="fenolftaleina"] {
+    --mb-fundo: #1C0E15;
+    --mb-superficie: #28141E;
+    --mb-superficie-2: #341B28;
+    --mb-borda: #50293C;
+    --mb-borda-forte: #7A4560;
+    --mb-texto: #F8E8F0;
+    --mb-texto-2: #DDB5C8;
+    --mb-estrutura: #FF9ECB;
+    --mb-barra: #24101A;
+    --mb-interacao: #FF9ECB;
+    --mb-interacao-bg: #3A1A2A;
+    --mb-texto-inv: #1C0E15;
+    --mb-lateral-fundo: #9C1458;
+  }
+}
+
+/* ---------- alaranjado ---------- */
+
+:root[data-paleta="alaranjado"] {
+  --mb-fundo: #FDF7F1;
+  --mb-superficie-2: #FBEBDC;
+  --mb-borda: #F0D6BE;
+  --mb-borda-forte: #D2A77F;
+  --mb-estrutura: #9C3D0A;
+  --mb-barra: #9C3D0A;
+  --mb-interacao: #A64A0C;
+  --mb-interacao-bg: #FDEEE2;
+  --mb-lateral-fundo: #9C3D0A;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-paleta="alaranjado"] {
+    --mb-fundo: #1C120B;
+    --mb-superficie: #271A10;
+    --mb-superficie-2: #332317;
+    --mb-borda: #4D3522;
+    --mb-borda-forte: #7A5536;
+    --mb-texto: #F7E9DC;
+    --mb-texto-2: #D6B9A0;
+    --mb-estrutura: #FFB47A;
+    --mb-barra: #22150C;
+    --mb-interacao: #FFB47A;
+    --mb-interacao-bg: #3A2414;
+    --mb-texto-inv: #1C120B;
+    --mb-lateral-fundo: #9C3D0A;
+  }
+}
+
+/* ---------- bromocresol ---------- */
+
+:root[data-paleta="bromocresol"] {
+  --mb-fundo: #F2F9F8;
+  --mb-superficie-2: #E3F1EE;
+  --mb-borda: #C7E2DD;
+  --mb-borda-forte: #8EBDB5;
+  --mb-estrutura: #0F6158;
+  --mb-barra: #0F6158;
+  --mb-interacao: #0E6B61;
+  --mb-interacao-bg: #E2F4F1;
+  --mb-lateral-fundo: #0F6158;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-paleta="bromocresol"] {
+    --mb-fundo: #0A1716;
+    --mb-superficie: #10211F;
+    --mb-superficie-2: #172D2A;
+    --mb-borda: #2A4744;
+    --mb-borda-forte: #41706B;
+    --mb-texto: #E3F3F0;
+    --mb-texto-2: #A7CCC6;
+    --mb-estrutura: #7FDCCD;
+    --mb-barra: #0B1D1B;
+    --mb-interacao: #7FDCCD;
+    --mb-interacao-bg: #12302C;
+    --mb-texto-inv: #0A1716;
+    --mb-lateral-fundo: #0F6158;
+  }
+}

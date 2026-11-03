@@ -117,10 +117,29 @@ app/
     app.js            interface
 ```
 
+## Presentes, tempo de uso e envio ao professor (v0.21)
+
+O mesmo desenho do Super Organic Box:
+
+- **Presentes e Troféus** (`#presentes`): avatar de cientista com acessórios que abrem
+  com os títulos do Treino, paletas com nomes de indicadores ácido-base (Tornassol de
+  boas-vindas; Fenolftaleína, Alaranjado de metila e Verde de bromocresol pelos degraus)
+  e as medalhas. Regras em `js/presentes.js` e `js/avatar.js`; cores em `paletas.css`,
+  geradas e medidas por `ferramentas/gerar_paletas.cjs`.
+- **Tempo de uso** (`js/tempo.js`): conta entre ações e para 3 minutos depois da última;
+  aparece no Progresso e vai no resumo do professor (`tmp=` minutos).
+- **Envio pela internet** para a planilha da turma de cada professor (Apps Script):
+  passo a passo em `docs/professor/envio-pela-internet.md`.
+- **Meus aplicativos** no menu: Super Atomic Box (em breve) e Super Organic Box.
+
+`js/tempo.js`, `js/envio.js` e `js/avatar.js` são convertidos dos módulos do Super Organic
+Box por `ferramentas/converter_modulo.cjs`: mude lá e converta de novo.
+
 ## Privacidade
 
-O progresso fica em `localStorage`, neste aparelho. Não há cadastro, não há
-servidor, nada é enviado para lugar nenhum.
+O progresso fica em `localStorage`, neste aparelho. Não há cadastro e não há
+servidor. Só se o aluno tocar em "Enviar pela internet", o resumo que ele vê na tela
+(com um código, sem nome) vai para a planilha do Google do professor da turma.
 
 ## Próxima fase
 
