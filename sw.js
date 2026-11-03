@@ -28,6 +28,7 @@ const ARQUIVOS = [
   "./js/acidobase.js", "./js/bancada.js", "./js/equivalente.js", "./js/mol.js",
   "./js/sobre.js", "./js/exercicios.js", "./js/progresso.js", "./js/app.js",
   "./js/tempo.js", "./js/envio.js", "./js/avatar.js", "./js/presentes.js", "./paletas.css",
+  "./js/nomenclatura_inorganica.js", "./js/compostos_inorganicos.js",
   "./marca/molbox-principal.svg", "./marca/molbox-negativo.svg",
   "./marca/molbox-negativo-tornassol.svg", "./marca/molbox-negativo-fenolftaleina.svg", "./marca/molbox-negativo-alaranjado.svg", "./marca/molbox-negativo-bromocresol.svg",
   "./icones/favicon.svg", "./icones/icone-180.png", "./icones/icone-192.png", "./icones/icone-512.png",

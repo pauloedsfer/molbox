@@ -1575,3 +1575,15 @@ header.barra { background: var(--mb-barra); }
 @media (prefers-color-scheme: dark) {
   .botao:not(.secundario) { color: var(--mb-texto-inv); }
 }
+
+/* ---------- nomenclatura inorgânica ---------- */
+
+#painel-nomenclatura .cartao { margin-bottom: var(--mb-e4); }
+.chip-ion { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.2; padding: 6px 12px; }
+.chip-ion strong { font-size: var(--mb-t-corpo); }
+.chip-ion span { font-family: var(--mb-fonte-texto); font-size: var(--mb-t-legenda); color: var(--mb-texto-2); }
+.formula-nomen { font-family: var(--mb-fonte-dado); font-size: var(--mb-t-numero); margin: 0; color: var(--mb-estrutura); overflow-wrap: anywhere; }
+.nome-nomen { font-family: var(--mb-fonte-marca); font-style: italic; font-weight: 600; font-size: var(--mb-t-titulo-2); margin: 0 0 var(--mb-e2); overflow-wrap: anywhere; }
+.regra-nomen { border-left: 4px solid var(--mb-interacao); padding-left: var(--mb-e3); }
+.achado-nomen { margin-top: var(--mb-e3); padding: var(--mb-e3); border: 2px solid var(--mb-acerto); border-radius: var(--mb-raio); background: var(--mb-acerto-bg); }
+#painel-nomenclatura select { min-height: var(--mb-toque); max-width: 100%; display: block; margin-top: var(--mb-e2); }
