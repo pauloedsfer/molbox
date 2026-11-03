@@ -275,7 +275,9 @@ function rendimentoDoTreino(p, treino) {
 
 const MARCA_EXPORTACAO = "MOLBOX1";
 
-/* `extra.tempoMin`: o tempo de uso em minutos (js/tempo.js), que sai como "tmp=95". */
+/* `extra.tempoMin`: o tempo de uso em minutos (js/tempo.js), que sai como "tmp=95".
+   `extra.moleculas` ({ encontradas, total }): os compostos da prateleira de nomenclatura
+   inorgânica (js/compostos_inorganicos.js), que saem como "mol=12/52". */
 function exportarProgresso(p, codigo, extra) {
   const cod = String(codigo || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
   if (cod.length < 4) return null;
@@ -295,6 +297,8 @@ function exportarProgresso(p, codigo, extra) {
   ];
 
   if (extra && Number.isInteger(extra.tempoMin) && extra.tempoMin >= 0) campos.push("tmp=" + extra.tempoMin);
+  const mol = extra && extra.moleculas;
+  if (mol && Number.isInteger(mol.encontradas) && Number.isInteger(mol.total)) campos.push("mol=" + mol.encontradas + "/" + mol.total);
 
   const bal = p.extras && p.extras.balanceamento ? p.extras.balanceamento : null;
   if (bal) campos.push("bal=" + bal.acertos + "/" + (bal.acertos + bal.erros));

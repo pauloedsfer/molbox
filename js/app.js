@@ -110,6 +110,7 @@
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
     "tela-presentes": "Presentes e Troféus",
+    "tela-nomenclatura": "Nomenclatura inorgânica",
     "tela-tabela": "Tabela periódica",
   };
 
@@ -157,6 +158,7 @@
     if (id === "tela-treino") entrarNoTreino();
     if (id === "tela-progresso") desenharProgresso();
     if (id === "tela-presentes") desenharPresentes();
+    if (id === "tela-nomenclatura") desenharNomenclatura();
   }
 
 
@@ -1684,7 +1686,7 @@
     saida.innerHTML = "";
 
     cronometro().gravar();
-    const linha = exportarProgresso(progresso, codigo, { tempoMin: Math.floor(cronometro().dados().total / 60000) });
+    const linha = exportarProgresso(progresso, codigo, { tempoMin: Math.floor(cronometro().dados().total / 60000), moleculas: compostosEncontrados() });
     if (!linha) {
       saida.appendChild(criar("p", { className: "erro",
         textContent: "O código precisa ter pelo menos 4 letras ou números. Confira com o professor." }));
@@ -4343,6 +4345,167 @@
     atualizarResumoLateral();
   }
 
+  /* ---------------- tela: nomenclatura inorgânica ----------------
+
+     O aluno monta o composto juntando um cátion e um ânion (js/nomenclatura_inorganica.js),
+     e o app mostra a fórmula, o nome, a função e a conta das cargas. Quem monta um composto
+     da prateleira (js/compostos_inorganicos.js) ganha o troféu. Todo texto entra por
+     textContent: os nomes vêm do banco curado, mas a tela não confia em HTML. */
+
+  // A tela começa sem escolha, e trocar de função zera a escolha: todo composto montado (e todo
+  // troféu) vem de uma escolha do aluno, nunca de um valor que já estava marcado.
+  const nomen = { funcao: "sal", cation: null, anion: null, aguas: 0, oxido: "metal", elemento: null, oxidoMol: null };
+  function zerarEscolhaNomen() { nomen.cation = null; nomen.anion = null; nomen.aguas = 0; nomen.elemento = null; nomen.oxidoMol = null; }
+  const FUNCOES_NOMEN = [
+    { id: "acido", nome: "Ácido" }, { id: "base", nome: "Base" }, { id: "sal", nome: "Sal" }, { id: "oxido", nome: "Óxido" },
+  ];
+
+  function chipsDe(rotulo, idRotulo, itens, marcado, aoEscolher, chave) {
+    const caixa = criar("div", { className: "grupo-avatar" });
+    caixa.appendChild(criar("p", { className: "titulo-grupo-avatar", id: idRotulo, textContent: rotulo }));
+    const linha = criar("div", { className: "opcoes-avatar" });
+    linha.setAttribute("role", "group");
+    linha.setAttribute("aria-labelledby", idRotulo);
+    for (const it of itens) {
+      const b = criar("button", { type: "button", className: "chip chip-ion" });
+      b.appendChild(criar("strong", { textContent: it.simbolo }));
+      if (it.nome) b.appendChild(criar("span", { textContent: it.nome }));
+      b.dataset[chave] = it.id;
+      b.setAttribute("aria-pressed", String(it.id === marcado));
+      b.addEventListener("click", () => { aoEscolher(it.id); desenharNomenclatura(`[data-${chave}="${it.id}"]`); });
+      linha.appendChild(b);
+    }
+    caixa.appendChild(linha);
+    return caixa;
+  }
+
+  function desenharNomenclatura(focar) {
+    const alvo = $("#painel-nomenclatura");
+    const N = window.NomenclaturaInorganica;
+    alvo.innerHTML = "";
+
+    // função
+    const abas = criar("div", { className: "opcoes-avatar abas-funcao" });
+    abas.setAttribute("role", "group");
+    abas.setAttribute("aria-label", "Função inorgânica");
+    for (const f of FUNCOES_NOMEN) {
+      const b = criar("button", { type: "button", className: "chip", textContent: f.nome });
+      b.dataset.funcao = f.id;
+      b.setAttribute("aria-pressed", String(f.id === nomen.funcao));
+      b.addEventListener("click", () => { nomen.funcao = f.id; zerarEscolhaNomen(); desenharNomenclatura(`[data-funcao="${f.id}"]`); });
+      abas.appendChild(b);
+    }
+    const cartaoEscolha = criar("div", { className: "cartao" });
+    cartaoEscolha.appendChild(criar("p", { className: "titulo-grupo-avatar", textContent: "1. Que tipo de composto?" }));
+    cartaoEscolha.appendChild(abas);
+
+    const naoMetal = nomen.funcao === "oxido" && nomen.oxido === "naometal";
+    if (nomen.funcao === "oxido") {
+      const tipo = criar("div", { className: "opcoes-avatar", style: "margin-top:var(--mb-e3)" });
+      tipo.setAttribute("role", "group");
+      tipo.setAttribute("aria-label", "Tipo de óxido");
+      for (const [id, nome] of [["metal", "Óxido de metal ou peróxido"], ["naometal", "Óxido de não metal"]]) {
+        const b = criar("button", { type: "button", className: "chip", textContent: nome });
+        b.dataset.tipoOxido = id;
+        b.setAttribute("aria-pressed", String(id === nomen.oxido));
+        b.addEventListener("click", () => { nomen.oxido = id; zerarEscolhaNomen(); desenharNomenclatura(`[data-tipo-oxido="${id}"]`); });
+        tipo.appendChild(b);
+      }
+      cartaoEscolha.appendChild(tipo);
+    }
+    alvo.appendChild(cartaoEscolha);
+
+    const cartaoIons = criar("div", { className: "cartao" });
+    let r;
+    if (naoMetal) {
+      cartaoIons.appendChild(chipsDe("2. O elemento", "nomen-elemento", N.ELEMENTOS_DE_OXIDO.map((e) => ({ id: e.id, simbolo: e.id, nome: e.nome })),
+        nomen.elemento, (id) => { nomen.elemento = id; nomen.oxidoMol = null; }, "elemento"));
+      if (nomen.elemento) {
+        const lista = N.oxidosDoElemento(nomen.elemento);
+        cartaoIons.appendChild(chipsDe("3. Quantos átomos de cada", "nomen-oxido", lista.map((o) => ({ id: o.id, simbolo: N.comIndices(o.formula), nome: "" })),
+          nomen.oxidoMol, (id) => { nomen.oxidoMol = id; }, "oxidoMol"));
+      }
+      cartaoIons.appendChild(criar("p", { className: "ajuda", textContent: "Os óxidos de não metal são moleculares: não há cátion e ânion. Escolha um dos óxidos que existem e que o aplicativo conhece." }));
+      r = nomen.oxidoMol ? N.montarOxidoMolecular(nomen.oxidoMol) : null;
+    } else {
+      const cations = N.cationsPara(nomen.funcao);
+      const anions = N.anionsPara(nomen.funcao);
+      if (!cations.some((c) => c.id === nomen.cation)) nomen.cation = null;
+      if (!anions.some((a) => a.id === nomen.anion)) nomen.anion = null;
+      const ehH = nomen.funcao === "acido";
+      const ehOH = nomen.funcao === "base";
+      if (ehH) cartaoIons.appendChild(criar("p", { textContent: "2. O cátion de todo ácido é o H⁺ (o íon hidrogênio)." }));
+      else cartaoIons.appendChild(chipsDe("2. O cátion", "nomen-cation", cations.map((c) => ({ id: c.id, simbolo: N.textoCation(c), nome: c.nome })), nomen.cation, (id) => { nomen.cation = id; }, "cation"));
+      if (ehOH) cartaoIons.appendChild(criar("p", { textContent: "3. O ânion de toda base é o OH⁻ (a hidroxila)." }));
+      else cartaoIons.appendChild(chipsDe(ehH ? "3. O ânion: ele decide o nome do ácido" : "3. O ânion", "nomen-anion", anions.map((a) => ({ id: a.id, simbolo: N.textoAnion(a), nome: a.nome })), nomen.anion, (id) => { nomen.anion = id; }, "anion"));
+      if (nomen.funcao === "sal") {
+        const linha = criar("div", { style: "margin-top:var(--mb-e3)" });
+        linha.appendChild(criar("label", { htmlFor: "nomen-aguas", textContent: "Águas de hidratação (sal hidratado)" }));
+        const sel = criar("select", { id: "nomen-aguas" });
+        for (let n = 0; n <= N.AGUAS_MAXIMAS; n++) sel.appendChild(criar("option", { value: String(n), textContent: n === 0 ? "Nenhuma (sal anidro)" : `${n} H₂O` }));
+        sel.value = String(nomen.aguas);
+        sel.addEventListener("change", () => { nomen.aguas = Number(sel.value); desenharNomenclatura("#nomen-aguas"); });
+        linha.appendChild(sel);
+        cartaoIons.appendChild(linha);
+      }
+      const cat = ehH ? "H" : nomen.cation;
+      const an = ehOH ? "OH" : nomen.anion;
+      r = cat && an ? N.montar(cat, an, { aguas: nomen.aguas }) : null;
+    }
+    alvo.appendChild(cartaoIons);
+
+    // resultado
+    const res = criar("div", { className: "cartao resultado-nomen" });
+    res.setAttribute("aria-live", "polite");
+    if (!r) {
+      res.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: naoMetal
+        ? "Escolha o elemento e o óxido para ver a fórmula e o nome."
+        : nomen.funcao === "acido" ? "Escolha o ânion para montar o ácido."
+          : nomen.funcao === "base" ? "Escolha o cátion para montar a base."
+            : "Escolha um cátion e um ânion para montar o composto." }));
+    } else if (!r.ok) {
+      res.appendChild(criar("p", { className: "erro", textContent: r.explicacao }));
+    } else {
+      const formula = criar("p", { className: "formula-nomen" });
+      formula.innerHTML = formatarFormula(r.formula.replace(/[^A-Za-z0-9()·]/g, ""));   // só letras, dígitos, parênteses e ponto
+      res.appendChild(formula);
+      res.appendChild(criar("p", { className: "nome-nomen", textContent: r.nome }));
+      if (r.usual) res.appendChild(criar("p", { className: "ajuda", textContent: `Nome usual: ${r.usual}.` }));
+      if (r.antigo) res.appendChild(criar("p", { className: "ajuda", textContent: `Também chamado de ${r.antigo} (nomenclatura antiga, com -oso e -ico).` }));
+      res.appendChild(criar("p", { textContent: `Função: ${r.nomeFuncao}${r.nomeClasse ? ` (${r.nomeClasse})` : ""}.` }));
+      const lista = criar("ul", { className: "lista-tempo" });
+      for (const c of r.contas) lista.appendChild(criar("li", { textContent: c }));
+      res.appendChild(lista);
+      res.appendChild(criar("p", { className: "regra-nomen", textContent: r.regra }));
+      if (r.regraClasse) res.appendChild(criar("p", { className: "ajuda", textContent: `${r.nomeClasse.charAt(0).toUpperCase()}${r.nomeClasse.slice(1)}: ${r.regraClasse}` }));
+
+      // troféu: quem monta um composto da prateleira ganha
+      const CI = window.CompostosInorganicos;
+      const trofeu = CI.trofeuDaFormula(r.formula);
+      if (trofeu && trofeu.funcao === r.funcao) {
+        const novo = CI.ganharTrofeu(armazenamentoLocal(), trofeu.id, new Date().toISOString());
+        const achado = criar("div", { className: "achado-nomen" });
+        achado.appendChild(criar("p", { className: "titulo-grupo-avatar", textContent: novo ? `🏆 Troféu conquistado: ${r.nome}!` : "🏆 Este troféu já está na sua prateleira." }));
+        achado.appendChild(criar("p", { className: "ajuda", textContent: `No dia a dia: ${trofeu.usual}.` }));
+        const ver = criar("button", { type: "button", className: "botao secundario", textContent: "Ver na prateleira" });
+        ver.addEventListener("click", () => mostrarTela("tela-presentes"));
+        achado.appendChild(ver);
+        res.appendChild(achado);
+      }
+
+      const massa = criar("button", { type: "button", className: "botao", textContent: "Ver a massa molar", style: "margin-top:var(--mb-e3)" });
+      massa.addEventListener("click", () => {
+        $("#formula").value = r.formula;
+        analisarAtual();
+        mostrarTela("tela-massa");
+      });
+      res.appendChild(massa);
+    }
+    alvo.appendChild(res);
+
+    if (typeof focar === "string") { const el = alvo.querySelector(focar); if (el) el.focus(); }
+  }
+
   /* ---------------- presentes, avatar e tempo de uso ----------------
 
      O mesmo desenho do Super Organic Box: presente é enfeite e nunca esconde
@@ -4439,6 +4602,86 @@
   }
 
   const copiaDoProgresso = () => JSON.parse(JSON.stringify(progresso));
+
+  /* Compostos da prateleira já encontrados (js/compostos_inorganicos.js). */
+  function compostosEncontrados() {
+    const CI = window.CompostosInorganicos;
+    return { encontradas: CI.carregarTrofeus(armazenamentoLocal()).length, total: CI.TROFEUS.length };
+  }
+
+  // Medalhas da prateleira: calculadas na hora a partir dos troféus (não ficam no progresso).
+  const MEDALHAS_PRATELEIRA = [
+    { n: 1, nome: "Primeiro composto", descricao: "montar o primeiro composto da prateleira" },
+    { n: 10, nome: "Dez compostos", descricao: "montar dez compostos da prateleira" },
+    { n: 0, nome: "Prateleira completa", descricao: "montar todos os compostos da prateleira" },
+  ];
+
+  const NOMES_FUNCAO_TROFEU = { acido: "ácido", base: "base", sal: "sal", oxido: "óxido" };
+
+  /* Nome oficial de cada composto da prateleira, montado pelas mesmas regras da tela (uma vez só). */
+  let nomesDaPrateleira = null;
+  function nomeDoTrofeu(formula) {
+    if (!nomesDaPrateleira) {
+      const N = window.NomenclaturaInorganica;
+      nomesDaPrateleira = new Map();
+      for (const f of ["acido", "base", "sal", "oxido"]) for (const c of N.cationsPara(f)) for (const a of N.anionsPara(f)) {
+        for (let aguas = 0; aguas <= N.AGUAS_MAXIMAS; aguas++) {
+          const r = N.montar(c.id, a.id, { aguas });
+          if (r.ok && !nomesDaPrateleira.has(r.formula)) nomesDaPrateleira.set(r.formula, r.nome);
+          if (f !== "sal") break;
+        }
+      }
+      for (const o of N.OXIDOS_MOLECULARES) nomesDaPrateleira.set(o.formula, o.nome);
+    }
+    return nomesDaPrateleira.get(formula) || "";
+  }
+
+  function carregarImagem(svg) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("imagem"));
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    });
+  }
+
+  // A marca entra no PDF como JPEG (o gerador não lê SVG). Sem ela, o PDF sai só com texto.
+  async function marcaParaPdf() {
+    try {
+      const svg = await (await fetch("marca/molbox-principal.svg")).text();
+      const img = await carregarImagem(svg);
+      const canvas = document.createElement("canvas");
+      canvas.width = 231 * 1.5; canvas.height = 91 * 1.5;
+      const c = canvas.getContext("2d");
+      c.fillStyle = "#FFFFFF"; c.fillRect(0, 0, canvas.width, canvas.height);
+      c.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((ok, falha) => canvas.toBlob((b) => (b ? ok(b) : falha(new Error("jpeg"))), "image/jpeg", 0.92));
+      return { tipo: "imagem", jpeg: new Uint8Array(await blob.arrayBuffer()), larguraPx: canvas.width, alturaPx: canvas.height };
+    } catch (e) { return null; }
+  }
+
+  async function baixarCertificado(nome) {
+    const nv = xpParaProximoNivel(progresso.xp);
+    const total = window.CompostosInorganicos.TROFEUS.length;
+    const blocos = [];
+    const marca = await marcaParaPdf();
+    if (marca) blocos.push(marca);
+    blocos.push({ tipo: "titulo", texto: "Certificado" });
+    blocos.push({ tipo: "texto", texto: "Certificamos que" });
+    blocos.push({ tipo: "secao", texto: nome });
+    blocos.push({ tipo: "texto", texto: `montou os ${total} compostos da prateleira de nomenclatura inorgânica do SUPER MOLBOX e abriu os cinco degraus da escada do mol no Treino.` });
+    blocos.push({ tipo: "texto", texto: `Título conquistado: ${window.Presentes.tituloDo(progresso)}.` });
+    blocos.push({ tipo: "texto", texto: `Nível ${nv.nivel}, com ${progresso.xp} XP e ${progresso.totalAcertos} ${progresso.totalAcertos === 1 ? "acerto" : "acertos"} no Treino.` });
+    blocos.push({ tipo: "texto", texto: `Emitido em ${new Date().toLocaleDateString("pt-BR")}.` });
+    blocos.push({ tipo: "texto", texto: "Gerado no aparelho do aluno, sem servidor. O professor pode conferir o progresso pelo resumo enviado na tela Progresso." });
+    const bytes = window.Pdf.gerarPdf({ titulo: `Certificado: ${nome}`, blocos, rodape: "SUPER MOLBOX" });
+    const arquivo = `certificado-super-molbox-${nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "aluno"}.pdf`;
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    const a = criar("a", { href: url, download: arquivo });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+    return arquivo;
+  }
 
   /* ---------------- tela: presentes e troféus ---------------- */
 
@@ -4583,20 +4826,86 @@
     }
 
     // --- medalhas ---
+    const CI = window.CompostosInorganicos;
+    const listaTrofeus = CI.carregarTrofeus(armazenamentoLocal());
+    const achados = new Map(listaTrofeus.map((x) => [x.id, x]));
+    const nTotal = CI.TROFEUS.length;
+
     const medalhas = criar("div", { className: "cartao" });
-    const ganhas = MEDALHAS.filter((m) => progresso.medalhas.includes(m.id)).length;
+    const daPrateleira = MEDALHAS_PRATELEIRA.map((m) => ({ nome: m.nome, descricao: m.descricao, tem: achados.size >= (m.n || nTotal) }));
+    const todas = MEDALHAS.map((m) => ({ nome: m.nome, descricao: m.descricao, tem: progresso.medalhas.includes(m.id) })).concat(daPrateleira);
     medalhas.appendChild(criar("h2", { textContent: "Medalhas", style: "margin-top:0" }));
-    medalhas.appendChild(criar("p", { className: "ajuda", textContent: `${ganhas} de ${MEDALHAS.length} medalhas conquistadas.` }));
+    medalhas.appendChild(criar("p", { className: "ajuda", textContent: `${todas.filter((m) => m.tem).length} de ${todas.length} medalhas conquistadas.` }));
     const gradeM = criar("div", { className: "medalhas" });
-    for (const m of MEDALHAS) {
-      const tem = progresso.medalhas.includes(m.id);
-      const item = criar("div", { className: "medalha " + (tem ? "conquistada" : "pendente") });
+    for (const m of todas) {
+      const item = criar("div", { className: "medalha " + (m.tem ? "conquistada" : "pendente") });
       item.appendChild(criar("strong", { textContent: m.nome }));
-      item.appendChild(document.createTextNode(`${tem ? "Conquistada: " : "Ainda não: "}${m.descricao.charAt(0).toLowerCase()}${m.descricao.slice(1)}.`));
+      item.appendChild(document.createTextNode(`${m.tem ? "Conquistada: " : "Ainda não: "}${m.descricao.charAt(0).toLowerCase()}${m.descricao.slice(1)}.`));
       gradeM.appendChild(item);
     }
     medalhas.appendChild(gradeM);
     alvo.appendChild(medalhas);
+
+    // --- certificado: todos os compostos e os cinco degraus abertos ---
+    const cert = criar("div", { className: "cartao" });
+    cert.appendChild(criar("h2", { textContent: "Certificado", style: "margin-top:0" }));
+    const faltas = [];
+    if (achados.size < nTotal) faltas.push(`Montar mais ${nTotal - achados.size} ${nTotal - achados.size === 1 ? "composto" : "compostos"} da prateleira (${achados.size} de ${nTotal}).`);
+    if (progresso.desbloqueado < 4) faltas.push(`Abrir o degrau Reação no Treino (você está em ${degrauPorNumero(progresso.desbloqueado).nome}).`);
+    if (faltas.length) {
+      cert.appendChild(criar("p", { textContent: "🔒 O certificado abre quando você montar todos os compostos da prateleira e abrir os cinco degraus do Treino. Falta:" }));
+      const ul = criar("ul", { className: "lista-tempo" });
+      for (const f of faltas) ul.appendChild(criar("li", { textContent: f }));
+      cert.appendChild(ul);
+    } else {
+      cert.appendChild(criar("p", { textContent: "🎓 Você montou todos os compostos e abriu os cinco degraus. Parabéns!" }));
+      cert.appendChild(criar("label", { htmlFor: "nome-certificado", textContent: "Nome no certificado (fica só neste aparelho e não vai no resumo do professor)" }));
+      const campo = criar("input", { type: "text", id: "nome-certificado", maxLength: 60, autocomplete: "name", value: preferencias().nome });
+      campo.setAttribute("aria-describedby", "certificado-status");
+      cert.appendChild(campo);
+      const status = criar("p", { className: "ajuda", id: "certificado-status" });
+      status.setAttribute("role", "status");
+      const botao = criar("button", { type: "button", className: "botao", textContent: "Baixar o certificado (PDF)", style: "margin-top:var(--mb-e2)" });
+      botao.addEventListener("click", async () => {
+        const nome = campo.value.trim().replace(/\s+/g, " ");
+        if (!nome) { campo.setAttribute("aria-invalid", "true"); status.textContent = "Escreva o nome que vai no certificado."; campo.focus(); return; }
+        campo.removeAttribute("aria-invalid");
+        guardarPreferencias({ nome });
+        botao.disabled = true;
+        status.textContent = "Preparando o certificado...";
+        try { status.textContent = `Certificado pronto: ${await baixarCertificado(nome)}.`; } catch (e) { status.textContent = "Não consegui gerar o certificado. Tente de novo."; }
+        botao.disabled = false;
+      });
+      cert.appendChild(botao);
+      cert.appendChild(status);
+    }
+    alvo.appendChild(cert);
+
+    // --- prateleira de troféus ---
+    const prat = criar("div", { className: "cartao" });
+    prat.appendChild(criar("h2", { id: "prateleira", textContent: "Prateleira de troféus", style: "margin-top:0" }));
+    prat.appendChild(criar("p", { className: "ajuda", textContent: "Cada composto importante que você monta na Nomenclatura inorgânica vira um troféu. Quem ainda falta mostra só a fórmula: descubra o nome e monte." }));
+    prat.appendChild(criar("p", { className: "contagem-trofeus", textContent: achados.size ? `${achados.size} de ${nTotal} compostos encontrados.` : `Nenhum troféu ainda: faltam ${nTotal} compostos para encontrar.` }));
+    const barraT = criar("progress", { max: nTotal, value: achados.size, className: "barra-trofeus" });
+    barraT.setAttribute("aria-label", "Troféus conquistados");
+    prat.appendChild(barraT);
+    const ul = criar("ul", { className: "prateleira" });
+    const N = window.NomenclaturaInorganica;
+    for (const t of CI.TROFEUS) {
+      const ganho = achados.get(t.id);
+      const li = criar("li", { className: "trofeu" + (ganho ? "" : " trofeu-falta") });
+      const icone = criar("span", { className: "trofeu-icone", textContent: ganho ? "🏆" : "?" });
+      icone.setAttribute("aria-hidden", "true");
+      li.appendChild(icone);
+      const f = criar("span", { className: "trofeu-nome" });
+      f.innerHTML = formatarFormula(t.formula.replace(/[^A-Za-z0-9()·]/g, ""));
+      li.appendChild(f);
+      if (ganho) li.appendChild(criar("span", { className: "trofeu-oficial", textContent: nomeDoTrofeu(t.formula) }));
+      li.appendChild(criar("span", { className: "trofeu-detalhe", textContent: ganho ? t.usual : `Ainda não encontrado (${NOMES_FUNCAO_TROFEU[t.funcao]})` }));
+      ul.appendChild(li);
+    }
+    prat.appendChild(ul);
+    alvo.appendChild(prat);
   }
 
   /* ---------------- tela: progresso ---------------- */
@@ -4885,7 +5194,7 @@
       "#massa-molar": "tela-massa", "#converter": "tela-ponte",
       "#balancear": "tela-balancear", "#estequiometria": "tela-esteq",
       "#treino": "tela-treino", "#progresso": "tela-progresso", "#tabela": "tela-tabela",
-      "#presentes": "tela-presentes",
+      "#presentes": "tela-presentes", "#nomenclatura": "tela-nomenclatura",
     }[location.hash];
     if (destino) mostrarTela(destino);
 
@@ -4949,8 +5258,13 @@
         .catch(() => { /* sem service worker o app funciona igual, só sem offline */ });
     });
 
+    // Na primeira visita não há controlador: o service worker novo assume a página (clients.claim)
+    // e dispara controllerchange sem haver versão nova. Recarregar aí apagava o que o aluno
+    // acabava de fazer. Só recarrega quando havia uma versão antiga rodando.
+    const tinhaControlador = !!navigator.serviceWorker.controller;
     let recarregando = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!tinhaControlador) return;
       // a trava evita o laço de recarregamento clássico quando o controlador
       // troca mais de uma vez
       if (recarregando) return;

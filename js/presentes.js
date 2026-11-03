@@ -107,7 +107,7 @@
   }
 
   function lerPreferencias(bruto) {
-    const padrao = { paleta: PALETA_PADRAO, vistas: 0, avatar: null, linkTurma: "" };
+    const padrao = { paleta: PALETA_PADRAO, vistas: 0, avatar: null, linkTurma: "", nome: "" };
     try {
       const d = JSON.parse(bruto);
       if (!d || typeof d !== "object" || Array.isArray(d)) return padrao;
@@ -116,6 +116,7 @@
         vistas: Number.isInteger(d.vistas) && d.vistas >= 0 ? d.vistas : 0,
         avatar: d.avatar && typeof d.avatar === "object" && !Array.isArray(d.avatar) ? d.avatar : null,
         linkTurma: typeof d.linkTurma === "string" ? d.linkTurma.slice(0, 300) : "",
+        nome: typeof d.nome === "string" ? d.nome.slice(0, 60) : "",
       };
     } catch (e) {
       return padrao;
