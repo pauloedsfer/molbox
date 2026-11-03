@@ -32,7 +32,7 @@ body {
 
 .sidebar {
   position: fixed; top: 0; bottom: 0; left: 0; width: var(--mb-lateral);
-  background: #164194; color: #FFFFFF; z-index: 50;
+  background: var(--mb-lateral-fundo, #164194); color: #FFFFFF; z-index: 50;
   display: flex; flex-direction: column;
   transform: translateX(-100%); transition: transform 0.22s ease;
   padding-bottom: env(safe-area-inset-bottom, 0);
@@ -1517,4 +1517,61 @@ input.coef-campo[disabled] { opacity: 0.7; }
   border: 1px solid var(--mb-borda-forte);
   background: var(--mb-superficie-2); color: var(--mb-texto);
   resize: vertical;
+}
+
+/* ---------- menu: meus aplicativos ---------- */
+
+.menu a.item-app { text-decoration: none; }
+.menu .item-app small { display: block; }
+.menu span.item-app { cursor: default; }
+.menu span.item-app:hover { background: none; }
+.menu .item-app.em-breve { color: rgba(255,255,255,0.78); }
+
+/* ---------- presentes e troféus (js/presentes.js, js/avatar.js) ---------- */
+
+.anuncio-presente:empty { display: none; }
+.anuncio-presente { font-weight: 600; margin: 0 0 var(--mb-e3); }
+.corpo-avatar { display: flex; flex-wrap: wrap; gap: var(--mb-e4); align-items: flex-start; }
+.figura-avatar { flex: 0 0 auto; background: var(--mb-superficie-2); border-radius: var(--mb-raio-card); padding: var(--mb-e3); }
+.figura-avatar svg, .avatar-pequeno svg { display: block; }
+.escolhas-avatar { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: var(--mb-e3); }
+.titulo-grupo-avatar { font-weight: 600; margin: 0 0 var(--mb-e2); }
+.opcoes-avatar { display: flex; flex-wrap: wrap; gap: var(--mb-e2); }
+.opcoes-avatar .chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--mb-toque); }
+.opcoes-avatar .chip[aria-pressed="true"] { border: 2px solid var(--mb-interacao); font-weight: 700; }
+.chip-fechado { border-style: dashed !important; color: var(--mb-texto-2); cursor: default; }
+.amostra-cor { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--mb-borda); flex: 0 0 auto; }
+.grade-paletas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--mb-e3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.paleta { display: flex; flex-direction: column; gap: var(--mb-e2); padding: var(--mb-e3); background: var(--mb-superficie); border: 1px solid var(--mb-borda); border-radius: var(--mb-raio); overflow-wrap: anywhere; }
+.paleta.ativa { border: 2px solid var(--mb-interacao); padding: calc(var(--mb-e3) - 1px); }
+.paleta.falta { background: transparent; border-style: dashed; }
+.paleta .botao { align-self: flex-start; }
+.nome-paleta { font-size: var(--mb-t-titulo-3); }
+/* Amostra: só reforça o nome escrito ao lado. Cores fixas de cada paleta. */
+.amostra-paleta { display: block; height: 28px; border-radius: 6px; border: 1px solid var(--mb-borda); }
+.amostra-paleta[data-paleta="institucional"] { background: linear-gradient(90deg, #164194 0 40%, #008BD2 40% 70%, #E84910 70%); }
+.amostra-paleta[data-paleta="tornassol"] { background: linear-gradient(90deg, #C62828 0 33%, #5B3A99 33% 66%, #1E5BC6 66%); }
+.amostra-paleta[data-paleta="fenolftaleina"] { background: linear-gradient(90deg, #F4F4F4 0 40%, #F48FB1 40% 70%, #9C1458 70%); }
+.amostra-paleta[data-paleta="alaranjado"] { background: linear-gradient(90deg, #C62828 0 40%, #F57C00 40% 70%, #FBC02D 70%); }
+.amostra-paleta[data-paleta="bromocresol"] { background: linear-gradient(90deg, #FBC02D 0 33%, #43A047 33% 66%, #1E5BC6 66%); }
+.pigmento summary { cursor: pointer; color: var(--mb-interacao); text-decoration: underline; min-height: var(--mb-toque); display: flex; align-items: center; }
+.pigmento p { margin: var(--mb-e2) 0; }
+
+/* ---------- progresso: nível com avatar, tempo de uso e envio ---------- */
+
+.cartao-nivel { display: flex; gap: var(--mb-e4); align-items: flex-start; }
+.avatar-pequeno { flex: 0 0 auto; background: var(--mb-superficie-2); border-radius: var(--mb-raio); padding: var(--mb-e2); }
+.nivel-corpo { flex: 1 1 auto; min-width: 0; }
+.lista-tempo { margin: var(--mb-e2) 0 0; padding-left: 1.2em; }
+.envio-online { border-top: 1px solid var(--mb-borda); margin-top: var(--mb-e4); padding-top: var(--mb-e2); }
+.envio-online input { display: block; width: 100%; box-sizing: border-box; }
+@media (max-width: 420px) { .cartao-nivel { flex-direction: column; } }
+
+/* O nome .barra também é usado na barrinha de progresso, mais abaixo, que pintava o cabeçalho com
+   a cor de interação (no tema escuro, título branco sobre azul-claro). O cabeçalho volta à cor da barra. */
+header.barra { background: var(--mb-barra); }
+
+/* No tema escuro a cor de interação é clara: o texto do botão principal fica escuro. */
+@media (prefers-color-scheme: dark) {
+  .botao:not(.secundario) { color: var(--mb-texto-inv); }
 }

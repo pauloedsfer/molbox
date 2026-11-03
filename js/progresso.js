@@ -275,7 +275,8 @@ function rendimentoDoTreino(p, treino) {
 
 const MARCA_EXPORTACAO = "MOLBOX1";
 
-function exportarProgresso(p, codigo) {
+/* `extra.tempoMin`: o tempo de uso em minutos (js/tempo.js), que sai como "tmp=95". */
+function exportarProgresso(p, codigo, extra) {
   const cod = String(codigo || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
   if (cod.length < 4) return null;
 
@@ -292,6 +293,8 @@ function exportarProgresso(p, codigo) {
     "of=" + p.ofensiva,
     "ult=" + (p.ultimoDia || "-"),
   ];
+
+  if (extra && Number.isInteger(extra.tempoMin) && extra.tempoMin >= 0) campos.push("tmp=" + extra.tempoMin);
 
   const bal = p.extras && p.extras.balanceamento ? p.extras.balanceamento : null;
   if (bal) campos.push("bal=" + bal.acertos + "/" + (bal.acertos + bal.erros));
