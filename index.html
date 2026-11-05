@@ -50,6 +50,7 @@
     <p class="grupo">Prática</p>
     <button type="button" class="item" data-tela="tela-treino"><span class="glifo" aria-hidden="true">&#9998;</span><span class="rotulo">Treino</span></button>
     <button type="button" class="item" data-tela="tela-progresso"><span class="glifo" aria-hidden="true">&#9650;</span><span class="rotulo">Progresso</span></button>
+    <button type="button" class="item" data-tela="tela-avatar"><span class="glifo" aria-hidden="true">&#128578;</span><span class="rotulo">Meu avatar</span></button>
     <button type="button" class="item" data-tela="tela-presentes"><span class="glifo" aria-hidden="true">&#127942;</span><span class="rotulo">Presentes e Troféus</span></button>
     <p class="grupo">Meus aplicativos</p>
     <span class="item item-app em-breve"><span class="glifo" aria-hidden="true">&#9883;</span><span class="rotulo">Super Atomic Box <small>Em breve: as bases da química e do átomo</small></span></span>
@@ -59,7 +60,7 @@
   <div class="sidebar-rodape">
     <p id="resumo-lateral">&#8212;</p>
     <p class="autoria">Criado pelo <strong>Prof. Paulo Fernandes</strong><br>Químico Industrial, Farmacêutico e Docente de Química</p>
-    <p class="versao">SUPER MOLBOX v0.24 &middot; funciona sem internet</p>
+    <p class="versao">SUPER MOLBOX v0.25 &middot; funciona sem internet</p>
   </div>
 </aside>
 
@@ -68,6 +69,7 @@
 <header class="barra">
   <button type="button" class="menu-btn" id="menuBtn" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar"><span></span></button>
   <span class="titulo-pagina" id="tituloPagina">Massa molar</span>
+  <button type="button" class="avatar-barra" id="avatarBarra" aria-label="Meu avatar: abrir o editor do avatar"></button>
 </header>
 
 <main id="conteudo">
@@ -233,9 +235,15 @@
     <div id="painel-nomenclatura"></div>
   </section>
 
+  <section id="tela-avatar" hidden>
+    <h1>Meu avatar</h1>
+    <p class="intro">Monte o seu cientista: emoção, pele, rosto, olhos, cabelo e enfeites. Cada título do Treino abre um acessório, e cada paleta de presente abre uma pele de fantasia. Depois, baixe o crachá ou mande no WhatsApp.</p>
+    <div id="painel-avatar"></div>
+  </section>
+
   <section id="tela-presentes" hidden>
     <h1>Presentes e Troféus</h1>
-    <p class="intro">O que você conquistou estudando: seu avatar, o título do Treino, as paletas de cores e as medalhas. Nada no aplicativo fica escondido de quem ainda não ganhou.</p>
+    <p class="intro">O que você conquistou estudando: o título do Treino, as paletas de cores, as medalhas e a prateleira de troféus. Nada no aplicativo fica escondido de quem ainda não ganhou.</p>
     <div id="painel-presentes"></div>
   </section>
 
@@ -257,7 +265,7 @@
 
   <div class="rodape">
     <p>Massas atômicas padrão IUPAC 2021. Constante de Avogadro 6,02214076&times;10&#178;&#179; mol&#8315;&#185;, valor exato desde a redefinição do SI em 2019.</p>
-    <p>SUPER MOLBOX v0.24 &#8212; funciona sem internet depois da primeira visita.</p>
+    <p>SUPER MOLBOX v0.25 &#8212; funciona sem internet depois da primeira visita.</p>
   </div>
 
   <div id="seletor-especies" class="onboarding" hidden role="dialog" aria-modal="true"

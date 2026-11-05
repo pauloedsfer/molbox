@@ -1612,3 +1612,35 @@ header.barra { background: var(--mb-barra); }
 .compartilhar-avatar { display: flex; flex-direction: column; gap: var(--mb-e2); margin-top: var(--mb-e4); padding-top: var(--mb-e3); border-top: 1px solid var(--mb-borda); }
 .compartilhar-avatar input { width: 100%; box-sizing: border-box; }
 .compartilhar-avatar .botao { align-self: stretch; }
+
+/* ---------- avatar no cabeçalho ---------- */
+
+.avatar-barra {
+  margin-left: auto; flex: 0 0 auto; appearance: none; cursor: pointer; padding: 2px;
+  width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
+  background: rgba(255, 255, 255, 0.9); border: 2px solid rgba(255, 255, 255, 0.95);
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.avatar-barra svg { width: 46px; height: auto; margin-top: -2px; }
+.avatar-barra:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 2px; }
+
+/* ---------- tela Meu avatar: prévia sempre à vista ---------- */
+
+#painel-avatar .cartao { margin-bottom: var(--mb-e4); }
+.palco { margin-bottom: var(--mb-e4); position: sticky; top: 56px; z-index: 6; }
+.palco-celular { display: flex; align-items: center; justify-content: center; gap: var(--mb-e3); background: var(--mb-fundo); padding: var(--mb-e2) 0; border-bottom: 1px solid var(--mb-borda); }
+.palco-avatar { background: var(--mb-superficie-2); border-radius: 50%; width: 112px; height: 112px; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; flex: 0 0 auto; }
+.palco-avatar svg { display: block; margin-top: -4px; }
+.nome-palco { font-family: var(--mb-fonte-marca); font-style: italic; font-weight: 600; font-size: var(--mb-t-titulo-3); margin: 0; overflow-wrap: anywhere; }
+.palco-cracha { display: none; }
+.palco-cracha svg { display: block; max-width: 100%; height: auto; margin: 0 auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18)); }
+.cartao-avatar-resumo { display: flex; gap: var(--mb-e4); align-items: center; }
+.mini-avatar-cartao { background: var(--mb-superficie-2); border-radius: var(--mb-raio-card); padding: var(--mb-e2); flex: 0 0 auto; }
+.mini-avatar-cartao svg { display: block; }
+@media (min-width: 900px) {
+  .avatar-pagina { display: grid; grid-template-columns: 280px minmax(0, 1fr); column-gap: var(--mb-e5); align-items: start; }
+  .palco { grid-row: 1 / span 2; top: 72px; }
+  .palco-celular { display: none; }
+  .palco-cracha { display: block; }
+  .cartao-cracha .moldura-cracha { display: none; }
+}

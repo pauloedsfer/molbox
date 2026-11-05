@@ -110,6 +110,7 @@
     "tela-treino": "Treino",
     "tela-progresso": "Progresso",
     "tela-presentes": "Presentes e Troféus",
+    "tela-avatar": "Meu avatar",
     "tela-nomenclatura": "Nomenclatura inorgânica",
     "tela-tabela": "Tabela periódica",
   };
@@ -158,6 +159,8 @@
     if (id === "tela-treino") entrarNoTreino();
     if (id === "tela-progresso") desenharProgresso();
     if (id === "tela-presentes") desenharPresentes();
+    if (id === "tela-avatar") desenharMeuAvatar();
+    atualizarAvatarBarra();
     if (id === "tela-nomenclatura") desenharNomenclatura();
   }
 
@@ -4761,24 +4764,35 @@
     return arquivo;
   }
 
-  /* ---------------- tela: presentes e troféus ---------------- */
+  /* ---------------- tela: meu avatar ----------------
 
-  function desenharPresentes() {
-    const alvo = $("#painel-presentes");
+     O editor do avatar, o crachá e os botões de compartilhar. A prévia fica sempre à vista
+     enquanto o aluno muda as opções: o crachá fixo à esquerda no computador, o avatar preso
+     abaixo do cabeçalho no celular. */
+
+  function desenharMeuAvatar() {
+    const alvo = $("#painel-avatar");
     const P = window.Presentes;
     const A = window.Avatar;
     alvo.innerHTML = "";
     const indice = P.indiceDoTitulo(progresso);
     const av = avatarAtual();
 
-    const anuncio = criar("div", { className: "anuncio-presente" });
-    anuncio.setAttribute("role", "status");
-    alvo.appendChild(anuncio);
-
-    // --- avatar e crachá ---
-    const cartaoAvatar = criar("div", { className: "cartao cartao-avatar" });
-    cartaoAvatar.appendChild(criar("h2", { textContent: "Seu avatar e o seu crachá", style: "margin-top:0" }));
-    const corpo = criar("div", { className: "corpo-avatar" });
+    // Prévia sempre à vista: o crachá (computador) e o avatar compacto (celular).
+    const pagina = criar("div", { className: "avatar-pagina" });
+    const palco = criar("div", { className: "palco" });
+    const palcoCelular = criar("div", { className: "palco-celular" });
+    const palcoAvatar = criar("div", { className: "palco-avatar" });
+    const nomePalco = criar("p", { className: "nome-palco" });
+    palcoCelular.appendChild(palcoAvatar);
+    palcoCelular.appendChild(nomePalco);
+    const palcoCracha = criar("div", { className: "palco-cracha" });
+    palco.appendChild(palcoCelular);
+    palco.appendChild(palcoCracha);
+    pagina.appendChild(palco);
+    const cartaoEscolhas = criar("div", { className: "cartao cartao-escolhas" });
+    const cartaoCracha = criar("div", { className: "cartao cartao-cracha" });
+    cartaoCracha.appendChild(criar("h2", { textContent: "Seu crachá", style: "margin-top:0" }));
     const figura = criar("div", { className: "figura-avatar" });
     const moldura = criar("div", { className: "moldura-cracha" });
     const dadosDoCracha = () => {
@@ -4788,7 +4802,17 @@
       return { avatar: avatarAtual(), apelido: preferencias().apelido, titulo: P.tituloDo(progresso), app: "SUPER MOLBOX", cor,
         linhas: [`Nível ${nv.nivel} · ${t.encontradas}/${t.total} troféus · ${progresso.medalhas.length} ${progresso.medalhas.length === 1 ? "medalha" : "medalhas"}`] };
     };
-    const desenharCracha = () => { moldura.innerHTML = ""; moldura.appendChild(svgDoCracha(dadosDoCracha(), 240)); };
+    const desenharCracha = () => {
+      const svg = svgDoCracha(dadosDoCracha(), 240);
+      moldura.innerHTML = "";
+      moldura.appendChild(svg);
+      palcoCracha.innerHTML = "";
+      palcoCracha.appendChild(svg.cloneNode(true));
+      palcoAvatar.innerHTML = "";
+      palcoAvatar.appendChild(svgDoAvatar(avatarAtual(), 104));
+      nomePalco.textContent = A.lerApelido(preferencias().apelido);
+      atualizarAvatarBarra();
+    };
     desenharCracha();
     figura.appendChild(moldura);
     figura.appendChild(criar("label", { htmlFor: "apelido-cracha", textContent: "Apelido no crachá" }));
@@ -4883,12 +4907,11 @@
     caixaEnvio.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: "Mande no grupo da turma: vai a imagem e o seu progresso, com o código e sem o seu nome." }));
     caixaEnvio.appendChild(statusEnvio);
     figura.appendChild(caixaEnvio);
-    corpo.appendChild(figura);
     const escolhas = criar("div", { className: "escolhas-avatar" });
 
     function salvar(mudanca, focar) {
       guardarPreferencias({ avatar: Object.assign({}, avatarAtual(), mudanca) });
-      desenharPresentes();
+      desenharMeuAvatar();
       const b = focar && document.querySelector(focar);
       if (b) b.focus();
     }
@@ -4955,7 +4978,8 @@
     for (const x of P.PALETAS) nomesDePaleta[x.id] = x.nome;
     const peles = A.estadoDasPeles(paletasAbertas(), nomesDePaleta);
     escolhas.appendChild(grupo("Emoção", "emocao", A.EMOCOES, av.emocao, false));
-    escolhas.appendChild(grupo("Pele", "pele", peles.filter((x) => !x.fantasia), av.pele, true));
+    escolhas.appendChild(grupo("Pele", "pele", peles.filter((x) => !x.fantasia && !x.inusitada), av.pele, true));
+    escolhas.appendChild(grupo("Inusitadas", "pele", peles.filter((x) => x.inusitada), av.pele, true, "avatar-pele-inusitada"));
     escolhas.appendChild(grupo("Peles de fantasia (abrem com as paletas de presente)", "pele", peles.filter((x) => x.fantasia), av.pele, true, "avatar-pele-fantasia"));
     escolhas.appendChild(grupo("Formato do rosto", "rosto", A.ROSTOS, av.rosto, false));
     escolhas.appendChild(grupo("Cor dos olhos", "olhos", A.CORES_OLHOS, av.olhos, true));
@@ -4964,8 +4988,52 @@
     escolhas.appendChild(grupo("Cor da gola do jaleco", "gola", A.GOLAS, av.gola, true));
     escolhas.appendChild(alternaveis("Enfeites", "avatar-enfeites", "Para todo mundo, desde o começo. Toque para usar ou tirar.", A.ENFEITES, av.enfeites, "enfeite"));
     escolhas.appendChild(alternaveis("Acessórios de laboratório", "avatar-acessorios", "Cada título novo no Treino abre um acessório. Toque para usar ou tirar.", A.estadoDosAcessorios(indice, P.TITULOS), av.acessorios, "acessorio"));
-    corpo.appendChild(escolhas);
-    cartaoAvatar.appendChild(corpo);
+    cartaoEscolhas.appendChild(escolhas);
+    pagina.appendChild(cartaoEscolhas);
+    cartaoCracha.appendChild(figura);
+    pagina.appendChild(cartaoCracha);
+    alvo.appendChild(pagina);
+
+  }
+
+  /* O avatar pequeno no cabeçalho de todas as telas; um toque leva a "Meu avatar". */
+  function atualizarAvatarBarra() {
+    const botao = document.getElementById("avatarBarra");
+    if (!botao) return;
+    try {
+      const svg = svgDoAvatar(avatarAtual(), 40);
+      svg.setAttribute("aria-hidden", "true");
+      botao.innerHTML = "";
+      botao.appendChild(svg);
+    } catch (e) { /* sem avatar no cabeçalho: o app segue */ }
+  }
+
+  /* ---------------- tela: presentes e troféus ---------------- */
+
+  function desenharPresentes() {
+    const alvo = $("#painel-presentes");
+    const P = window.Presentes;
+    const A = window.Avatar;
+    alvo.innerHTML = "";
+    const indice = P.indiceDoTitulo(progresso);
+    const av = avatarAtual();
+
+    const anuncio = criar("div", { className: "anuncio-presente" });
+    anuncio.setAttribute("role", "status");
+    alvo.appendChild(anuncio);
+
+    // --- cartão do avatar: o editor fica na tela "Meu avatar" ---
+    const cartaoAvatar = criar("div", { className: "cartao cartao-avatar-resumo" });
+    const mini = criar("div", { className: "mini-avatar-cartao" });
+    mini.appendChild(svgDoAvatar(av, 96));
+    cartaoAvatar.appendChild(mini);
+    const textoCartao = criar("div");
+    textoCartao.appendChild(criar("p", { className: "titulo-grupo-avatar", style: "margin:0", textContent: A.lerApelido(preferencias().apelido) }));
+    textoCartao.appendChild(criar("p", { className: "ajuda", textContent: `${P.tituloDo(progresso)}. Cada título abre um acessório e cada paleta abre uma pele de fantasia.` }));
+    const editar = criar("button", { type: "button", className: "botao", textContent: "Editar meu avatar" });
+    editar.addEventListener("click", () => mostrarTela("tela-avatar"));
+    textoCartao.appendChild(editar);
+    cartaoAvatar.appendChild(textoCartao);
     alvo.appendChild(cartaoAvatar);
 
     // --- título ---
@@ -5335,6 +5403,7 @@
     recuperar();
     progresso = carregarProgresso();
     aplicarPaletaGuardada();   // antes da primeira tela, para não piscar a paleta institucional
+    document.getElementById("avatarBarra").addEventListener("click", () => mostrarTela("tela-avatar"));
 
     // Tempo de uso: cada toque, tecla ou rolagem é uma ação; aba escondida ou fechada para a conta.
     for (const tipo of ["pointerdown", "keydown", "wheel", "touchstart", "scroll"]) {
@@ -5346,7 +5415,7 @@
     });
     window.addEventListener("pagehide", () => cronometro().parar());
     window.addEventListener("storage", (ev) => {
-      if (ev.key === window.Presentes.CHAVE_PREFERENCIAS) aplicarPaletaGuardada();   // paleta trocada em outra aba
+      if (ev.key === window.Presentes.CHAVE_PREFERENCIAS) { aplicarPaletaGuardada(); atualizarAvatarBarra(); }   // paleta ou avatar trocados em outra aba
     });
     $("#formula").value = estado.formula;
     montarExemplos();
@@ -5395,7 +5464,7 @@
       "#massa-molar": "tela-massa", "#converter": "tela-ponte",
       "#balancear": "tela-balancear", "#estequiometria": "tela-esteq",
       "#treino": "tela-treino", "#progresso": "tela-progresso", "#tabela": "tela-tabela",
-      "#presentes": "tela-presentes", "#nomenclatura": "tela-nomenclatura",
+      "#presentes": "tela-presentes", "#avatar": "tela-avatar", "#nomenclatura": "tela-nomenclatura",
     }[location.hash];
     if (destino) mostrarTela(destino);
 
