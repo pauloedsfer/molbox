@@ -4568,24 +4568,67 @@
 
   function aplicarPaletaGuardada() { return aplicarPaleta(preferencias().paleta); }
 
-  /* O avatar como SVG criado pelo DOM, com descrição em texto. */
-  function svgDoAvatar(av, tamanho) {
-    const svg = document.createElementNS(SVG_NS, "svg");
-    svg.setAttribute("viewBox", "0 0 120 140");
-    svg.setAttribute("width", String(tamanho));
-    svg.setAttribute("height", String(Math.round(tamanho * 140 / 120)));
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", window.Avatar.descricaoDoAvatar(av));
-    for (const forma of window.Avatar.formasDoAvatar(av)) {
+  /* Formas de js/avatar.js viram SVG pelo DOM; os textos do crachá entram por textContent. */
+  function desenharFormas(pai, formas) {
+    for (const forma of formas) {
       const el = document.createElementNS(SVG_NS, forma.tag);
       for (const k in forma.atributos) el.setAttribute(k, String(forma.atributos[k]));
-      svg.appendChild(el);
+      if (forma.texto !== undefined) el.textContent = forma.texto;
+      if (forma.filhos) desenharFormas(el, forma.filhos);
+      pai.appendChild(el);
     }
+  }
+
+  function svgBase(viewBox, largura, altura, rotulo) {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", viewBox);
+    svg.setAttribute("width", String(largura));
+    svg.setAttribute("height", String(altura));
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", rotulo);
     return svg;
   }
 
+  /* O avatar como SVG criado pelo DOM, com descrição em texto. */
+  function svgDoAvatar(av, tamanho) {
+    const svg = svgBase(window.Avatar.VIEWBOX_AVATAR, tamanho, Math.round(tamanho * 160 / 140), window.Avatar.descricaoDoAvatar(av));
+    desenharFormas(svg, window.Avatar.formasDoAvatar(av));
+    return svg;
+  }
+
+  function svgDoCracha(dados, largura) {
+    const rotulo = `Crachá de ${window.Avatar.lerApelido(dados.apelido)}. ${dados.titulo}. ${dados.linhas.join(". ")}. ${window.Avatar.descricaoDoAvatar(dados.avatar)}`;
+    const svg = svgBase(window.Avatar.VIEWBOX_CRACHA, largura, Math.round(largura * 340 / 240), rotulo);
+    desenharFormas(svg, window.Avatar.formasDoCracha(dados));
+    return svg;
+  }
+
+  /* O crachá como PNG (para baixar e mostrar à turma). */
+  function pngDoCracha(svg) {
+    return new Promise((resolver, rejeitar) => {
+      const copia = svg.cloneNode(true);
+      copia.setAttribute("xmlns", SVG_NS);
+      copia.setAttribute("width", "240");
+      copia.setAttribute("height", "340");
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 720; canvas.height = 1020;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((b) => (b ? resolver(b) : rejeitar(new Error("png"))), "image/png");
+      };
+      img.onerror = () => rejeitar(new Error("imagem"));
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(copia));
+    });
+  }
+
+  /* Ids das paletas abertas: as peles de fantasia do avatar abrem com elas. */
+  function paletasAbertas() {
+    return window.Presentes.estadoDasPaletas(progresso).filter((x) => x.aberta && x.id !== window.Presentes.PALETA_PADRAO).map((x) => x.id);
+  }
+
   function avatarAtual() {
-    return window.Avatar.lerAvatar(preferencias().avatar, window.Presentes.indiceDoTitulo(progresso));
+    return window.Avatar.lerAvatar(preferencias().avatar, window.Presentes.indiceDoTitulo(progresso), paletasAbertas());
   }
 
   /* Frases de presente novo, comparando o progresso de antes com o de agora. */
@@ -4697,12 +4740,45 @@
     anuncio.setAttribute("role", "status");
     alvo.appendChild(anuncio);
 
-    // --- avatar ---
+    // --- avatar e crachá ---
     const cartaoAvatar = criar("div", { className: "cartao cartao-avatar" });
-    cartaoAvatar.appendChild(criar("h2", { textContent: "Seu avatar", style: "margin-top:0" }));
+    cartaoAvatar.appendChild(criar("h2", { textContent: "Seu avatar e o seu crachá", style: "margin-top:0" }));
     const corpo = criar("div", { className: "corpo-avatar" });
     const figura = criar("div", { className: "figura-avatar" });
-    figura.appendChild(svgDoAvatar(av, 150));
+    const moldura = criar("div", { className: "moldura-cracha" });
+    const dadosDoCracha = () => {
+      const nv = xpParaProximoNivel(progresso.xp);
+      const t = compostosEncontrados();
+      const cor = getComputedStyle(document.documentElement).getPropertyValue("--mb-lateral-fundo").trim() || "#164194";
+      return { avatar: avatarAtual(), apelido: preferencias().apelido, titulo: P.tituloDo(progresso), app: "SUPER MOLBOX", cor,
+        linhas: [`Nível ${nv.nivel} · ${t.encontradas}/${t.total} troféus · ${progresso.medalhas.length} ${progresso.medalhas.length === 1 ? "medalha" : "medalhas"}`] };
+    };
+    const desenharCracha = () => { moldura.innerHTML = ""; moldura.appendChild(svgDoCracha(dadosDoCracha(), 240)); };
+    desenharCracha();
+    figura.appendChild(moldura);
+    figura.appendChild(criar("label", { htmlFor: "apelido-cracha", textContent: "Apelido no crachá" }));
+    const campoApelido = criar("input", { type: "text", id: "apelido-cracha", maxLength: A.APELIDO_MAXIMO, autocomplete: "off", placeholder: "Cientista", value: preferencias().apelido });
+    campoApelido.setAttribute("aria-describedby", "cracha-status");
+    campoApelido.addEventListener("input", () => { guardarPreferencias({ apelido: campoApelido.value.slice(0, A.APELIDO_MAXIMO) }); desenharCracha(); });
+    figura.appendChild(campoApelido);
+    figura.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: "Use um apelido, não o seu nome completo. Ele fica só neste aparelho." }));
+    const statusCracha = criar("p", { className: "ajuda", id: "cracha-status" });
+    statusCracha.setAttribute("role", "status");
+    const baixarCracha = criar("button", { type: "button", className: "botao secundario", textContent: "Baixar o crachá (PNG)" });
+    baixarCracha.addEventListener("click", async () => {
+      statusCracha.textContent = "Preparando o crachá...";
+      try {
+        const blob = await pngDoCracha(moldura.querySelector("svg"));
+        const nome = A.lerApelido(preferencias().apelido).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "cientista";
+        const url = URL.createObjectURL(blob);
+        const a = criar("a", { href: url, download: `cracha-${nome}.png` });
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 600000);
+        statusCracha.textContent = `Crachá pronto: cracha-${nome}.png.`;
+      } catch (e) { statusCracha.textContent = "Não consegui gerar a imagem do crachá. Tente de novo."; }
+    });
+    figura.appendChild(baixarCracha);
+    figura.appendChild(statusCracha);
     corpo.appendChild(figura);
     const escolhas = criar("div", { className: "escolhas-avatar" });
 
@@ -4712,21 +4788,31 @@
       const b = focar && document.querySelector(focar);
       if (b) b.focus();
     }
-    function grupo(titulo, campo, lista, valor, comCor) {
+    // Grupo de botões, um marcado (aria-pressed); item fechado vira aviso com cadeado.
+    function grupo(titulo, campo, lista, valor, comCor, idTitulo) {
       const caixa = criar("div", { className: "grupo-avatar" });
-      const rot = criar("p", { className: "titulo-grupo-avatar", id: "avatar-" + campo, textContent: titulo });
+      const rot = criar("p", { className: "titulo-grupo-avatar", id: idTitulo || "avatar-" + campo, textContent: titulo });
       const linha = criar("div", { className: "opcoes-avatar" });
       linha.setAttribute("role", "group");
       linha.setAttribute("aria-labelledby", rot.id);
       for (const op of lista) {
-        const b = criar("button", { type: "button", className: "chip" });
+        const filhos = [];
         if (comCor) {
           const bolinha = criar("span", { className: "amostra-cor" });
           bolinha.setAttribute("aria-hidden", "true");
           bolinha.style.background = op.cor;
-          b.appendChild(bolinha);
+          filhos.push(bolinha);
         }
-        b.appendChild(criar("span", { textContent: op.nome }));
+        if (op.aberta === false) {
+          const fechado = criar("span", { className: "chip chip-fechado" });
+          for (const x of filhos) fechado.appendChild(x);
+          fechado.appendChild(criar("span", { textContent: `🔒 ${op.nome}: ${op.falta}` }));
+          linha.appendChild(fechado);
+          continue;
+        }
+        const b = criar("button", { type: "button", className: "chip" });
+        for (const x of filhos) b.appendChild(x);
+        b.appendChild(criar("span", { textContent: op.fantasia ? `✨ ${op.nome}` : op.nome }));
         b.dataset.campo = campo;
         b.dataset.valor = op.id;
         b.setAttribute("aria-pressed", String(op.id === valor));
@@ -4737,32 +4823,41 @@
       caixa.appendChild(linha);
       return caixa;
     }
-    escolhas.appendChild(grupo("Pele", "pele", A.PELES, av.pele, true));
+    function alternaveis(titulo, idTitulo, ajuda, itens, usados, campo) {
+      const caixa = criar("div", { className: "grupo-avatar" });
+      caixa.appendChild(criar("p", { className: "titulo-grupo-avatar", id: idTitulo, textContent: titulo }));
+      caixa.appendChild(criar("p", { className: "ajuda", style: "margin:0 0 var(--mb-e2)", textContent: ajuda }));
+      const linha = criar("div", { className: "opcoes-avatar" });
+      linha.setAttribute("role", "group");
+      linha.setAttribute("aria-labelledby", idTitulo);
+      for (const a of itens) {
+        if (a.aberto === false) {
+          linha.appendChild(criar("span", { className: "chip chip-fechado", textContent: `🔒 ${a.nome}: abre com o título ${a.tituloQueAbre}` }));
+          continue;
+        }
+        const usando = usados.indexOf(a.id) >= 0;
+        const b = criar("button", { type: "button", className: "chip", textContent: a.nome });
+        b.dataset.campo = campo;
+        b.dataset.valor = a.id;
+        b.setAttribute("aria-pressed", String(usando));
+        b.addEventListener("click", () => salvar({ [campo === "acessorio" ? "acessorios" : "enfeites"]: usando ? usados.filter((x) => x !== a.id) : usados.concat(a.id) },
+          `[data-campo="${campo}"][data-valor="${a.id}"]`));
+        linha.appendChild(b);
+      }
+      caixa.appendChild(linha);
+      return caixa;
+    }
+    const nomesDePaleta = {};
+    for (const x of P.PALETAS) nomesDePaleta[x.id] = x.nome;
+    const peles = A.estadoDasPeles(paletasAbertas(), nomesDePaleta);
+    escolhas.appendChild(grupo("Emoção", "emocao", A.EMOCOES, av.emocao, false));
+    escolhas.appendChild(grupo("Pele", "pele", peles.filter((x) => !x.fantasia), av.pele, true));
+    escolhas.appendChild(grupo("Peles de fantasia (abrem com as paletas de presente)", "pele", peles.filter((x) => x.fantasia), av.pele, true, "avatar-pele-fantasia"));
     escolhas.appendChild(grupo("Cabelo", "cabelo", A.CABELOS, av.cabelo, false));
     if (av.cabelo !== "raspado") escolhas.appendChild(grupo("Cor do cabelo", "corCabelo", A.CORES_CABELO, av.corCabelo, true));
     escolhas.appendChild(grupo("Cor da gola do jaleco", "gola", A.GOLAS, av.gola, true));
-    const acess = criar("div", { className: "grupo-avatar" });
-    acess.appendChild(criar("p", { className: "titulo-grupo-avatar", id: "avatar-acessorios", textContent: "Acessórios de laboratório" }));
-    acess.appendChild(criar("p", { className: "ajuda", style: "margin:0 0 var(--mb-e2)", textContent: "Cada título novo no Treino abre um acessório. Toque para usar ou tirar." }));
-    const linhaAc = criar("div", { className: "opcoes-avatar" });
-    linhaAc.setAttribute("role", "group");
-    linhaAc.setAttribute("aria-labelledby", "avatar-acessorios");
-    for (const a of A.estadoDosAcessorios(indice, P.TITULOS)) {
-      if (!a.aberto) {
-        linhaAc.appendChild(criar("span", { className: "chip chip-fechado", textContent: `🔒 ${a.nome}: abre com o título ${a.tituloQueAbre}` }));
-        continue;
-      }
-      const usando = av.acessorios.indexOf(a.id) >= 0;
-      const b = criar("button", { type: "button", className: "chip", textContent: a.nome });
-      b.dataset.campo = "acessorio";
-      b.dataset.valor = a.id;
-      b.setAttribute("aria-pressed", String(usando));
-      b.addEventListener("click", () => salvar({ acessorios: usando ? av.acessorios.filter((x) => x !== a.id) : av.acessorios.concat(a.id) },
-        `[data-campo="acessorio"][data-valor="${a.id}"]`));
-      linhaAc.appendChild(b);
-    }
-    acess.appendChild(linhaAc);
-    escolhas.appendChild(acess);
+    escolhas.appendChild(alternaveis("Enfeites", "avatar-enfeites", "Para todo mundo, desde o começo. Toque para usar ou tirar.", A.ENFEITES, av.enfeites, "enfeite"));
+    escolhas.appendChild(alternaveis("Acessórios de laboratório", "avatar-acessorios", "Cada título novo no Treino abre um acessório. Toque para usar ou tirar.", A.estadoDosAcessorios(indice, P.TITULOS), av.acessorios, "acessorio"));
     corpo.appendChild(escolhas);
     cartaoAvatar.appendChild(corpo);
     alvo.appendChild(cartaoAvatar);

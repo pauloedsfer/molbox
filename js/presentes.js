@@ -107,7 +107,8 @@
   }
 
   function lerPreferencias(bruto) {
-    const padrao = { paleta: PALETA_PADRAO, vistas: 0, avatar: null, linkTurma: "", nome: "" };
+    // `apelido`: o nome do crachá do avatar; não sai do aparelho.
+    const padrao = { paleta: PALETA_PADRAO, vistas: 0, avatar: null, linkTurma: "", nome: "", apelido: "" };
     try {
       const d = JSON.parse(bruto);
       if (!d || typeof d !== "object" || Array.isArray(d)) return padrao;
@@ -117,6 +118,7 @@
         avatar: d.avatar && typeof d.avatar === "object" && !Array.isArray(d.avatar) ? d.avatar : null,
         linkTurma: typeof d.linkTurma === "string" ? d.linkTurma.slice(0, 300) : "",
         nome: typeof d.nome === "string" ? d.nome.slice(0, 60) : "",
+        apelido: typeof d.apelido === "string" ? d.apelido.slice(0, 18) : "",
       };
     } catch (e) {
       return padrao;

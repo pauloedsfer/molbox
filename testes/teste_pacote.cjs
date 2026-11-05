@@ -48,6 +48,6 @@ module.exports = ({ teste, igual, verdadeiro, carregar, RAIZ }) => {
     igual(P.tituloDo({ desbloqueado: 0 }), "Aprendiz de bancada");
     igual(P.tituloDo({ desbloqueado: 4, porDegrau: { 4: { acertos: 5 } }, extras: { balanceamento: { acertos: 10 } } }), "Químico(a) de bancada");
     igual(P.estadoDasPaletas({ desbloqueado: 0, totalAcertos: 1 }).filter((x) => x.aberta).map((x) => x.id).join(","), "institucional,tornassol");
-    igual(JSON.stringify(P.lerPreferencias("{lixo")), JSON.stringify({ paleta: "institucional", vistas: 0, avatar: null, linkTurma: "", nome: "" }));
+    igual(JSON.stringify(P.lerPreferencias("{lixo")), JSON.stringify({ paleta: "institucional", vistas: 0, avatar: null, linkTurma: "", nome: "", apelido: "" }));
   });
 };

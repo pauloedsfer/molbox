@@ -1601,3 +1601,11 @@ header.barra { background: var(--mb-barra); }
 .trofeu-oficial { font-weight: 600; overflow-wrap: anywhere; }
 .trofeu-detalhe { font-size: var(--mb-t-legenda); color: var(--mb-texto-2); }
 #nome-certificado { display: block; width: 100%; box-sizing: border-box; }
+
+/* ---------- avatar em estilo de desenho animado e crachá ---------- */
+
+.cartao-avatar .figura-avatar { background: none; padding: 0; width: min(100%, 260px); display: flex; flex-direction: column; gap: var(--mb-e2); }
+.moldura-cracha svg { display: block; max-width: 100%; height: auto; margin: 0 auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18)); }
+.figura-avatar input { width: 100%; box-sizing: border-box; }
+.figura-avatar .botao { align-self: flex-start; }
+@media (max-width: 599px) { .cartao-avatar .figura-avatar { width: 100%; align-items: center; } .figura-avatar .botao { align-self: center; } }
