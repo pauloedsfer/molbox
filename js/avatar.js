@@ -34,6 +34,8 @@
     { id: "rosa", nome: "Rosa-chiclete", cor: "#F59AB8", fantasia: true, paletas: ["alizarina", "fenolftaleina"] },
     { id: "laranja", nome: "Laranja-cenoura", cor: "#FFB061", fantasia: true, paletas: ["betacaroteno", "alaranjado"] },
     { id: "roxo", nome: "Roxo-uva", cor: "#C79BEA", fantasia: true, paletas: ["antocianina", "tornassol"] },
+    // Inusitadas: abertas para todo mundo.
+    { id: "caveira", nome: "Caveira", cor: "#F2EEE3", inusitada: true },
   ];
 
   const CABELOS = [
@@ -269,6 +271,36 @@
     }
   }
 
+  /* Rosto de caveira: órbitas escuras com um brilho na cor dos olhos, nariz em triângulo e dentes.
+     A emoção muda a boca e as órbitas. */
+  function rostoCaveira(emocao, corOlhos) {
+    const brilho = corOlhos === CONTORNO ? "#FFFFFF" : corOlhos;
+    const orbita = (cx, ry = 9) => [
+      f("ellipse", { cx, cy: 66, rx: 8.5, ry, fill: CONTORNO }),
+      f("circle", { cx: cx + 1.5, cy: 64, r: 2.4, fill: brilho }),
+    ];
+    const dentes = (y, altura) => [
+      f("rect", comContorno({ x: 57, y, width: 26, height: altura, rx: 3, fill: "#FFFFFF" }, 1.8)),
+      ...[63.5, 70, 76.5].map((x) => traco(`M${x} ${y} L${x} ${y + altura}`, CONTORNO, 1.4)),
+    ];
+    const partes = [
+      traco("M82 34 L86 41 L83 46", CONTORNO, 1.4),   // rachadura na testa
+      f("path", { d: "M70 73 L66 80 L74 80 Z", fill: CONTORNO }),
+    ];
+    switch (emocao) {
+      case "rindo":
+        return [...partes, ...orbita(56, 7), ...orbita(84, 7), f("rect", comContorno({ x: 57, y: 84, width: 26, height: 14, rx: 4, fill: "#5A2230" }, 1.8)), ...dentes(84, 5)];
+      case "surpreso":
+        return [...partes, ...orbita(56, 10.5), ...orbita(84, 10.5), f("ellipse", comContorno({ cx: 70, cy: 90, rx: 5, ry: 6.5, fill: CONTORNO }, 1.8))];
+      case "piscadela":
+        return [...partes, traco("M48 67 Q56 71 64 67", CONTORNO, 3), ...orbita(84), ...dentes(85, 8)];
+      case "pensativo":
+        return [...partes, ...orbita(56), ...orbita(84), f("rect", comContorno({ x: 60, y: 86, width: 20, height: 6, rx: 2, fill: "#FFFFFF" }, 1.8)), traco("M66.5 86 L66.5 92", CONTORNO, 1.2), traco("M73.5 86 L73.5 92", CONTORNO, 1.2)];
+      default:
+        return [...partes, ...orbita(56), ...orbita(84), ...dentes(85, 8)];
+    }
+  }
+
   /* Formas do avatar num viewBox 0 0 140 160, de trás para a frente. */
   function formasDoAvatar(av) {
     const a = lerAvatar(av, 99, PELES.flatMap((p) => p.paletas || []));
@@ -288,7 +320,8 @@
     // pescoço, orelhas e cabeça
     formas.push(f("rect", comContorno({ x: 62, y: 94, width: 16, height: 26, rx: 6, fill: pele })));
     formas.push(f("ellipse", { cx: 70, cy: 101, rx: 9, ry: 3.2, fill: "#000000", opacity: 0.12 }));
-    formas.push(f("circle", comContorno({ cx: 34, cy: 68, r: 7, fill: pele })), f("circle", comContorno({ cx: 106, cy: 68, r: 7, fill: pele })));
+    const caveira = a.pele === "caveira";
+    if (!caveira) formas.push(f("circle", comContorno({ cx: 34, cy: 68, r: 7, fill: pele })), f("circle", comContorno({ cx: 106, cy: 68, r: 7, fill: pele })));
     if (a.rosto === "oval") formas.push(f("ellipse", comContorno({ cx: 70, cy: 65, rx: 33, ry: 38, fill: pele }, 2.4)));
     else if (a.rosto === "quadrado") formas.push(f("rect", comContorno({ x: 35, y: 29, width: 70, height: 72, rx: 24, fill: pele }, 2.4)));
     else formas.push(f("circle", comContorno({ cx: 70, cy: 64, r: 36, fill: pele }, 2.4)));
@@ -297,13 +330,17 @@
     if (usa("laco")) {
       formas.push(f("path", comContorno({ d: "M88 30 L100 22 L100 38 Z M88 30 L76 22 L76 38 Z", fill: "#E85A9B" }, 1.6)), f("circle", comContorno({ cx: 88, cy: 30, r: 3.5, fill: "#E85A9B" }, 1.6)));
     }
-    // bochechas, sardas, nariz e rosto
-    formas.push(f("ellipse", { cx: 49, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }), f("ellipse", { cx: 91, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }));
-    if (usa("sardas")) {
-      for (const [x, y] of [[46, 76], [50, 80], [53, 76], [87, 76], [90, 80], [94, 76]]) formas.push(f("circle", { cx: x, cy: y, r: 1.1, fill: "#8A5A3C" }));
+    if (caveira) {
+      formas.push(...rostoCaveira(a.emocao, achar(CORES_OLHOS, a.olhos).cor));
+    } else {
+      // bochechas, sardas, nariz e rosto
+      formas.push(f("ellipse", { cx: 49, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }), f("ellipse", { cx: 91, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }));
+      if (usa("sardas")) {
+        for (const [x, y] of [[46, 76], [50, 80], [53, 76], [87, 76], [90, 80], [94, 76]]) formas.push(f("circle", { cx: x, cy: y, r: 1.1, fill: "#8A5A3C" }));
+      }
+      formas.push(traco("M67 75 Q70 78 73 75", CONTORNO, 1.8));
+      formas.push(...rosto(a.emocao, achar(CORES_OLHOS, a.olhos).cor));
     }
-    formas.push(traco("M67 75 Q70 78 73 75", CONTORNO, 1.8));
-    formas.push(...rosto(a.emocao, achar(CORES_OLHOS, a.olhos).cor));
     if (usa("bigode")) formas.push(f("path", comContorno({ d: "M70 81 C64 77 56 79 54 84 C60 83 64 84 70 83 C76 84 80 83 86 84 C84 79 76 77 70 81 Z", fill: corCabelo }, 1.4)));
     if (usa("grau")) {
       formas.push(f("circle", { cx: 56, cy: 67, r: 10.5, fill: "#FFFFFF", "fill-opacity": 0.15, stroke: CONTORNO, "stroke-width": 2.2 }));
