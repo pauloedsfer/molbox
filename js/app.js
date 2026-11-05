@@ -1940,6 +1940,7 @@
     alvo.innerHTML = "";
     const t = estado.treinoBal;
     if (!t.balanceada) return;
+    mostrarMensagemDoPulo(alvo);
 
     const dif = dificuldadeDoDesafio(t.balanceada);
     const cabeca = criar("div", { className: "cabeca-desafio" });
@@ -1979,12 +1980,14 @@
         contar.addEventListener("click", () => { estado.treinoBal.contou = true; desenharTreinoBal(); });
         acoes.appendChild(contar);
       }
+      acoes.appendChild(botaoDePulo(() => { sortearDesafioBal(); desenharPlacarTreinoBal(); }, "aviso-pulo-bal"));
     } else {
       const proximo = criar("button", { type: "button", className: "botao", textContent: "Próxima equação" });
       proximo.addEventListener("click", () => { sortearDesafioBal(); desenharPlacarTreinoBal(); });
       acoes.appendChild(proximo);
     }
     alvo.appendChild(acoes);
+    if (!t.respondido) alvo.appendChild(avisoDoPulo("aviso-pulo-bal"));
 
     if (t.respondido) alvo.appendChild(devolutivaDesafioBal());
   }
@@ -4034,10 +4037,48 @@
     desenharExercicio();
   }
 
+  /* ---------------- pular exercício (js/progresso.js) ----------------
+     Custa 1, 2, 4... até 100 XP; o acerto seguinte volta o custo a 1; sem XP, não pula. */
+  let mensagemDoPulo = "";
+
+  function botaoDePulo(aoPular, idAviso) {
+    const c = custoDoPulo(progresso);
+    const b = criar("button", { className: "botao secundario", type: "button", textContent: c.pode ? `Pular (−${c.custo} XP)` : "Pular" });
+    b.setAttribute("aria-describedby", idAviso);
+    if (!c.pode) b.setAttribute("aria-disabled", "true");
+    b.addEventListener("click", () => {
+      const r = registrarPulo(progresso);
+      if (!r.pulou) { const aviso = document.getElementById(idAviso); if (aviso) aviso.focus(); return; }
+      mensagemDoPulo = `Exercício pulado: −${r.perda} XP. ` + (r.proximo.pode
+        ? `O próximo pulo custa ${r.proximo.custo} XP.`
+        : "Seu XP acabou: para pular de novo, ganhe XP nos degraus anteriores.");
+      atualizarResumoLateral();
+      aoPular();
+    });
+    return b;
+  }
+
+  function avisoDoPulo(id) {
+    const c = custoDoPulo(progresso);
+    const aviso = criar("p", { className: "ajuda", id, tabIndex: -1, style: "margin:var(--mb-e2) 0 0",
+      textContent: c.pode ? `Você tem ${progresso.xp} XP. O acerto seguinte volta o custo do pulo para 1 XP.` : "Sem XP para pular. Faça exercícios dos degraus anteriores para ganhar XP e depois volte." });
+    return aviso;
+  }
+
+  // A mensagem do pulo aparece uma vez, no alto do exercício seguinte.
+  function mostrarMensagemDoPulo(alvo) {
+    if (!mensagemDoPulo) return;
+    const m = criar("p", { className: "dica-caixa", textContent: mensagemDoPulo, style: "margin:0 0 var(--mb-e3)" });
+    m.setAttribute("role", "status");
+    alvo.appendChild(m);
+    mensagemDoPulo = "";
+  }
+
   function desenharExercicio() {
     const q = estado.exercicio;
     const alvo = $("#exercicio");
     alvo.innerHTML = "";
+    mostrarMensagemDoPulo(alvo);
 
     alvo.appendChild(criar("p", { className: "ajuda", textContent: NOME_TIPO[q.tipo], style: "margin:0 0 var(--mb-e2)" }));
 
@@ -4111,9 +4152,7 @@
       });
       acoes.appendChild(dica);
 
-      const pular = criar("button", { className: "botao secundario", type: "button", textContent: "Trocar exercício" });
-      pular.addEventListener("click", proximoExercicio);
-      acoes.appendChild(pular);
+      acoes.appendChild(botaoDePulo(() => { proximoExercicio(); desenharPlacar(); }, "aviso-pulo-treino"));
 
       const campoEnter = document.getElementById("resposta");
       if (campoEnter) {
@@ -4126,6 +4165,7 @@
     }
 
     alvo.appendChild(acoes);
+    if (!estado.respondido) alvo.appendChild(avisoDoPulo("aviso-pulo-treino"));
 
     const rend = rendimentoDoDegrau(progresso, estado.degrau);
     const ultimo = DEGRAUS[DEGRAUS.length - 1].n;
