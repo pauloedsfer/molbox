@@ -11,7 +11,7 @@ const nomes = exp[1].split(",").map((s) => s.trim()).filter(Boolean).map((s) => 
   return { local: m[1], publico: m[2] || m[1] };
 });
 // Imports de outros módulos convertidos viram leituras do global deles.
-const GLOBAIS = { "formula_texto.js": "FormulaTexto", "tempo.js": "Tempo", "envio.js": "Envio", "avatar.js": "Avatar", "pdf.js": "Pdf" };
+const GLOBAIS = { "formula_texto.js": "FormulaTexto", "tempo.js": "Tempo", "envio.js": "Envio", "avatar.js": "Avatar", "pdf.js": "Pdf", "compartilhar.js": "TextosCompartilhar" };
 const corpo = texto.replace(exp[0], "").replace(/^import \{([^}]*)\} from "[^"]*\/([\w.]+)";$/gm, (linha, nomes, arquivo) => {
   if (!GLOBAIS[arquivo]) throw new Error("import sem global conhecido: " + linha);
   return `const {${nomes}} = window.${GLOBAIS[arquivo]};`;
