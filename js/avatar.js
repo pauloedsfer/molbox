@@ -71,6 +71,21 @@
     { id: "preto", nome: "Preto", cor: "#2B2A33" },
   ];
 
+  // Formato do rosto e cor dos olhos (como nos Mii, em 2D).
+  const ROSTOS = [
+    { id: "redondo", nome: "Redondo" },
+    { id: "oval", nome: "Oval" },
+    { id: "quadrado", nome: "Quadrado" },
+  ];
+
+  const CORES_OLHOS = [
+    { id: "escuro", nome: "Escuros", cor: CONTORNO },
+    { id: "castanho", nome: "Castanhos", cor: "#6B4423" },
+    { id: "mel", nome: "Cor de mel", cor: "#B07A2A" },
+    { id: "verde", nome: "Verdes", cor: "#3E8E5A" },
+    { id: "azul", nome: "Azuis", cor: "#3B79C9" },
+  ];
+
   // `expressao`: como a emoção entra na descrição para o leitor de tela, sem marcar gênero.
   const EMOCOES = [
     { id: "feliz", nome: "Feliz", expressao: "com expressão feliz" },
@@ -97,9 +112,11 @@
     { id: "sardas", nome: "Sardas" },
     { id: "bigode", nome: "Bigode" },
     { id: "laco", nome: "Laço no cabelo" },
+    { id: "brincos", nome: "Brincos" },
+    { id: "fones", nome: "Fone de ouvido" },
   ];
 
-  const PADRAO = { pele: "p3", cabelo: "curto", corCabelo: "castanho", gola: "verde", emocao: "feliz", acessorios: [], enfeites: [] };
+  const PADRAO = { pele: "p3", rosto: "redondo", olhos: "escuro", cabelo: "curto", corCabelo: "castanho", gola: "verde", emocao: "feliz", acessorios: [], enfeites: [] };
 
   const achar = (lista, id) => lista.find((x) => x.id === id);
 
@@ -119,6 +136,8 @@
     const pele = achar(PELES, d.pele);
     return {
       pele: pele && peleAberta(pele, paletasAbertas) ? pele.id : PADRAO.pele,
+      rosto: valido(ROSTOS, d.rosto, PADRAO.rosto),
+      olhos: valido(CORES_OLHOS, d.olhos, PADRAO.olhos),
       cabelo: valido(CABELOS, d.cabelo, PADRAO.cabelo),
       corCabelo: valido(CORES_CABELO, d.corCabelo, PADRAO.corCabelo),
       gola: valido(GOLAS, d.gola, PADRAO.gola),
@@ -200,14 +219,17 @@
     }
   }
 
-  function olhoAberto(cx, cy, ry = 6, olhar = [0, 0]) {
-    return [
-      f("ellipse", { cx: cx + olhar[0], cy: cy + olhar[1], rx: 4.6, ry, fill: CONTORNO }),
-      f("circle", { cx: cx + olhar[0] + 1.6, cy: cy + olhar[1] - 2.2, r: 1.7, fill: "#FFFFFF" }),
-    ];
+  // Olho aberto: a íris na cor escolhida, a pupila escura e o brilho.
+  function olhoAberto(cx, cy, ry = 6, olhar = [0, 0], cor = CONTORNO) {
+    const x = cx + olhar[0];
+    const y = cy + olhar[1];
+    const iris = [f("ellipse", { cx: x, cy: y, rx: 4.6, ry, fill: cor })];
+    if (cor !== CONTORNO) iris.push(f("ellipse", { cx: x, cy: y + 0.5, rx: 2.4, ry: ry * 0.55, fill: CONTORNO }));
+    return [...iris, f("circle", { cx: x + 1.6, cy: y - 2.2, r: 1.7, fill: "#FFFFFF" })];
   }
 
-  function rosto(emocao) {
+  function rosto(emocao, corOlhos = CONTORNO) {
+    const olhoAberto_ = (cx, cy, ry, olhar) => olhoAberto(cx, cy, ry, olhar, corOlhos);
     const sorriso = traco("M60 84 Q70 93 80 84");
     const sobrancelhas = [traco("M50 56 Q56 53 62 56"), traco("M78 56 Q84 53 90 56")];
     switch (emocao) {
@@ -221,29 +243,29 @@
       case "surpreso":
         return [
           traco("M49 52 Q56 47 63 52"), traco("M77 52 Q84 47 91 52"),
-          ...olhoAberto(56, 67, 7.5), ...olhoAberto(84, 67, 7.5),
+          ...olhoAberto_(56, 67, 7.5), ...olhoAberto_(84, 67, 7.5),
           f("ellipse", comContorno({ cx: 70, cy: 89, rx: 4.5, ry: 6, fill: "#7A2730" })),
         ];
       case "pensativo":
         return [
           traco("M50 57 Q56 55 62 57"), traco("M78 53 Q84 49 90 54"),
-          ...olhoAberto(56, 67, 6, [1.5, -2]), ...olhoAberto(84, 67, 6, [1.5, -2]),
+          ...olhoAberto_(56, 67, 6, [1.5, -2]), ...olhoAberto_(84, 67, 6, [1.5, -2]),
           traco("M63 88 Q70 87 78 84"),
         ];
       case "piscadela":
         return [
           ...sobrancelhas,
-          traco("M50 67 Q56 71 62 67"), ...olhoAberto(84, 67),
+          traco("M50 67 Q56 71 62 67"), ...olhoAberto_(84, 67),
           traco("M60 83 Q72 94 82 82"),
         ];
       case "concentrado":
         return [
           traco("M50 54 L62 58"), traco("M78 58 L90 54"),
-          ...olhoAberto(56, 68, 5), ...olhoAberto(84, 68, 5),
+          ...olhoAberto_(56, 68, 5), ...olhoAberto_(84, 68, 5),
           traco("M64 87 Q70 89 76 87"),
         ];
       default:   // feliz
-        return [...sobrancelhas, ...olhoAberto(56, 67), ...olhoAberto(84, 67), sorriso];
+        return [...sobrancelhas, ...olhoAberto_(56, 67), ...olhoAberto_(84, 67), sorriso];
     }
   }
 
@@ -267,7 +289,10 @@
     formas.push(f("rect", comContorno({ x: 62, y: 94, width: 16, height: 26, rx: 6, fill: pele })));
     formas.push(f("ellipse", { cx: 70, cy: 101, rx: 9, ry: 3.2, fill: "#000000", opacity: 0.12 }));
     formas.push(f("circle", comContorno({ cx: 34, cy: 68, r: 7, fill: pele })), f("circle", comContorno({ cx: 106, cy: 68, r: 7, fill: pele })));
-    formas.push(f("circle", comContorno({ cx: 70, cy: 64, r: 36, fill: pele }, 2.4)));
+    if (a.rosto === "oval") formas.push(f("ellipse", comContorno({ cx: 70, cy: 65, rx: 33, ry: 38, fill: pele }, 2.4)));
+    else if (a.rosto === "quadrado") formas.push(f("rect", comContorno({ x: 35, y: 29, width: 70, height: 72, rx: 24, fill: pele }, 2.4)));
+    else formas.push(f("circle", comContorno({ cx: 70, cy: 64, r: 36, fill: pele }, 2.4)));
+    if (usa("brincos")) formas.push(f("circle", comContorno({ cx: 34, cy: 78, r: 3.2, fill: "#E9B824" }, 1.4)), f("circle", comContorno({ cx: 106, cy: 78, r: 3.2, fill: "#E9B824" }, 1.4)));
     formas.push(...cabelo(a.cabelo, corCabelo, false));
     if (usa("laco")) {
       formas.push(f("path", comContorno({ d: "M88 30 L100 22 L100 38 Z M88 30 L76 22 L76 38 Z", fill: "#E85A9B" }, 1.6)), f("circle", comContorno({ cx: 88, cy: 30, r: 3.5, fill: "#E85A9B" }, 1.6)));
@@ -278,7 +303,7 @@
       for (const [x, y] of [[46, 76], [50, 80], [53, 76], [87, 76], [90, 80], [94, 76]]) formas.push(f("circle", { cx: x, cy: y, r: 1.1, fill: "#8A5A3C" }));
     }
     formas.push(traco("M67 75 Q70 78 73 75", CONTORNO, 1.8));
-    formas.push(...rosto(a.emocao));
+    formas.push(...rosto(a.emocao, achar(CORES_OLHOS, a.olhos).cor));
     if (usa("bigode")) formas.push(f("path", comContorno({ d: "M70 81 C64 77 56 79 54 84 C60 83 64 84 70 83 C76 84 80 83 86 84 C84 79 76 77 70 81 Z", fill: corCabelo }, 1.4)));
     if (usa("grau")) {
       formas.push(f("circle", { cx: 56, cy: 67, r: 10.5, fill: "#FFFFFF", "fill-opacity": 0.15, stroke: CONTORNO, "stroke-width": 2.2 }));
@@ -289,6 +314,11 @@
       formas.push(traco("M36 66 L42 66", "#2F6F8F", 3), traco("M98 66 L104 66", "#2F6F8F", 3));
       formas.push(f("rect", { x: 42, y: 56, width: 56, height: 22, rx: 10, fill: "#9FD8F0", "fill-opacity": 0.5, stroke: "#2F6F8F", "stroke-width": 2.8 }));
       formas.push(f("path", { d: "M47 62 L55 60", stroke: "#FFFFFF", "stroke-width": 2.2, "stroke-linecap": "round", opacity: 0.8 }));
+    }
+    if (usa("fones")) {
+      formas.push(f("path", { d: "M32 64 C30 18 110 18 108 64", fill: "none", stroke: CONTORNO, "stroke-width": 7, "stroke-linecap": "round" }));
+      formas.push(f("path", { d: "M32 64 C30 18 110 18 108 64", fill: "none", stroke: "#E85A9B", "stroke-width": 3.5, "stroke-linecap": "round" }));
+      formas.push(f("rect", comContorno({ x: 24, y: 58, width: 14, height: 22, rx: 6, fill: "#E85A9B" })), f("rect", comContorno({ x: 102, y: 58, width: 14, height: 22, rx: 6, fill: "#E85A9B" })));
     }
     // nas mãos e no bolso
     if (usa("caneta")) formas.push(f("rect", comContorno({ x: 89, y: 133, width: 3.5, height: 14, rx: 1.5, fill: "#3F51B5" }, 1.2)), f("rect", comContorno({ x: 95, y: 135, width: 3.5, height: 12, rx: 1.5, fill: "#C62828" }, 1.2)));
@@ -317,7 +347,8 @@
   function descricaoDoAvatar(av) {
     const a = lerAvatar(av, 99, PELES.flatMap((p) => p.paletas || []));
     const base = `Avatar: cientista ${achar(EMOCOES, a.emocao).expressao}, de jaleco com gola ${achar(GOLAS, a.gola).nome.toLowerCase()}, pele ${achar(PELES, a.pele).nome.toLowerCase()}, cabelo ${achar(CABELOS, a.cabelo).nome.toLowerCase()}`
-      + (a.cabelo === "raspado" ? "" : ` ${achar(CORES_CABELO, a.corCabelo).nome.toLowerCase()}`);
+      + (a.cabelo === "raspado" ? "" : ` ${achar(CORES_CABELO, a.corCabelo).nome.toLowerCase()}`)
+      + (a.olhos === "escuro" ? "" : `, olhos ${achar(CORES_OLHOS, a.olhos).nome.toLowerCase()}`);
     const itens = [...a.acessorios.map((id) => achar(ACESSORIOS, id).nome), ...a.enfeites.map((id) => achar(ENFEITES, id).nome)].map((n) => n.toLowerCase());
     return itens.length ? `${base}, com ${itens.length > 1 ? `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}` : itens[0]}.` : `${base}.`;
   }
@@ -371,5 +402,5 @@
     ];
   }
 
-  window.Avatar = { VIEWBOX_AVATAR, VIEWBOX_CRACHA, APELIDO_MAXIMO, PELES, CABELOS, CORES_CABELO, GOLAS, EMOCOES, ACESSORIOS, ENFEITES, AVATAR_PADRAO: PADRAO, lerAvatar, lerApelido, estadoDasPeles, estadoDosAcessorios, acessoriosDoTitulo, formasDoAvatar, descricaoDoAvatar, formasDoCracha };
+  window.Avatar = { VIEWBOX_AVATAR, VIEWBOX_CRACHA, APELIDO_MAXIMO, PELES, ROSTOS, CORES_OLHOS, CABELOS, CORES_CABELO, GOLAS, EMOCOES, ACESSORIOS, ENFEITES, AVATAR_PADRAO: PADRAO, lerAvatar, lerApelido, estadoDasPeles, estadoDosAcessorios, acessoriosDoTitulo, formasDoAvatar, descricaoDoAvatar, formasDoCracha };
 })();

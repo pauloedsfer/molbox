@@ -4603,23 +4603,58 @@
     return svg;
   }
 
-  /* O crachá como PNG (para baixar e mostrar à turma). */
-  function pngDoCracha(svg) {
+  /* Um SVG da página como PNG: o desenho no centro de um quadro [largura, altura], com margem e
+     fundo transparente. */
+  function svgParaPng(svg, quadro, margem) {
     return new Promise((resolver, rejeitar) => {
       const copia = svg.cloneNode(true);
       copia.setAttribute("xmlns", SVG_NS);
-      copia.setAttribute("width", "240");
-      copia.setAttribute("height", "340");
+      const vb = copia.getAttribute("viewBox").split(" ").map(Number);
+      const escala = Math.min((quadro[0] - 2 * (margem || 0)) / vb[2], (quadro[1] - 2 * (margem || 0)) / vb[3]);
+      copia.setAttribute("width", String(Math.round(vb[2] * escala)));
+      copia.setAttribute("height", String(Math.round(vb[3] * escala)));
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        canvas.width = 720; canvas.height = 1020;
-        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.width = quadro[0]; canvas.height = quadro[1];
+        canvas.getContext("2d").drawImage(img, (quadro[0] - vb[2] * escala) / 2, (quadro[1] - vb[3] * escala) / 2, vb[2] * escala, vb[3] * escala);
         canvas.toBlob((b) => (b ? resolver(b) : rejeitar(new Error("png"))), "image/png");
       };
       img.onerror = () => rejeitar(new Error("imagem"));
       img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(copia));
     });
+  }
+
+  /* O crachá como PNG (para baixar e mostrar à turma). */
+  function pngDoCracha(svg) { return svgParaPng(svg, [720, 1020], 0); }
+
+  /* O avatar como figurinha: PNG quadrado de 512 px, fundo transparente. */
+  function pngDoAvatar(av) { return svgParaPng(svgDoAvatar(av, 140), [512, 512], 24); }
+
+  function baixarBlob(blob, arquivo) {
+    const url = URL.createObjectURL(blob);
+    const a = criar("a", { href: url, download: arquivo });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 600000);
+  }
+
+  /* Compartilhar imagem + texto. No celular, a janela de compartilhar do aparelho (o aluno escolhe
+     o WhatsApp e o grupo); no computador, baixa a imagem e abre o WhatsApp Web com o texto. */
+  async function compartilharImagem(blob, arquivo, texto) {
+    const file = typeof File === "function" ? new File([blob], arquivo, { type: "image/png" }) : null;
+    try {
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: texto, title: "SUPER MOLBOX" });
+        return "Pronto! Escolha o WhatsApp e o grupo na janela que abriu.";
+      }
+    } catch (e) {
+      if (e && e.name === "AbortError") return "Envio cancelado.";
+    }
+    baixarBlob(blob, arquivo);
+    const janela = window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank", "noopener");
+    return janela
+      ? `A imagem ${arquivo} foi baixada e o WhatsApp abriu com o texto. Anexe a imagem baixada antes de enviar.`
+      : `A imagem ${arquivo} foi baixada. O navegador bloqueou a janela do WhatsApp: abra o WhatsApp, cole o texto e anexe a imagem.`;
   }
 
   /* Ids das paletas abertas: as peles de fantasia do avatar abrem com elas. */
@@ -4779,6 +4814,75 @@
     });
     figura.appendChild(baixarCracha);
     figura.appendChild(statusCracha);
+
+    // --- compartilhar pelo WhatsApp: divulgação e progresso ao professor ---
+    const TC = window.TextosCompartilhar;
+    const caixaEnvio = criar("div", { className: "compartilhar-avatar" });
+    caixaEnvio.appendChild(criar("p", { className: "titulo-grupo-avatar", id: "titulo-enviar", textContent: "Compartilhar" }));
+    let oQueEnviar = "avatar";
+    const escolhaEnvio = criar("div", { className: "opcoes-avatar" });
+    escolhaEnvio.setAttribute("role", "group");
+    escolhaEnvio.setAttribute("aria-labelledby", "titulo-enviar");
+    const opcoesEnvio = [["avatar", "Avatar (figurinha)"], ["cracha", "Crachá"]].map(([id, nome]) => {
+      const b = criar("button", { type: "button", className: "chip", textContent: nome });
+      b.dataset.envio = id;
+      b.setAttribute("aria-pressed", String(id === oQueEnviar));
+      b.addEventListener("click", () => { oQueEnviar = id; for (const x of opcoesEnvio) x.setAttribute("aria-pressed", String(x === b)); });
+      escolhaEnvio.appendChild(b);
+      return b;
+    });
+    caixaEnvio.appendChild(escolhaEnvio);
+    const statusEnvio = criar("p", { className: "ajuda", id: "envio-zap-status" });
+    statusEnvio.setAttribute("role", "status");
+    const imagemParaEnviar = async () => (oQueEnviar === "cracha"
+      ? { blob: await pngDoCracha(moldura.querySelector("svg")), arquivo: "cracha-super-molbox.png" }
+      : { blob: await pngDoAvatar(avatarAtual()), arquivo: "avatar-super-molbox.png" });
+    async function enviar(texto, botao) {
+      botao.disabled = true;
+      statusEnvio.textContent = "Preparando a imagem...";
+      try { const img = await imagemParaEnviar(); statusEnvio.textContent = await compartilharImagem(img.blob, img.arquivo, texto); }
+      catch (e) { statusEnvio.textContent = "Não consegui preparar a imagem. Tente de novo."; }
+      botao.disabled = false;
+    }
+    const botaoDivulgar = criar("button", { type: "button", className: "botao", textContent: "📲 Enviar no WhatsApp" });
+    botaoDivulgar.addEventListener("click", () => enviar(TC.textoDivulgacao("molbox", oQueEnviar), botaoDivulgar));
+    caixaEnvio.appendChild(botaoDivulgar);
+    caixaEnvio.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: "Vai com um convite e o link do app, para os colegas montarem o deles." }));
+    caixaEnvio.appendChild(criar("label", { htmlFor: "codigo-envio", textContent: "Seu código (o mesmo da folha de exercício)" }));
+    let codigoGuardado = "";
+    try { codigoGuardado = localStorage.getItem(CHAVE_CODIGO) || ""; } catch (e) {}
+    const campoCodigo = criar("input", { type: "text", id: "codigo-envio", maxLength: 12, autocomplete: "off", placeholder: "MASO07", value: codigoGuardado });
+    campoCodigo.setAttribute("aria-describedby", "envio-zap-status");
+    caixaEnvio.appendChild(campoCodigo);
+    const botaoProfessor = criar("button", { type: "button", className: "botao secundario", textContent: "📊 Enviar ao professor" });
+    botaoProfessor.addEventListener("click", () => {
+      cronometro().gravar();
+      const tempo = cronometro().dados().total;
+      const t = compostosEncontrados();
+      const linha = exportarProgresso(progresso, campoCodigo.value, { tempoMin: Math.floor(tempo / 60000), moleculas: t });
+      if (!linha) {
+        campoCodigo.setAttribute("aria-invalid", "true");
+        statusEnvio.textContent = "Escreva o seu código (pelo menos 4 letras ou números), o mesmo combinado com o professor.";
+        campoCodigo.focus();
+        return;
+      }
+      campoCodigo.removeAttribute("aria-invalid");
+      try { localStorage.setItem(CHAVE_CODIGO, campoCodigo.value.trim().toUpperCase()); } catch (e) {}
+      const nv = xpParaProximoNivel(progresso.xp);
+      const bal = progresso.extras && progresso.extras.balanceamento;
+      const texto = TC.textoProfessor("molbox", {
+        codigo: campoCodigo.value.trim().toUpperCase(), apelido: preferencias().apelido, titulo: P.tituloDo(progresso), nivel: nv.nivel, xp: progresso.xp,
+        acertos: progresso.totalAcertos, tentativas: progresso.totalTentativas,
+        extras: [`Compostos da prateleira: ${t.encontradas}/${t.total}`, bal ? `Treino de Balanceamento: ${bal.acertos} acertos` : "",
+          `Tempo de uso: ${window.Tempo.textoDoTempo(tempo)}`, `Medalhas: ${progresso.medalhas.length}`],
+        linha,
+      });
+      enviar(texto, botaoProfessor);
+    });
+    caixaEnvio.appendChild(botaoProfessor);
+    caixaEnvio.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: "Mande no grupo da turma: vai a imagem e o seu progresso, com o código e sem o seu nome." }));
+    caixaEnvio.appendChild(statusEnvio);
+    figura.appendChild(caixaEnvio);
     corpo.appendChild(figura);
     const escolhas = criar("div", { className: "escolhas-avatar" });
 
@@ -4853,6 +4957,8 @@
     escolhas.appendChild(grupo("Emoção", "emocao", A.EMOCOES, av.emocao, false));
     escolhas.appendChild(grupo("Pele", "pele", peles.filter((x) => !x.fantasia), av.pele, true));
     escolhas.appendChild(grupo("Peles de fantasia (abrem com as paletas de presente)", "pele", peles.filter((x) => x.fantasia), av.pele, true, "avatar-pele-fantasia"));
+    escolhas.appendChild(grupo("Formato do rosto", "rosto", A.ROSTOS, av.rosto, false));
+    escolhas.appendChild(grupo("Cor dos olhos", "olhos", A.CORES_OLHOS, av.olhos, true));
     escolhas.appendChild(grupo("Cabelo", "cabelo", A.CABELOS, av.cabelo, false));
     if (av.cabelo !== "raspado") escolhas.appendChild(grupo("Cor do cabelo", "corCabelo", A.CORES_CABELO, av.corCabelo, true));
     escolhas.appendChild(grupo("Cor da gola do jaleco", "gola", A.GOLAS, av.gola, true));
