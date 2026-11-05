@@ -42,6 +42,8 @@ function progressoVazio() {
     ultimoDia: null,
     medalhas: [],
     extras: {},          // { treino: { acertos, erros } } — fora da escada
+    pulos: 0,            // pulos desde o último acerto: dá o custo do próximo
+    totalPulos: 0,
   };
 }
 
@@ -66,6 +68,7 @@ function carregarProgresso() {
     if (!p.porTipo) p.porTipo = {};
     if (!p.extras) p.extras = {};   // progresso salvo antes dos treinos extras
     if (!Array.isArray(p.medalhas)) p.medalhas = [];
+    for (const c of ["xp", "pulos", "totalPulos"]) if (!Number.isInteger(p[c]) || p[c] < 0) p[c] = 0;
     return p;
   } catch (e) {
     return progressoVazio();
@@ -153,6 +156,7 @@ function registrarResposta(p, exercicio, acertou, usouDica) {
 
   if (acertou) {
     p.totalAcertos += 1;
+    p.pulos = 0;
     p.porDegrau[d].acertos += 1;
     p.porTipo[exercicio.tipo].acertos += 1;
     p.sequencia += 1;
@@ -192,7 +196,34 @@ function registrarResposta(p, exercicio, acertou, usouDica) {
   };
 }
 
-/* Os tipos com maior taxa de erro, para o mapa de dificuldades. */
+/* ---------------- pular exercício ----------------
+
+   Pular custa XP, cada vez mais: 1, 2, 4... até 100 por pulo. O próximo acerto
+   volta o custo para 1. Sem XP não dá para pular: o caminho é ganhar XP nos
+   degraus anteriores. Assim o pulo serve para sair de um exercício empacado,
+   e não para escolher só os fáceis. O mesmo do Super Organic Box. */
+const CUSTOS_DO_PULO = [1, 2, 4, 8, 16, 32, 64, 100];
+
+/* `custo`: o XP que sai (nunca mais do que o aluno tem); `pode`: ainda há XP. */
+function custoDoPulo(p) {
+  const tabela = CUSTOS_DO_PULO[Math.min(p.pulos || 0, CUSTOS_DO_PULO.length - 1)];
+  return { pode: p.xp > 0, custo: Math.min(tabela, p.xp) };
+}
+
+/* Tira o XP, conta o pulo e quebra a sequência. Não conta como tentativa nem
+   como erro: o mapa de dificuldades fica com o que o aluno respondeu. */
+function registrarPulo(p) {
+  const { pode, custo } = custoDoPulo(p);
+  if (!pode) return { pulou: false, perda: 0, proximo: custoDoPulo(p) };
+  registrarDia(p);
+  p.xp -= custo;
+  p.pulos = (p.pulos || 0) + 1;
+  p.totalPulos = (p.totalPulos || 0) + 1;
+  p.sequencia = 0;
+  salvarProgresso(p);
+  return { pulou: true, perda: custo, proximo: custoDoPulo(p) };
+}
+
 /* Treinos extras dão XP e não mexem na escada.
 
    Por que não reaproveitar `registrarResposta`: ela grava em `porDegrau`, e
@@ -213,6 +244,7 @@ function registrarTreinoExtra(p, treino, acertou, usouDica) {
 
   if (acertou) {
     p.totalAcertos += 1;
+    p.pulos = 0;
     p.extras[treino].acertos += 1;
     p.sequencia += 1;
     p.melhorSequencia = Math.max(p.melhorSequencia, p.sequencia);
@@ -300,6 +332,8 @@ function exportarProgresso(p, codigo, extra) {
   const mol = extra && extra.moleculas;
   if (mol && Number.isInteger(mol.encontradas) && Number.isInteger(mol.total)) campos.push("mol=" + mol.encontradas + "/" + mol.total);
 
+  if (Number.isInteger(p.totalPulos) && p.totalPulos > 0) campos.push("pu=" + p.totalPulos);
+
   const bal = p.extras && p.extras.balanceamento ? p.extras.balanceamento : null;
   if (bal) campos.push("bal=" + bal.acertos + "/" + (bal.acertos + bal.erros));
 
@@ -345,6 +379,7 @@ function lerExportacao(linha) {
   return dados.codigo ? dados : null;
 }
 
+/* Os tipos com maior taxa de erro, para o mapa de dificuldades. */
 function pontosFracos(p, minimo = 2) {
   const lista = [];
   for (const tipo in p.porTipo) {

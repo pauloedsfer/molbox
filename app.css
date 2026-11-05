@@ -1644,3 +1644,6 @@ header.barra { background: var(--mb-barra); }
   .palco-cracha { display: block; }
   .cartao-cracha .moldura-cracha { display: none; }
 }
+
+/* Pular sem XP: o botão continua focável e explica por quê, mas parece travado. */
+.acoes .botao[aria-disabled="true"], .montador-acoes .botao[aria-disabled="true"] { opacity: 0.6; cursor: not-allowed; }

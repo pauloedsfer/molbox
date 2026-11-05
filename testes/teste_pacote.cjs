@@ -36,6 +36,21 @@ module.exports = ({ teste, igual, verdadeiro, carregar, RAIZ }) => {
     verdadeiro(!ctx.exportarProgresso(p, "MASO07").includes("mol="));
   });
 
+  teste("pular: custa 1, 2, 4... até 100 XP, nunca negativo, sem XP não pula, acerto volta a 1", () => {
+    const ctx = carregar(["js/progresso.js"]);
+    const p = ctx.progressoVazio();
+    p.xp = 300;
+    const perdas = [];
+    for (let i = 0; i < 9; i++) perdas.push(ctx.registrarPulo(p).perda);
+    igual(perdas, [1, 2, 4, 8, 16, 32, 64, 100, 73]);
+    igual(p.xp, 0);
+    igual(ctx.registrarPulo(p).pulou, false);
+    igual(p.totalTentativas, 0, "pulo não é tentativa");
+    ctx.registrarTreinoExtra(p, "balanceamento", true, false);
+    igual(ctx.custoDoPulo(p).custo, 1);
+    verdadeiro(ctx.exportarProgresso(p, "MASO07").includes(";pu=9"));
+  });
+
   teste("o gerador de PDF convertido do Organic produz um PDF", () => {
     const ctx = carregar(["js/formula_texto.js", "js/pdf.js"]);
     const b = ctx.window.Pdf.gerarPdf({ titulo: "Certificado", blocos: [{ tipo: "titulo", texto: "Certificado" }, { tipo: "secao", texto: "Ana Júlia" }], rodape: "SUPER MOLBOX" });
