@@ -4607,7 +4607,7 @@
   }
 
   /* Um SVG da página como PNG: o desenho no centro de um quadro [largura, altura], com margem e
-     fundo transparente. */
+     fundo branco. */
   function svgParaPng(svg, quadro, margem) {
     return new Promise((resolver, rejeitar) => {
       const copia = svg.cloneNode(true);
@@ -4620,7 +4620,11 @@
       img.onload = () => {
         const canvas = document.createElement("canvas");
         canvas.width = quadro[0]; canvas.height = quadro[1];
-        canvas.getContext("2d").drawImage(img, (quadro[0] - vb[2] * escala) / 2, (quadro[1] - vb[3] * escala) / 2, vb[2] * escala, vb[3] * escala);
+        const ctx = canvas.getContext("2d");
+        // Fundo branco: no WhatsApp, o fundo transparente aparece preto no tema escuro.
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, quadro[0], quadro[1]);
+        ctx.drawImage(img, (quadro[0] - vb[2] * escala) / 2, (quadro[1] - vb[3] * escala) / 2, vb[2] * escala, vb[3] * escala);
         canvas.toBlob((b) => (b ? resolver(b) : rejeitar(new Error("png"))), "image/png");
       };
       img.onerror = () => rejeitar(new Error("imagem"));
@@ -4631,7 +4635,7 @@
   /* O crachá como PNG (para baixar e mostrar à turma). */
   function pngDoCracha(svg) { return svgParaPng(svg, [720, 1020], 0); }
 
-  /* O avatar como figurinha: PNG quadrado de 512 px, fundo transparente. */
+  /* O avatar como figurinha: PNG quadrado de 512 px com fundo branco. */
   function pngDoAvatar(av) { return svgParaPng(svgDoAvatar(av, 140), [512, 512], 24); }
 
   function baixarBlob(blob, arquivo) {
@@ -4986,6 +4990,10 @@
     escolhas.appendChild(grupo("Cabelo", "cabelo", A.CABELOS, av.cabelo, false));
     if (av.cabelo !== "raspado") escolhas.appendChild(grupo("Cor do cabelo", "corCabelo", A.CORES_CABELO, av.corCabelo, true));
     escolhas.appendChild(grupo("Cor da gola do jaleco", "gola", A.GOLAS, av.gola, true));
+    // A cor do crachá e do cordão: a da paleta ou a da gola, cada uma com a amostra.
+    const daPaleta = getComputedStyle(document.documentElement).getPropertyValue("--mb-lateral-fundo").trim() || "#164194";
+    const corGola = A.GOLAS.find((g) => g.id === av.gola).cor;
+    escolhas.appendChild(grupo("Cor do crachá e do cordão", "cracha", A.CORES_CRACHA.map((c) => Object.assign({}, c, { cor: c.id === "gola" ? corGola : daPaleta })), av.cracha, true));
     escolhas.appendChild(alternaveis("Enfeites", "avatar-enfeites", "Para todo mundo, desde o começo. Toque para usar ou tirar.", A.ENFEITES, av.enfeites, "enfeite"));
     escolhas.appendChild(alternaveis("Acessórios de laboratório", "avatar-acessorios", "Cada título novo no Treino abre um acessório. Toque para usar ou tirar.", A.estadoDosAcessorios(indice, P.TITULOS), av.acessorios, "acessorio"));
     cartaoEscolhas.appendChild(escolhas);

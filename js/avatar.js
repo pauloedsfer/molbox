@@ -1,4 +1,4 @@
-/* ORIGEM: dados/avatar.js (Super Organic Box), convertido por ferramentas/converter_modulo.cjs.
+/* ORIGEM: dados/avatar.js (Super Organic Box) (Super Organic Box), convertido por ferramentas/converter_modulo.cjs.
    Mude lá e converta de novo: os dois aplicativos usam a mesma lógica. */
 (function () {
   "use strict";
@@ -118,7 +118,13 @@
     { id: "fones", nome: "Fone de ouvido" },
   ];
 
-  const PADRAO = { pele: "p3", rosto: "redondo", olhos: "escuro", cabelo: "curto", corCabelo: "castanho", gola: "verde", emocao: "feliz", acessorios: [], enfeites: [] };
+  /* A cor do crachá e do cordão: a da paleta em uso ou a mesma da gola do jaleco. */
+  const CORES_CRACHA = [
+    { id: "paleta", nome: "Da paleta" },
+    { id: "gola", nome: "Da gola do jaleco" },
+  ];
+
+  const PADRAO = { pele: "p3", rosto: "redondo", olhos: "escuro", cabelo: "curto", corCabelo: "castanho", gola: "verde", emocao: "feliz", acessorios: [], enfeites: [], cracha: "paleta" };
 
   const achar = (lista, id) => lista.find((x) => x.id === id);
 
@@ -146,6 +152,7 @@
       emocao: valido(EMOCOES, d.emocao, PADRAO.emocao),
       acessorios: ACESSORIOS.filter((a) => usados.includes(a.id) && a.titulo <= indiceDoTitulo).map((a) => a.id),
       enfeites: ENFEITES.filter((e) => enfeites.includes(e.id)).map((e) => e.id),
+      cracha: valido(CORES_CRACHA, d.cracha, PADRAO.cracha),
     };
   }
 
@@ -415,12 +422,25 @@
     return lista;
   }
 
+  // Cor clara (o amarelo da gola, por exemplo) pede texto escuro em cima e no fundo branco.
+  function corClara(hex) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3;
+  }
+
   /* O crachá do aluno: o avatar numa moldura, o apelido, o título e as linhas de números. `cor` é a
-     cor da faixa (a barra da paleta em uso); `app` é o nome do aplicativo. Os textos entram como
-     texto puro (`texto`), nunca como marcação. */
+     cor da faixa e do cordão (a barra da paleta em uso), trocada pela cor da gola quando o avatar
+     pede (`avatar.cracha === "gola"`); `app` é o nome do aplicativo. Os textos entram como texto
+     puro (`texto`), nunca como marcação. */
   function formasDoCracha({ avatar, apelido, titulo, linhas = [], cor = "#1B5E3A", app = "SUPER ORGANIC BOX" }) {
     const nome = lerApelido(apelido);
-    const corOk = /^#[0-9A-Fa-f]{6}$/.test(cor) ? cor : "#1B5E3A";
+    const daGola = avatar && avatar.cracha === "gola" && achar(GOLAS, avatar.gola);
+    const pedida = daGola ? daGola.cor : cor;
+    const corOk = /^#[0-9A-Fa-f]{6}$/.test(pedida) ? pedida : "#1B5E3A";
+    const clara = corClara(corOk);
+    const sobreFaixa = clara ? CONTORNO : "#FFFFFF";
+    const corTitulo = clara ? CONTORNO : corOk;
     const texto = (x, y, conteudo, extra) => f("text", { x, y, "text-anchor": "middle", "font-family": "'Exo 2', Inter, Arial, Helvetica, sans-serif", "font-style": "normal", ...extra }, { texto: String(conteudo) });
     return [
       f("rect", { x: 108, y: 0, width: 24, height: 28, fill: corOk }),
@@ -428,16 +448,16 @@
       f("rect", comContorno({ x: 10, y: 34, width: 220, height: 298, rx: 18, fill: "#FFFFFF" })),
       f("path", { d: "M10 52 Q10 34 28 34 L212 34 Q230 34 230 52 L230 92 L10 92 Z", fill: corOk }),
       f("rect", { x: 112, y: 40, width: 16, height: 5, rx: 2.5, fill: "#FFFFFF", opacity: 0.6 }),
-      texto(120, 66, app, { "font-size": 15, "font-weight": 700, "font-style": "italic", fill: "#FFFFFF" }),
-      texto(120, 83, "CRACHÁ DE LABORATÓRIO", { "font-size": 9.5, "letter-spacing": 1.6, fill: "#FFFFFF" }),
+      texto(120, 66, app, { "font-size": 15, "font-weight": 700, "font-style": "italic", fill: sobreFaixa }),
+      texto(120, 83, "CRACHÁ DE LABORATÓRIO", { "font-size": 9.5, "letter-spacing": 1.6, fill: sobreFaixa }),
       f("rect", comContorno({ x: 58, y: 100, width: 124, height: 138, rx: 14, fill: "#EEF2F5" }, 1.8)),
       f("g", { transform: "translate(64 104) scale(0.8)" }, { filhos: formasDoAvatar(avatar) }),
       texto(120, 262, nome, { "font-size": 19, "font-weight": 700, fill: CONTORNO }),
-      texto(120, 280, titulo || "", { "font-size": 12, "font-weight": 600, fill: corOk }),
+      texto(120, 280, titulo || "", { "font-size": 12, "font-weight": 600, fill: corTitulo }),
       ...linhas.slice(0, 1).map((l) => texto(120, 297, l, { "font-size": 10.5, fill: "#4A5560" })),
       ...barras(nome),
     ];
   }
 
-  window.Avatar = { VIEWBOX_AVATAR, VIEWBOX_CRACHA, APELIDO_MAXIMO, PELES, ROSTOS, CORES_OLHOS, CABELOS, CORES_CABELO, GOLAS, EMOCOES, ACESSORIOS, ENFEITES, AVATAR_PADRAO: PADRAO, lerAvatar, lerApelido, estadoDasPeles, estadoDosAcessorios, acessoriosDoTitulo, formasDoAvatar, descricaoDoAvatar, formasDoCracha };
+  window.Avatar = { VIEWBOX_AVATAR, VIEWBOX_CRACHA, APELIDO_MAXIMO, PELES, ROSTOS, CORES_OLHOS, CABELOS, CORES_CABELO, GOLAS, CORES_CRACHA, EMOCOES, ACESSORIOS, ENFEITES, AVATAR_PADRAO: PADRAO, lerAvatar, lerApelido, estadoDasPeles, estadoDosAcessorios, acessoriosDoTitulo, formasDoAvatar, descricaoDoAvatar, formasDoCracha };
 })();
