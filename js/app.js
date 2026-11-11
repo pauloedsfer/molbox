@@ -4184,7 +4184,7 @@
     }
 
     if (q.formulas && q.formulas.length) montarConsulta(alvo, q);
-    if (q.formato !== "escolha") {
+    if (q.formato !== "escolha" || q.numerica) {
       montarCalculadora(alvo, document.getElementById("resposta"));
       const campoResposta = document.getElementById("resposta");
       if (!estado.respondido && campoResposta) campoResposta.focus();
@@ -4302,7 +4302,8 @@
       destino.value = formatarNumero(valor, 4);
       destino.focus();
     });
-    acoes.appendChild(usar);
+    // Sem campo de resposta (questão de alternativas), a calculadora só faz a conta.
+    if (campoResposta) acoes.appendChild(usar);
     const limpar = criar("button", { className: "botao secundario", type: "button", textContent: "Limpar" });
     limpar.addEventListener("click", () => { campo.value = ""; estado.expressao = ""; campo.focus(); atualizar(); });
     acoes.appendChild(limpar);
