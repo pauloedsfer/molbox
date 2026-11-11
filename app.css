@@ -1624,25 +1624,66 @@ header.barra { background: var(--mb-barra); }
 .avatar-barra svg { width: 46px; height: auto; margin-top: -2px; }
 .avatar-barra:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 2px; }
 
-/* ---------- tela Meu avatar: prévia sempre à vista ---------- */
+/* ---------- tela Meu avatar: prévia sempre à vista, abas e miniaturas ---------- */
 
 #painel-avatar .cartao { margin-bottom: var(--mb-e4); }
-.palco { margin-bottom: var(--mb-e4); position: sticky; top: 56px; z-index: 6; }
-.palco-celular { display: flex; align-items: center; justify-content: center; gap: var(--mb-e3); background: var(--mb-fundo); padding: var(--mb-e2) 0; border-bottom: 1px solid var(--mb-borda); }
-.palco-avatar { background: var(--mb-superficie-2); border-radius: 50%; width: 112px; height: 112px; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; flex: 0 0 auto; }
-.palco-avatar svg { display: block; margin-top: -4px; }
+/* A prévia fica presa abaixo do cabeçalho enquanto as opções rolam (a caixa de fora é a página). */
+.palco {
+  position: sticky; top: 56px; z-index: 6; margin-bottom: var(--mb-e3);
+  display: flex; align-items: center; justify-content: center; gap: var(--mb-e4);
+  background: var(--mb-fundo); padding: var(--mb-e2) 0; border-bottom: 1px solid var(--mb-borda);
+}
+.palco-avatar { background: var(--mb-superficie-2); border-radius: 24px; width: 150px; height: 150px; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; flex: 0 0 auto; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+.palco-avatar svg { display: block; margin-top: -6px; }
+.palco-lado { display: flex; flex-direction: column; gap: var(--mb-e2); align-items: flex-start; min-width: 0; }
 .nome-palco { font-family: var(--mb-fonte-marca); font-style: italic; font-weight: 600; font-size: var(--mb-t-titulo-3); margin: 0; overflow-wrap: anywhere; }
-.palco-cracha { display: none; }
-.palco-cracha svg { display: block; max-width: 100%; height: auto; margin: 0 auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18)); }
+.abas-avatar { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px var(--mb-e2); margin: 0 calc(-1 * var(--mb-e2)); scrollbar-width: thin; }
+.aba-avatar {
+  appearance: none; cursor: pointer; font: inherit; font-size: var(--mb-t-legenda); flex: 0 0 auto; min-width: 66px; min-height: 58px; padding: 6px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: var(--mb-superficie-2); color: var(--mb-texto); border: 2px solid transparent; border-radius: 14px;
+}
+.aba-avatar .aba-icone { font-size: 1.35rem; line-height: 1.2; }
+.aba-avatar:hover { border-color: var(--mb-borda); }
+.aba-avatar[aria-pressed="true"] { border-color: var(--mb-interacao); background: var(--mb-superficie); font-weight: 700; }
+.aviso-avatar { min-height: 1.4em; margin: var(--mb-e2) 0; }
+.painel-avatar { display: flex; flex-direction: column; gap: var(--mb-e4); }
+.grade-avatar { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--mb-e2); }
+.mini-opcao {
+  appearance: none; cursor: pointer; font: inherit; position: relative; padding: 6px 4px 8px; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--mb-superficie-2); color: var(--mb-texto); border: 3px solid transparent; border-radius: 16px;
+}
+.mini-opcao svg { display: block; width: 100%; max-width: 84px; height: auto; border-radius: 12px; }
+.mini-nome { font-size: var(--mb-t-legenda); line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+.mini-opcao:hover { border-color: var(--mb-borda); }
+.mini-opcao[aria-pressed="true"] { border-color: var(--mb-interacao); background: var(--mb-superficie); }
+.mini-opcao[aria-pressed="true"] .mini-nome { font-weight: 700; }
+.mini-opcao.fechada { cursor: help; }
+.mini-opcao.fechada svg { filter: grayscale(1); opacity: 0.45; }
+.mini-opcao .cadeado { position: absolute; top: 4px; right: 6px; font-size: 1rem; }
+.cores-avatar { display: flex; flex-wrap: wrap; gap: 10px; }
+.bolinha-cor { appearance: none; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--mb-borda); padding: 0; }
+.bolinha-cor[aria-pressed="true"] { outline: 3px solid var(--mb-interacao); outline-offset: 3px; }
+.bolinha-cor.sem-cor { background: repeating-linear-gradient(45deg, var(--mb-superficie-2) 0 6px, var(--mb-superficie) 6px 12px); }
+.painel-avatar .figura-avatar { background: none; padding: 0; display: flex; flex-direction: column; gap: var(--mb-e2); max-width: 320px; }
+.painel-avatar .moldura-cracha svg { display: block; max-width: 100%; height: auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18)); }
+@media (max-width: 420px) {
+  .palco-avatar { width: 124px; height: 124px; }
+  .palco-avatar svg { width: 124px; height: auto; }
+  .grade-avatar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) {
+  .avatar-pagina { display: grid; grid-template-columns: 240px minmax(0, 1fr); column-gap: var(--mb-e5); align-items: start; }
+  .palco { top: calc(56px + var(--mb-e3)); flex-direction: column; border-bottom: 0; background: none; }
+  .palco-avatar { width: 220px; height: 220px; }
+  .palco-avatar svg { width: 220px; height: auto; }
+  .palco-lado { align-items: center; }
+  .abas-avatar { flex-wrap: wrap; overflow: visible; }
+}
 .cartao-avatar-resumo { display: flex; gap: var(--mb-e4); align-items: center; }
 .mini-avatar-cartao { background: var(--mb-superficie-2); border-radius: var(--mb-raio-card); padding: var(--mb-e2); flex: 0 0 auto; }
 .mini-avatar-cartao svg { display: block; }
-@media (min-width: 900px) {
-  .avatar-pagina { display: grid; grid-template-columns: 280px minmax(0, 1fr); column-gap: var(--mb-e5); align-items: start; }
-  .palco { grid-row: 1 / span 2; top: 72px; }
-  .palco-celular { display: none; }
-  .palco-cracha { display: block; }
-  .cartao-cracha .moldura-cracha { display: none; }
 }
 
 /* Pular sem XP: o botão continua focável e explica por quê, mas parece travado. */

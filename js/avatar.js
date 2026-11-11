@@ -49,6 +49,10 @@
     { id: "trancas", nome: "Tranças" },
     { id: "moicano", nome: "Moicano" },
     { id: "raspado", nome: "Raspado" },
+    { id: "ondulado", nome: "Ondulado" },
+    { id: "chanel", nome: "Chanel" },
+    { id: "topete", nome: "Topete" },
+    { id: "dreads", nome: "Dreads" },
   ];
 
   const CORES_CABELO = [
@@ -80,6 +84,12 @@
     { id: "quadrado", nome: "Quadrado" },
   ];
 
+  const SOBRANCELHAS = [
+    { id: "fina", nome: "Finas", largura: 1.5 },
+    { id: "natural", nome: "Naturais", largura: 2.4 },
+    { id: "grossa", nome: "Grossas", largura: 4 },
+  ];
+
   const CORES_OLHOS = [
     { id: "escuro", nome: "Escuros", cor: CONTORNO },
     { id: "castanho", nome: "Castanhos", cor: "#6B4423" },
@@ -108,14 +118,36 @@
     { id: "capelo", nome: "Capelo de formatura", titulo: 6 },
   ];
 
-  /* Enfeites que todo mundo pode usar desde o começo. */
+  /* Enfeites que todo mundo pode usar desde o começo. `grupo` é a aba do editor em que o enfeite
+     aparece; nos grupos de GRUPOS_DE_UM_SO o aluno usa um por vez (um par de óculos, um chapéu). */
   const ENFEITES = [
-    { id: "grau", nome: "Óculos de grau" },
-    { id: "sardas", nome: "Sardas" },
-    { id: "bigode", nome: "Bigode" },
-    { id: "laco", nome: "Laço no cabelo" },
-    { id: "brincos", nome: "Brincos" },
-    { id: "fones", nome: "Fone de ouvido" },
+    { id: "grau", nome: "Óculos redondos", grupo: "oculos" },
+    { id: "quadrado", nome: "Óculos quadrados", grupo: "oculos" },
+    { id: "escuros", nome: "Óculos escuros", grupo: "oculos" },
+    { id: "sardas", nome: "Sardas", grupo: "detalhe" },
+    { id: "bigode", nome: "Bigode", grupo: "barba" },
+    { id: "cavanhaque", nome: "Cavanhaque", grupo: "barba" },
+    { id: "barba", nome: "Barba", grupo: "barba" },
+    { id: "laco", nome: "Laço no cabelo", grupo: "detalhe" },
+    { id: "brincos", nome: "Brincos", grupo: "detalhe" },
+    { id: "fones", nome: "Fone de ouvido", grupo: "detalhe" },
+    { id: "bone", nome: "Boné", grupo: "cabeca" },
+    { id: "gorro", nome: "Gorro", grupo: "cabeca" },
+    { id: "chapeu", nome: "Chapéu de palha", grupo: "cabeca" },
+  ];
+  const GRUPOS_DE_UM_SO = ["oculos", "cabeca"];
+
+  /* O fundo da figurinha: sem fundo (como sempre foi) ou uma cor. */
+  const FUNDOS = [
+    { id: "nenhum", nome: "Sem fundo", cor: "" },
+    { id: "ceu", nome: "Céu", cor: "#BFE0FF" },
+    { id: "menta", nome: "Menta", cor: "#BFE8CF" },
+    { id: "limao", nome: "Limão", cor: "#F5E9A6" },
+    { id: "pessego", nome: "Pêssego", cor: "#FFD3B0" },
+    { id: "rosa", nome: "Rosa", cor: "#F9C6D8" },
+    { id: "lilas", nome: "Lilás", cor: "#D9C8F5" },
+    { id: "cinza", nome: "Cinza", cor: "#DADDE3" },
+    { id: "noite", nome: "Noite", cor: "#2B2A33" },
   ];
 
   /* A cor do crachá e do cordão: a da paleta em uso ou a mesma da gola do jaleco. */
@@ -124,7 +156,7 @@
     { id: "gola", nome: "Da gola do jaleco" },
   ];
 
-  const PADRAO = { pele: "p3", rosto: "redondo", olhos: "escuro", cabelo: "curto", corCabelo: "castanho", gola: "verde", emocao: "feliz", acessorios: [], enfeites: [], cracha: "paleta" };
+  const PADRAO = { pele: "p3", rosto: "redondo", olhos: "escuro", cabelo: "curto", corCabelo: "castanho", gola: "verde", emocao: "feliz", acessorios: [], enfeites: [], cracha: "paleta", sobrancelha: "natural", fundo: "nenhum" };
 
   const achar = (lista, id) => lista.find((x) => x.id === id);
 
@@ -153,7 +185,33 @@
       acessorios: ACESSORIOS.filter((a) => usados.includes(a.id) && a.titulo <= indiceDoTitulo).map((a) => a.id),
       enfeites: ENFEITES.filter((e) => enfeites.includes(e.id)).map((e) => e.id),
       cracha: valido(CORES_CRACHA, d.cracha, PADRAO.cracha),
+      sobrancelha: valido(SOBRANCELHAS, d.sobrancelha, PADRAO.sobrancelha),
+      fundo: valido(FUNDOS, d.fundo, PADRAO.fundo),
     };
+  }
+
+  /* Liga ou desliga um enfeite. Nos grupos de um só (óculos, chapéus), o novo tira o anterior. */
+  function alternarEnfeite(usados, id) {
+    const item = achar(ENFEITES, id);
+    if (!item) return usados;
+    if (usados.includes(id)) return usados.filter((x) => x !== id);
+    const resto = GRUPOS_DE_UM_SO.includes(item.grupo) ? usados.filter((x) => achar(ENFEITES, x).grupo !== item.grupo) : usados;
+    return ENFEITES.filter((e) => e.id === id || resto.includes(e.id)).map((e) => e.id);
+  }
+
+  /* Um avatar sorteado só com o que o aluno já abriu. `sorteio`: função como Math.random. */
+  function avatarSurpresa(sorteio = Math.random, indiceDoTitulo = 0, paletasAbertas = []) {
+    const um = (lista) => lista[Math.floor(sorteio() * lista.length)].id;
+    const enfeites = [];
+    for (const grupo of ["oculos", "barba", "cabeca", "detalhe"]) {
+      if (sorteio() < 0.35) enfeites.push(um(ENFEITES.filter((e) => e.grupo === grupo)));
+    }
+    return lerAvatar({
+      pele: um(PELES.filter((p) => peleAberta(p, paletasAbertas))),
+      rosto: um(ROSTOS), olhos: um(CORES_OLHOS), sobrancelha: um(SOBRANCELHAS), cabelo: um(CABELOS), corCabelo: um(CORES_CABELO),
+      gola: um(GOLAS), emocao: um(EMOCOES), fundo: um(FUNDOS), enfeites,
+      acessorios: ACESSORIOS.filter((a) => a.titulo <= indiceDoTitulo && sorteio() < 0.5).map((a) => a.id),
+    }, indiceDoTitulo, paletasAbertas);
   }
 
   /* Cada pele, aberta ou não, com a paleta que a abre. `nomesDePaleta`: { id: nome } do aplicativo. */
@@ -223,24 +281,59 @@
           f("path", { d: "M35 60 C34 34 52 27 70 27 C88 27 106 34 105 60 C98 46 84 41 70 41 C56 41 42 46 35 60 Z", fill: cor, opacity: 0.35 }),
           forma("M60 46 L54 22 L64 31 L70 9 L76 31 L86 22 L80 46 C74 42 66 42 60 46 Z"),
         ];
+      case "ondulado":
+        return atras
+          ? [forma("M31 60 C28 20 112 20 109 60 C117 74 105 84 113 98 C106 106 99 98 95 106 L45 106 C41 98 34 106 27 98 C35 84 23 74 31 60 Z")]
+          : [forma("M33 62 C31 32 50 23 70 23 C92 23 110 34 107 62 C102 50 94 50 88 44 C80 50 72 40 64 46 C54 40 42 48 33 62 Z")];
+      case "chanel":
+        return atras
+          ? [forma("M30 60 C27 18 113 18 110 60 L113 92 C105 97 98 95 96 90 L44 90 C42 95 35 97 27 92 Z")]
+          : [forma("M33 62 C31 32 50 23 70 23 C92 23 110 34 107 62 L104 49 C90 54 50 54 36 49 Z")];
+      case "topete":
+        return atras ? [] : [forma("M33 62 C31 38 46 27 60 27 C56 13 86 5 100 20 C109 29 110 46 107 62 C100 50 90 44 76 44 C62 44 42 48 33 62 Z")];
+      case "dreads": {
+        if (!atras) return [forma(frenteLisa), ...[46, 58, 70, 82, 94].map((x) => traco(`M${x} ${x === 70 ? 24 : x === 46 || x === 94 ? 31 : 26} L${x + (x - 70) * 0.08} 41`, CONTORNO, 1.4))];
+        const mecha = (x, altura) => f("rect", comContorno({ x: x - 5, y: 46, width: 10, height: altura, rx: 5, fill: cor }, 2));
+        return [mecha(27, 70), mecha(38, 78), mecha(102, 78), mecha(113, 70), ...[[27, 108], [113, 108]].map(([cx, cy]) => f("rect", comContorno({ x: cx - 5, y: cy, width: 10, height: 5, rx: 2, fill: "#E9B824" }, 1.4)))];
+      }
       default:   // curto
         return atras ? [] : [forma("M33 62 C31 34 50 24 70 24 C92 24 110 36 107 62 C100 50 90 44 78 44 C72 50 60 50 54 46 C45 48 38 54 33 62 Z")];
     }
   }
 
-  // Olho aberto: a íris na cor escolhida, a pupila escura e o brilho.
-  function olhoAberto(cx, cy, ry = 6, olhar = [0, 0], cor = CONTORNO) {
-    const x = cx + olhar[0];
-    const y = cy + olhar[1];
-    const iris = [f("ellipse", { cx: x, cy: y, rx: 4.6, ry, fill: cor })];
-    if (cor !== CONTORNO) iris.push(f("ellipse", { cx: x, cy: y + 0.5, rx: 2.4, ry: ry * 0.55, fill: CONTORNO }));
-    return [...iris, f("circle", { cx: x + 1.6, cy: y - 2.2, r: 1.7, fill: "#FFFFFF" })];
+  // A luz no cabelo: mechas claras por cima da cor, no lugar em que cada corte tem volume.
+  function brilhoDoCabelo(estilo) {
+    const luz = (d, largura = 3) => f("path", { d, fill: "none", stroke: "#FFFFFF", "stroke-width": largura, "stroke-linecap": "round", opacity: 0.28 });
+    switch (estilo) {
+      case "raspado": return [];
+      case "moicano": return [luz("M66 30 L69 17", 2.4)];
+      case "cacheado": return [[48, 27], [64, 21], [81, 26], [94, 38]].map(([x, y]) => luz(`M${x} ${y + 3} Q${x + 3} ${y - 2} ${x + 8} ${y}`, 2.4));
+      case "blackpower": return [luz("M34 30 Q46 12 66 9", 4), luz("M76 9 Q84 10 90 14", 4)];
+      case "topete": return [luz("M68 21 Q80 12 93 21", 3.4), luz("M42 40 Q48 33 56 31", 2.6)];
+      default: return [luz("M45 37 Q56 28 70 28", 3.4), luz("M78 29 Q86 30 92 35", 3.4)];
+    }
   }
 
-  function rosto(emocao, corOlhos = CONTORNO) {
+  // Olho aberto: o branco do olho, a íris na cor escolhida, a pupila, dois brilhos e a pálpebra.
+  function olhoAberto(cx, cy, ry = 6, olhar = [0, 0], cor = CONTORNO) {
+    const x = cx + olhar[0] * 0.8;
+    const y = cy + olhar[1] * 0.8;
+    const iris = cor === CONTORNO ? "#3B2A22" : cor;
+    return [
+      f("ellipse", { cx, cy, rx: 6.6, ry: ry + 1.4, fill: "#FFFFFF", stroke: CONTORNO, "stroke-width": 1.2 }),
+      f("ellipse", { cx: x, cy: y + 0.4, rx: 4.4, ry: Math.min(ry, 5.6), fill: iris }),
+      f("ellipse", { cx: x, cy: y + 0.6, rx: 2.3, ry: Math.min(ry, 5.6) * 0.58, fill: "#17161C" }),
+      f("circle", { cx: x + 1.7, cy: y - 2, r: 1.6, fill: "#FFFFFF" }),
+      f("circle", { cx: x - 1.6, cy: y + 2.2, r: 0.8, fill: "#FFFFFF", opacity: 0.8 }),
+      traco(`M${cx - 7} ${cy - ry * 0.55} Q${cx} ${cy - ry - 3.4} ${cx + 7} ${cy - ry * 0.55}`, CONTORNO, 2),
+    ];
+  }
+
+  function rosto(emocao, corOlhos = CONTORNO, larguraSob = 2.4) {
     const olhoAberto_ = (cx, cy, ry, olhar) => olhoAberto(cx, cy, ry, olhar, corOlhos);
     const sorriso = traco("M60 84 Q70 93 80 84");
-    const sobrancelhas = [traco("M50 56 Q56 53 62 56"), traco("M78 56 Q84 53 90 56")];
+    const sob = (d) => traco(d, CONTORNO, larguraSob);
+    const sobrancelhas = [sob("M50 56 Q56 53 62 56"), sob("M78 56 Q84 53 90 56")];
     switch (emocao) {
       case "rindo":
         return [
@@ -251,13 +344,13 @@
         ];
       case "surpreso":
         return [
-          traco("M49 52 Q56 47 63 52"), traco("M77 52 Q84 47 91 52"),
+          sob("M49 52 Q56 47 63 52"), sob("M77 52 Q84 47 91 52"),
           ...olhoAberto_(56, 67, 7.5), ...olhoAberto_(84, 67, 7.5),
           f("ellipse", comContorno({ cx: 70, cy: 89, rx: 4.5, ry: 6, fill: "#7A2730" })),
         ];
       case "pensativo":
         return [
-          traco("M50 57 Q56 55 62 57"), traco("M78 53 Q84 49 90 54"),
+          sob("M50 57 Q56 55 62 57"), sob("M78 53 Q84 49 90 54"),
           ...olhoAberto_(56, 67, 6, [1.5, -2]), ...olhoAberto_(84, 67, 6, [1.5, -2]),
           traco("M63 88 Q70 87 78 84"),
         ];
@@ -269,7 +362,7 @@
         ];
       case "concentrado":
         return [
-          traco("M50 54 L62 58"), traco("M78 58 L90 54"),
+          sob("M50 54 L62 58"), sob("M78 58 L90 54"),
           ...olhoAberto_(56, 68, 5), ...olhoAberto_(84, 68, 5),
           traco("M64 87 Q70 89 76 87"),
         ];
@@ -317,6 +410,8 @@
     const usa = (id) => a.acessorios.includes(id) || a.enfeites.includes(id);
     const formas = [];
 
+    const fundo = achar(FUNDOS, a.fundo).cor;
+    if (fundo) formas.push(f("rect", { x: 0, y: 0, width: 140, height: 160, rx: 20, fill: fundo }));
     formas.push(...cabelo(a.cabelo, corCabelo, true));
     // jaleco, camisa na cor da gola, lapelas, bolso
     formas.push(f("path", comContorno({ d: "M20 160 C20 134 38 120 70 118 C102 120 120 134 120 160 Z", fill: "#FAFAF7" })));
@@ -324,16 +419,26 @@
     formas.push(traco("M57 119 L63 135 L70 140 L77 135 L83 119", CONTORNO, 1.8), traco("M70 140 L70 160", CONTORNO, 1.6));
     formas.push(f("rect", { x: 86, y: 141, width: 17, height: 13, rx: 2.5, fill: "none", stroke: "#B9BDB8", "stroke-width": 1.6 }));
     formas.push(f("circle", { cx: 70, cy: 148, r: 1.8, fill: "#B9BDB8" }), f("circle", { cx: 70, cy: 156, r: 1.8, fill: "#B9BDB8" }));
+    // o volume do jaleco: sombra dos lados, dobra das mangas e a luz na gola
+    formas.push(f("path", { d: "M21.5 159 C22 138 34 126 50 121.5 C36 132 31 144 31 159 Z", fill: "#DDE3E6", opacity: 0.9 }), f("path", { d: "M118.5 159 C118 138 106 126 90 121.5 C104 132 109 144 109 159 Z", fill: "#DDE3E6", opacity: 0.9 }));
+    formas.push(traco("M38 159 Q37 147 41 139", "#B9BDB8", 1.5), traco("M102 159 Q103 147 99 139", "#B9BDB8", 1.5), traco("M88 144.5 H101", "#B9BDB8", 1.4));
+    formas.push(f("path", { d: "M60.5 121 L66 130", fill: "none", stroke: "#FFFFFF", "stroke-width": 2, "stroke-linecap": "round", opacity: 0.45 }));
     // pescoço, orelhas e cabeça
     formas.push(f("rect", comContorno({ x: 62, y: 94, width: 16, height: 26, rx: 6, fill: pele })));
-    formas.push(f("ellipse", { cx: 70, cy: 101, rx: 9, ry: 3.2, fill: "#000000", opacity: 0.12 }));
+    formas.push(f("path", { d: "M63 97 H77 V104 Q70 109 63 104 Z", fill: "#000000", opacity: 0.16 }));
     const caveira = a.pele === "caveira";
     if (!caveira) formas.push(f("circle", comContorno({ cx: 34, cy: 68, r: 7, fill: pele })), f("circle", comContorno({ cx: 106, cy: 68, r: 7, fill: pele })));
     if (a.rosto === "oval") formas.push(f("ellipse", comContorno({ cx: 70, cy: 65, rx: 33, ry: 38, fill: pele }, 2.4)));
     else if (a.rosto === "quadrado") formas.push(f("rect", comContorno({ x: 35, y: 29, width: 70, height: 72, rx: 24, fill: pele }, 2.4)));
     else formas.push(f("circle", comContorno({ cx: 70, cy: 64, r: 36, fill: pele }, 2.4)));
+    if (!caveira) {
+      // o volume do rosto: a curva da orelha, a sombra do queixo e a luz na bochecha
+      formas.push(traco("M32.5 65.5 Q30.5 69 33.5 72", CONTORNO, 1.3), traco("M107.5 65.5 Q109.5 69 106.5 72", CONTORNO, 1.3));
+      formas.push(f("path", { d: "M45 88 Q70 107 95 88 Q84 100.5 70 100.5 Q56 100.5 45 88 Z", fill: "#000000", opacity: 0.08 }));
+      formas.push(f("path", { d: "M40.5 58 Q41 47 48 40", fill: "none", stroke: "#FFFFFF", "stroke-width": 3, "stroke-linecap": "round", opacity: 0.3 }));
+    }
     if (usa("brincos")) formas.push(f("circle", comContorno({ cx: 34, cy: 78, r: 3.2, fill: "#E9B824" }, 1.4)), f("circle", comContorno({ cx: 106, cy: 78, r: 3.2, fill: "#E9B824" }, 1.4)));
-    formas.push(...cabelo(a.cabelo, corCabelo, false));
+    formas.push(...cabelo(a.cabelo, corCabelo, false), ...brilhoDoCabelo(a.cabelo));
     if (usa("laco")) {
       formas.push(f("path", comContorno({ d: "M88 30 L100 22 L100 38 Z M88 30 L76 22 L76 38 Z", fill: "#E85A9B" }, 1.6)), f("circle", comContorno({ cx: 88, cy: 30, r: 3.5, fill: "#E85A9B" }, 1.6)));
     }
@@ -345,14 +450,27 @@
       if (usa("sardas")) {
         for (const [x, y] of [[46, 76], [50, 80], [53, 76], [87, 76], [90, 80], [94, 76]]) formas.push(f("circle", { cx: x, cy: y, r: 1.1, fill: "#8A5A3C" }));
       }
+      // A barba entra antes da boca, que fica desenhada por cima.
+      if (usa("barba")) formas.push(f("path", comContorno({ d: "M36 70 C35 98 54 107 70 107 C86 107 105 98 104 70 C99 80 92 82 84 79 C76 76 64 76 56 79 C48 82 41 80 36 70 Z", fill: corCabelo }, 2)));
+      if (usa("cavanhaque")) formas.push(f("path", comContorno({ d: "M60 93 C61 107 79 107 80 93 C75 98 65 98 60 93 Z", fill: corCabelo }, 1.6)));
       formas.push(traco("M67 75 Q70 78 73 75", CONTORNO, 1.8));
-      formas.push(...rosto(a.emocao, achar(CORES_OLHOS, a.olhos).cor));
+      formas.push(...rosto(a.emocao, achar(CORES_OLHOS, a.olhos).cor, achar(SOBRANCELHAS, a.sobrancelha).largura));
     }
     if (usa("bigode")) formas.push(f("path", comContorno({ d: "M70 81 C64 77 56 79 54 84 C60 83 64 84 70 83 C76 84 80 83 86 84 C84 79 76 77 70 81 Z", fill: corCabelo }, 1.4)));
     if (usa("grau")) {
       formas.push(f("circle", { cx: 56, cy: 67, r: 10.5, fill: "#FFFFFF", "fill-opacity": 0.15, stroke: CONTORNO, "stroke-width": 2.2 }));
       formas.push(f("circle", { cx: 84, cy: 67, r: 10.5, fill: "#FFFFFF", "fill-opacity": 0.15, stroke: CONTORNO, "stroke-width": 2.2 }));
       formas.push(traco("M66.5 66 Q70 63 73.5 66", CONTORNO, 2), traco("M45.5 66 L36 64", CONTORNO, 2), traco("M94.5 66 L104 64", CONTORNO, 2));
+    }
+    if (usa("quadrado")) {
+      formas.push(f("rect", { x: 45, y: 58, width: 22, height: 17, rx: 4, fill: "#FFFFFF", "fill-opacity": 0.15, stroke: CONTORNO, "stroke-width": 2.4 }));
+      formas.push(f("rect", { x: 73, y: 58, width: 22, height: 17, rx: 4, fill: "#FFFFFF", "fill-opacity": 0.15, stroke: CONTORNO, "stroke-width": 2.4 }));
+      formas.push(traco("M67 65 H73", CONTORNO, 2), traco("M45 64 L36 63", CONTORNO, 2), traco("M95 64 L104 63", CONTORNO, 2));
+    }
+    if (usa("escuros")) {
+      formas.push(traco("M45 63 L36 62", CONTORNO, 2.4), traco("M95 63 L104 62", CONTORNO, 2.4), traco("M66 62 H74", CONTORNO, 2.6));
+      formas.push(f("path", comContorno({ d: "M44 59 H67 V68 Q67 78 55.5 78 Q44 78 44 68 Z", fill: "#1F2A33" }, 2)), f("path", comContorno({ d: "M73 59 H96 V68 Q96 78 84.5 78 Q73 78 73 68 Z", fill: "#1F2A33" }, 2)));
+      formas.push(traco("M48 63 L54 62", "#FFFFFF", 1.8), traco("M77 63 L83 62", "#FFFFFF", 1.8));
     }
     if (usa("oculos")) {
       formas.push(traco("M36 66 L42 66", "#2F6F8F", 3), traco("M98 66 L104 66", "#2F6F8F", 3));
@@ -363,6 +481,23 @@
       formas.push(f("path", { d: "M32 64 C30 18 110 18 108 64", fill: "none", stroke: CONTORNO, "stroke-width": 7, "stroke-linecap": "round" }));
       formas.push(f("path", { d: "M32 64 C30 18 110 18 108 64", fill: "none", stroke: "#E85A9B", "stroke-width": 3.5, "stroke-linecap": "round" }));
       formas.push(f("rect", comContorno({ x: 24, y: 58, width: 14, height: 22, rx: 6, fill: "#E85A9B" })), f("rect", comContorno({ x: 102, y: 58, width: 14, height: 22, rx: 6, fill: "#E85A9B" })));
+    }
+    // na cabeça: boné e gorro na cor da gola, chapéu de palha
+    if (usa("bone")) {
+      formas.push(f("path", comContorno({ d: "M33 48 C31 16 109 16 107 48 C92 42 48 42 33 48 Z", fill: gola })));
+      formas.push(f("path", comContorno({ d: "M62 43 C90 38 118 44 126 54 C108 51 84 50 62 53 Z", fill: gola })));
+      formas.push(f("circle", comContorno({ cx: 70, cy: 22, r: 3, fill: gola }, 1.4)));
+    }
+    if (usa("gorro")) {
+      formas.push(f("path", comContorno({ d: "M33 46 C30 10 110 10 107 46 Z", fill: gola })));
+      formas.push(f("rect", comContorno({ x: 29, y: 40, width: 82, height: 13, rx: 6.5, fill: "#FAFAF7" })));
+      formas.push(...[42, 56, 70, 84, 98].map((x) => traco(`M${x} 42 V51`, "#B9BDB8", 1.4)));
+      formas.push(f("circle", comContorno({ cx: 70, cy: 15, r: 7.5, fill: "#FAFAF7" })));
+    }
+    if (usa("chapeu")) {
+      formas.push(f("ellipse", comContorno({ cx: 70, cy: 42, rx: 58, ry: 9.5, fill: "#E2B85F" })));
+      formas.push(f("path", comContorno({ d: "M43 41 C41 10 99 10 97 41 C84 45 56 45 43 41 Z", fill: "#EBC773" })));
+      formas.push(f("path", { d: "M43.5 35 C56 40 84 40 96.5 35 L97 41 C84 45 56 45 43 41 Z", fill: gola, stroke: CONTORNO, "stroke-width": 1.6, "stroke-linejoin": "round" }));
     }
     // nas mãos e no bolso
     if (usa("caneta")) formas.push(f("rect", comContorno({ x: 89, y: 133, width: 3.5, height: 14, rx: 1.5, fill: "#3F51B5" }, 1.2)), f("rect", comContorno({ x: 95, y: 135, width: 3.5, height: 12, rx: 1.5, fill: "#C62828" }, 1.2)));
@@ -378,7 +513,7 @@
     const mao = (x) => (usa("luvas")
       ? f("circle", comContorno({ cx: x, cy: 150, r: 8.5, fill: "#7FC4E8" }, 2))
       : f("circle", comContorno({ cx: x, cy: 150, r: 8, fill: pele }, 2)));
-    formas.push(mao(22), mao(118));
+    formas.push(mao(22), mao(118), traco("M19 146 Q22 150 26 147", CONTORNO, 1.3), traco("M121 146 Q118 150 114 147", CONTORNO, 1.3));
     if (usa("capelo")) {
       formas.push(f("path", comContorno({ d: "M50 30 L50 40 C60 46 80 46 90 40 L90 30 Z", fill: "#1F2A33" })));
       formas.push(f("path", comContorno({ d: "M26 26 L70 9 L114 26 L70 43 Z", fill: "#1F2A33" })));
@@ -459,5 +594,5 @@
     ];
   }
 
-  window.Avatar = { VIEWBOX_AVATAR, VIEWBOX_CRACHA, APELIDO_MAXIMO, PELES, ROSTOS, CORES_OLHOS, CABELOS, CORES_CABELO, GOLAS, CORES_CRACHA, EMOCOES, ACESSORIOS, ENFEITES, AVATAR_PADRAO: PADRAO, lerAvatar, lerApelido, estadoDasPeles, estadoDosAcessorios, acessoriosDoTitulo, formasDoAvatar, descricaoDoAvatar, formasDoCracha };
+  window.Avatar = { VIEWBOX_AVATAR, VIEWBOX_CRACHA, APELIDO_MAXIMO, PELES, ROSTOS, CORES_OLHOS, SOBRANCELHAS, FUNDOS, GRUPOS_DE_UM_SO, CABELOS, CORES_CABELO, GOLAS, CORES_CRACHA, EMOCOES, ACESSORIOS, ENFEITES, AVATAR_PADRAO: PADRAO, lerAvatar, alternarEnfeite, avatarSurpresa, lerApelido, estadoDasPeles, estadoDosAcessorios, acessoriosDoTitulo, formasDoAvatar, descricaoDoAvatar, formasDoCracha };
 })();

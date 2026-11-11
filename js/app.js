@@ -4634,8 +4634,9 @@
   }
 
   /* O avatar como SVG criado pelo DOM, com descrição em texto. */
-  function svgDoAvatar(av, tamanho) {
-    const svg = svgBase(window.Avatar.VIEWBOX_AVATAR, tamanho, Math.round(tamanho * 160 / 140), window.Avatar.descricaoDoAvatar(av));
+  function svgDoAvatar(av, tamanho, recorte) {
+    const quadro = (recorte || window.Avatar.VIEWBOX_AVATAR).split(" ").map(Number);
+    const svg = svgBase(recorte || window.Avatar.VIEWBOX_AVATAR, tamanho, Math.round(tamanho * quadro[3] / quadro[2]), window.Avatar.descricaoDoAvatar(av));
     desenharFormas(svg, window.Avatar.formasDoAvatar(av));
     return svg;
   }
@@ -4811,10 +4812,12 @@
 
   /* ---------------- tela: meu avatar ----------------
 
-     O editor do avatar, o crachá e os botões de compartilhar. A prévia fica sempre à vista
-     enquanto o aluno muda as opções: o crachá fixo à esquerda no computador, o avatar preso
-     abaixo do cabeçalho no celular. */
+     O editor do avatar, o crachá e os botões de compartilhar, igual ao do Super Organic Box
+     (telas/meu_avatar.js): a prévia grande sempre à vista, as opções em abas por categoria e
+     cada opção como miniatura do próprio avatar. A aba Crachá guarda o crachá e o envio. */
 
+  let abaDoAvatar = "pele";
+  let avisoDoAvatar = "";
   function desenharMeuAvatar() {
     const alvo = $("#painel-avatar");
     const P = window.Presentes;
@@ -4823,21 +4826,19 @@
     const indice = P.indiceDoTitulo(progresso);
     const av = avatarAtual();
 
-    // Prévia sempre à vista: o crachá (computador) e o avatar compacto (celular).
+    // A prévia grande fica sempre à vista; as opções vêm em abas, uma categoria por vez.
     const pagina = criar("div", { className: "avatar-pagina" });
     const palco = criar("div", { className: "palco" });
-    const palcoCelular = criar("div", { className: "palco-celular" });
     const palcoAvatar = criar("div", { className: "palco-avatar" });
     const nomePalco = criar("p", { className: "nome-palco" });
-    palcoCelular.appendChild(palcoAvatar);
-    palcoCelular.appendChild(nomePalco);
-    const palcoCracha = criar("div", { className: "palco-cracha" });
-    palco.appendChild(palcoCelular);
-    palco.appendChild(palcoCracha);
+    const botaoSurpresa = criar("button", { type: "button", className: "botao secundario", textContent: "🎲 Surpresa" });
+    const palcoLado = criar("div", { className: "palco-lado" });
+    palcoLado.appendChild(nomePalco);
+    palcoLado.appendChild(botaoSurpresa);
+    palco.appendChild(palcoAvatar);
+    palco.appendChild(palcoLado);
     pagina.appendChild(palco);
     const cartaoEscolhas = criar("div", { className: "cartao cartao-escolhas" });
-    const cartaoCracha = criar("div", { className: "cartao cartao-cracha" });
-    cartaoCracha.appendChild(criar("h2", { textContent: "Seu crachá", style: "margin-top:0" }));
     const figura = criar("div", { className: "figura-avatar" });
     const moldura = criar("div", { className: "moldura-cracha" });
     const dadosDoCracha = () => {
@@ -4851,10 +4852,8 @@
       const svg = svgDoCracha(dadosDoCracha(), 240);
       moldura.innerHTML = "";
       moldura.appendChild(svg);
-      palcoCracha.innerHTML = "";
-      palcoCracha.appendChild(svg.cloneNode(true));
       palcoAvatar.innerHTML = "";
-      palcoAvatar.appendChild(svgDoAvatar(avatarAtual(), 104));
+      palcoAvatar.appendChild(svgDoAvatar(avatarAtual(), 150));
       nomePalco.textContent = A.lerApelido(preferencias().apelido);
       atualizarAvatarBarra();
     };
@@ -4952,95 +4951,159 @@
     caixaEnvio.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: "Mande no grupo da turma: vai a imagem e o seu progresso, com o código e sem o seu nome." }));
     caixaEnvio.appendChild(statusEnvio);
     figura.appendChild(caixaEnvio);
-    const escolhas = criar("div", { className: "escolhas-avatar" });
+    const CABECA = "14 2 112 112";   // o recorte das miniaturas: só a cabeça
+    const ABAS = [
+      ["pele", "🎨", "Pele"], ["rosto", "🙂", "Rosto"], ["olhos", "👀", "Olhos"], ["cabelo", "💇", "Cabelo"],
+      ["barba", "🧔", "Barba"], ["oculos", "👓", "Óculos"], ["cabeca", "🧢", "Chapéus"], ["detalhe", "✨", "Detalhes"],
+      ["jaleco", "🥼", "Jaleco"], ["fundo", "🖼️", "Fundo"], ["cracha", "🪪", "Crachá"],
+    ];
+    const aviso = criar("p", { className: "ajuda aviso-avatar", textContent: avisoDoAvatar });
+    aviso.setAttribute("role", "status");
+    avisoDoAvatar = "";
+    const abas = criar("div", { className: "abas-avatar" });
+    abas.setAttribute("role", "group");
+    abas.setAttribute("aria-label", "Partes do avatar");
+    for (const [id, icone, nome] of ABAS) {
+      const b = criar("button", { type: "button", className: "aba-avatar" });
+      const ic = criar("span", { className: "aba-icone", textContent: icone });
+      ic.setAttribute("aria-hidden", "true");
+      b.appendChild(ic);
+      b.appendChild(criar("span", { textContent: nome }));
+      b.dataset.aba = id;
+      b.setAttribute("aria-pressed", String(id === abaDoAvatar));
+      b.addEventListener("click", () => {
+        abaDoAvatar = id;
+        desenharMeuAvatar();
+        const novo = document.querySelector(`[data-aba="${id}"]`);
+        if (novo) { novo.focus({ preventScroll: true }); novo.scrollIntoView({ block: "nearest", inline: "center" }); }
+      });
+      abas.appendChild(b);
+    }
+    const painel = criar("div", { className: "painel-avatar" });
 
     function salvar(mudanca, focar) {
+      const rolagem = abas.scrollLeft;
       guardarPreferencias({ avatar: Object.assign({}, avatarAtual(), mudanca) });
       desenharMeuAvatar();
+      const novasAbas = document.querySelector(".abas-avatar");
+      if (novasAbas) novasAbas.scrollLeft = rolagem;
       const b = focar && document.querySelector(focar);
-      if (b) b.focus();
+      if (b) b.focus({ preventScroll: true });
     }
-    // Grupo de botões, um marcado (aria-pressed); item fechado vira aviso com cadeado.
-    function grupo(titulo, campo, lista, valor, comCor, idTitulo) {
+    let contador = 0;
+    function cabecalho(titulo, lista) {
+      const id = "avatar-grupo-" + (++contador);
       const caixa = criar("div", { className: "grupo-avatar" });
-      const rot = criar("p", { className: "titulo-grupo-avatar", id: idTitulo || "avatar-" + campo, textContent: titulo });
-      const linha = criar("div", { className: "opcoes-avatar" });
-      linha.setAttribute("role", "group");
-      linha.setAttribute("aria-labelledby", rot.id);
+      caixa.appendChild(criar("p", { className: "titulo-grupo-avatar", id, textContent: titulo }));
+      lista.setAttribute("role", "group");
+      lista.setAttribute("aria-labelledby", id);
+      caixa.appendChild(lista);
+      return caixa;
+    }
+    // Uma grade de miniaturas: cada opção é o próprio avatar já com aquela escolha.
+    function grade(titulo, opcoes, recorte) {
+      const lista = criar("div", { className: "grade-avatar" });
+      for (const op of opcoes) {
+        const b = criar("button", { type: "button", className: "mini-opcao" });
+        const mini = svgDoAvatar(op.avatar, 84, recorte === undefined ? CABECA : recorte);
+        mini.setAttribute("aria-hidden", "true");
+        b.appendChild(mini);
+        b.appendChild(criar("span", { className: "mini-nome", textContent: op.nome }));
+        b.dataset.campo = op.campo;
+        b.dataset.valor = op.valor;
+        if (op.fechado) {
+          b.classList.add("fechada");
+          b.setAttribute("aria-disabled", "true");
+          b.setAttribute("aria-label", `${op.nome}: fechado, ${op.fechado}`);
+          const cadeado = criar("span", { className: "cadeado", textContent: "🔒" });
+          cadeado.setAttribute("aria-hidden", "true");
+          b.appendChild(cadeado);
+          b.addEventListener("click", () => { aviso.textContent = `🔒 ${op.nome}: ${op.fechado}.`; });
+        } else {
+          b.setAttribute("aria-pressed", String(Boolean(op.marcado)));
+          b.addEventListener("click", () => salvar(op.mudanca, `[data-campo="${op.campo}"][data-valor="${op.valor}"]`));
+        }
+        lista.appendChild(b);
+      }
+      return cabecalho(titulo, lista);
+    }
+    // Uma fileira de bolinhas de cor (o nome vai no rótulo e na dica).
+    function cores(titulo, campo, lista, valor) {
+      const linha = criar("div", { className: "cores-avatar" });
       for (const op of lista) {
-        const filhos = [];
-        if (comCor) {
-          const bolinha = criar("span", { className: "amostra-cor" });
-          bolinha.setAttribute("aria-hidden", "true");
-          bolinha.style.background = op.cor;
-          filhos.push(bolinha);
-        }
-        if (op.aberta === false) {
-          const fechado = criar("span", { className: "chip chip-fechado" });
-          for (const x of filhos) fechado.appendChild(x);
-          fechado.appendChild(criar("span", { textContent: `🔒 ${op.nome}: ${op.falta}` }));
-          linha.appendChild(fechado);
-          continue;
-        }
-        const b = criar("button", { type: "button", className: "chip" });
-        for (const x of filhos) b.appendChild(x);
-        b.appendChild(criar("span", { textContent: op.fantasia ? `✨ ${op.nome}` : op.nome }));
+        const b = criar("button", { type: "button", className: "bolinha-cor", title: op.nome });
+        b.setAttribute("aria-label", op.nome);
+        b.setAttribute("aria-pressed", String(op.id === valor));
         b.dataset.campo = campo;
         b.dataset.valor = op.id;
-        b.setAttribute("aria-pressed", String(op.id === valor));
+        if (op.cor) b.style.background = op.cor; else b.classList.add("sem-cor");
         b.addEventListener("click", () => salvar({ [campo]: op.id }, `[data-campo="${campo}"][data-valor="${op.id}"]`));
         linha.appendChild(b);
       }
-      caixa.appendChild(rot);
-      caixa.appendChild(linha);
-      return caixa;
+      return cabecalho(titulo, linha);
     }
-    function alternaveis(titulo, idTitulo, ajuda, itens, usados, campo) {
-      const caixa = criar("div", { className: "grupo-avatar" });
-      caixa.appendChild(criar("p", { className: "titulo-grupo-avatar", id: idTitulo, textContent: titulo }));
-      caixa.appendChild(criar("p", { className: "ajuda", style: "margin:0 0 var(--mb-e2)", textContent: ajuda }));
-      const linha = criar("div", { className: "opcoes-avatar" });
-      linha.setAttribute("role", "group");
-      linha.setAttribute("aria-labelledby", idTitulo);
-      for (const a of itens) {
-        if (a.aberto === false) {
-          linha.appendChild(criar("span", { className: "chip chip-fechado", textContent: `🔒 ${a.nome}: abre com o título ${a.tituloQueAbre}` }));
-          continue;
-        }
-        const usando = usados.indexOf(a.id) >= 0;
-        const b = criar("button", { type: "button", className: "chip", textContent: a.nome });
-        b.dataset.campo = campo;
-        b.dataset.valor = a.id;
-        b.setAttribute("aria-pressed", String(usando));
-        b.addEventListener("click", () => salvar({ [campo === "acessorio" ? "acessorios" : "enfeites"]: usando ? usados.filter((x) => x !== a.id) : usados.concat(a.id) },
-          `[data-campo="${campo}"][data-valor="${a.id}"]`));
-        linha.appendChild(b);
-      }
-      caixa.appendChild(linha);
-      return caixa;
+    const umDe = (campo, lista) => lista.map((op) => ({
+      campo, valor: op.id, nome: op.fantasia ? `✨ ${op.nome}` : op.nome, avatar: Object.assign({}, av, { [campo]: op.id }),
+      marcado: av[campo] === op.id, mudanca: { [campo]: op.id }, fechado: op.aberta === false ? op.falta : "",
+    }));
+    function enfeitesDe(grupo, nomeNenhum) {
+      const doGrupo = A.ENFEITES.filter((e) => e.grupo === grupo);
+      const sem = av.enfeites.filter((id) => !doGrupo.some((e) => e.id === id));
+      return [{ campo: "enfeite", valor: "sem-" + grupo, nome: nomeNenhum, avatar: Object.assign({}, av, { enfeites: sem }), marcado: sem.length === av.enfeites.length, mudanca: { enfeites: sem } }]
+        .concat(doGrupo.map((e) => {
+          const lista = A.alternarEnfeite(av.enfeites, e.id);
+          const usando = av.enfeites.indexOf(e.id) >= 0;
+          return { campo: "enfeite", valor: e.id, nome: e.nome, avatar: Object.assign({}, av, { enfeites: usando ? av.enfeites : lista }), marcado: usando, mudanca: { enfeites: lista } };
+        }));
     }
     const nomesDePaleta = {};
     for (const x of P.PALETAS) nomesDePaleta[x.id] = x.nome;
     const peles = A.estadoDasPeles(paletasAbertas(), nomesDePaleta);
-    escolhas.appendChild(grupo("Emoção", "emocao", A.EMOCOES, av.emocao, false));
-    escolhas.appendChild(grupo("Pele", "pele", peles.filter((x) => !x.fantasia && !x.inusitada), av.pele, true));
-    escolhas.appendChild(grupo("Inusitadas", "pele", peles.filter((x) => x.inusitada), av.pele, true, "avatar-pele-inusitada"));
-    escolhas.appendChild(grupo("Peles de fantasia (abrem com as paletas de presente)", "pele", peles.filter((x) => x.fantasia), av.pele, true, "avatar-pele-fantasia"));
-    escolhas.appendChild(grupo("Formato do rosto", "rosto", A.ROSTOS, av.rosto, false));
-    escolhas.appendChild(grupo("Cor dos olhos", "olhos", A.CORES_OLHOS, av.olhos, true));
-    escolhas.appendChild(grupo("Cabelo", "cabelo", A.CABELOS, av.cabelo, false));
-    if (av.cabelo !== "raspado") escolhas.appendChild(grupo("Cor do cabelo", "corCabelo", A.CORES_CABELO, av.corCabelo, true));
-    escolhas.appendChild(grupo("Cor da gola do jaleco", "gola", A.GOLAS, av.gola, true));
-    // A cor do crachá e do cordão: a da paleta ou a da gola, cada uma com a amostra.
-    const daPaleta = getComputedStyle(document.documentElement).getPropertyValue("--mb-lateral-fundo").trim() || "#164194";
-    const corGola = A.GOLAS.find((g) => g.id === av.gola).cor;
-    escolhas.appendChild(grupo("Cor do crachá e do cordão", "cracha", A.CORES_CRACHA.map((c) => Object.assign({}, c, { cor: c.id === "gola" ? corGola : daPaleta })), av.cracha, true));
-    escolhas.appendChild(alternaveis("Enfeites", "avatar-enfeites", "Para todo mundo, desde o começo. Toque para usar ou tirar.", A.ENFEITES, av.enfeites, "enfeite"));
-    escolhas.appendChild(alternaveis("Acessórios de laboratório", "avatar-acessorios", "Cada título novo no Treino abre um acessório. Toque para usar ou tirar.", A.estadoDosAcessorios(indice, P.TITULOS), av.acessorios, "acessorio"));
-    cartaoEscolhas.appendChild(escolhas);
+    const partes = [];
+    if (abaDoAvatar === "pele") {
+      partes.push(grade("Tom da pele", umDe("pele", peles.filter((x) => !x.fantasia))));
+      partes.push(grade("Peles de fantasia: cada paleta de presente abre uma", umDe("pele", peles.filter((x) => x.fantasia))));
+    } else if (abaDoAvatar === "rosto") {
+      partes.push(grade("Expressão", umDe("emocao", A.EMOCOES)), grade("Formato do rosto", umDe("rosto", A.ROSTOS)));
+    } else if (abaDoAvatar === "olhos") {
+      partes.push(cores("Cor dos olhos", "olhos", A.CORES_OLHOS, av.olhos), grade("Sobrancelhas", umDe("sobrancelha", A.SOBRANCELHAS)));
+    } else if (abaDoAvatar === "cabelo") {
+      if (av.cabelo !== "raspado") partes.push(cores("Cor do cabelo", "corCabelo", A.CORES_CABELO, av.corCabelo));
+      partes.push(grade("Corte", umDe("cabelo", A.CABELOS), "8 0 124 124"));
+    } else if (abaDoAvatar === "barba") {
+      partes.push(cores("Cor (a mesma do cabelo)", "corCabelo", A.CORES_CABELO, av.corCabelo), grade("Barba e bigode: dá para combinar", enfeitesDe("barba", "Sem barba")));
+    } else if (abaDoAvatar === "oculos") {
+      partes.push(grade("Óculos", enfeitesDe("oculos", "Sem óculos")));
+    } else if (abaDoAvatar === "cabeca") {
+      partes.push(grade("Chapéus: o boné e o gorro pegam a cor da gola", enfeitesDe("cabeca", "Sem chapéu")));
+    } else if (abaDoAvatar === "detalhe") {
+      partes.push(grade("Detalhes: use quantos quiser", enfeitesDe("detalhe", "Nenhum")));
+    } else if (abaDoAvatar === "jaleco") {
+      partes.push(cores("Cor da gola", "gola", A.GOLAS, av.gola));
+      partes.push(grade("Acessórios de laboratório: cada título do Treino abre um", A.estadoDosAcessorios(indice, P.TITULOS).map((a) => {
+        const usando = av.acessorios.indexOf(a.id) >= 0;
+        return { campo: "acessorio", valor: a.id, nome: a.nome, avatar: Object.assign({}, av, { acessorios: usando ? av.acessorios : av.acessorios.concat(a.id) }), marcado: usando,
+          mudanca: { acessorios: usando ? av.acessorios.filter((x) => x !== a.id) : av.acessorios.concat(a.id) }, fechado: a.aberto ? "" : `abre com o título ${a.tituloQueAbre}` };
+      }), ""));
+    } else if (abaDoAvatar === "fundo") {
+      partes.push(grade("Cor de fundo da figurinha", umDe("fundo", A.FUNDOS), ""));
+    } else {
+      // A cor do crachá e do cordão: a da paleta ou a da gola, cada uma com a amostra.
+      const daPaleta = getComputedStyle(document.documentElement).getPropertyValue("--mb-lateral-fundo").trim() || "#164194";
+      const corGola = A.GOLAS.find((g) => g.id === av.gola).cor;
+      partes.push(cores("Cor do crachá e do cordão", "cracha", A.CORES_CRACHA.map((c) => Object.assign({}, c, { cor: c.id === "gola" ? corGola : daPaleta })), av.cracha));
+      partes.push(figura);
+    }
+    for (const x of partes) painel.appendChild(x);
+    botaoSurpresa.addEventListener("click", () => {
+      guardarPreferencias({ avatar: Object.assign(A.avatarSurpresa(Math.random, indice, paletasAbertas()), { cracha: av.cracha }) });
+      avisoDoAvatar = "Avatar sorteado. Não gostou? Sorteie de novo ou ajuste nas abas.";
+      desenharMeuAvatar();
+    });
+    cartaoEscolhas.appendChild(abas);
+    cartaoEscolhas.appendChild(aviso);
+    cartaoEscolhas.appendChild(painel);
     pagina.appendChild(cartaoEscolhas);
-    cartaoCracha.appendChild(figura);
-    pagina.appendChild(cartaoCracha);
     alvo.appendChild(pagina);
 
   }
