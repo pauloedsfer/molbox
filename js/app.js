@@ -136,6 +136,7 @@
     estado.telaAtual = id;
     guardar();
     cronometro().registrarAcao(id);   // trocar de tela é uma ação: o tempo passa a contar nesta tela
+    if (window.Gatos) window.Gatos.gatoDaTela(id);
     for (const s of document.querySelectorAll("main > section")) s.hidden = (s.id !== id);
     for (const b of document.querySelectorAll(".menu .item")) {
       if (b.dataset.tela && b.dataset.tela === id) b.setAttribute("aria-current", "page");
@@ -776,6 +777,7 @@
     const acertou = veredito.situacao === "certo";
     if (acertou) m.acertosRodada += 1;
     const efeito = registrarResposta(progresso, q, acertou, false);
+    if (window.Gatos) window.Gatos.reagirAoTreino(acertou);
     atualizarResumoLateral();
     desenharRodada();
     if (efeito.subiuDegrau) mostrarDesbloqueio(efeito.subiuDegrau);
@@ -4349,6 +4351,7 @@
 
     const antesDoRegistro = copiaDoProgresso();
     const efeito = registrarResposta(progresso, q, acertou, estado.usouDica);
+    if (window.Gatos) window.Gatos.reagirAoTreino(acertou);
     estado.sessao.xp += efeito.ganho;
 
     desenharExercicio();
