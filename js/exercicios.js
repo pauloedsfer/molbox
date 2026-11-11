@@ -677,6 +677,63 @@ function gerarExercicio(degrau, cfg, tipoAnterior) {
   }
   q.erros = limpos;
 
+  return comAlternativas(q);
+}
+
+/* ---------------- questões numéricas por alternativas ----------------
+
+   Digitar 6,02×10²³ no celular travava a turma. A questão numérica vira de
+   escolha: a resposta certa e, como erradas, os valores dos erros típicos da
+   lista `erros` (cada um com o diagnóstico de sempre). Se faltar erro, entra
+   um fator de dez (vírgula ou potência trocada) ou, em contagens pequenas, um
+   número vizinho. A conta continua sendo do aluno: a calculadora e a tabela
+   seguem na tela, e as alternativas só dizem onde a conta pode ter saído do
+   trilho. */
+const ALTERNATIVAS_NUMERICAS = 4;
+
+function textoDoValor(q, valor) {
+  const inteiro = Number.isInteger(valor) && Math.abs(valor) < 1000;
+  const numero = inteiro ? String(valor) : formatarNumero(valor, Math.min(q.sig || 3, 4));
+  const unidade = valor === 1 && q.unidade === "átomos" ? "átomo" : q.unidade;
+  return unidade ? `${numero} ${unidade}` : numero;
+}
+
+// Para o vizinho de uma resposta inteira: o que conferir, conforme a conta.
+const CONFERIR_INTEIRO = {
+  atomosNaFormula: "Refaça a contagem com calma, elemento por elemento, sem esquecer o índice de fora do parêntese.",
+  coeficienteNaEquacao: "Conte os átomos de cada elemento dos dois lados com esse coeficiente: alguma contagem não fecha.",
+  molParaMolReacao: "Confira a proporção entre os coeficientes da equação balanceada.",
+  produtoComLimitante: "Ache primeiro o reagente limitante e use a proporção dos coeficientes a partir dele.",
+};
+
+function comAlternativas(q) {
+  const certo = { texto: textoDoValor(q, q.resposta), correta: true, valor: q.resposta };
+  const opcoes = [certo];
+  const cabe = (valor) => isFinite(valor) && valor > 0 && !opcoes.some((o) => proximo(o.valor, valor) || o.texto === textoDoValor(q, valor));
+  for (const e of q.erros) {
+    if (opcoes.length >= ALTERNATIVAS_NUMERICAS) break;
+    if (cabe(e.valor)) opcoes.push({ texto: textoDoValor(q, e.valor), valor: e.valor, diagnostico: e.mensagem });
+  }
+  const contagem = Number.isInteger(q.resposta) && q.resposta < 50;
+  const vizinhos = contagem
+    ? [q.resposta + 1, q.resposta - 1, q.resposta * 2, q.resposta + 2, q.resposta + 3]
+    : [q.resposta * 10, q.resposta / 10, q.resposta * 100, q.resposta / 100, q.resposta * 1000];
+  for (const v of vizinhos) {
+    if (opcoes.length >= ALTERNATIVAS_NUMERICAS) break;
+    if (!cabe(v)) continue;
+    const razao = v / q.resposta;
+    const diagnostico = contagem
+      ? `Não é esse valor. ${CONFERIR_INTEIRO[q.tipo] || "Refaça a conta escrevendo as unidades ao lado de cada número."}`
+      : `O caminho parece certo, mas esse valor está ${razao >= 10 ? Math.round(razao) + " vezes maior" : Math.round(1 / razao) + " vezes menor"} que o esperado. Confira a potência de dez ou a vírgula.`;
+    opcoes.push({ texto: textoDoValor(q, v), valor: v, diagnostico });
+  }
+  for (let i = opcoes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [opcoes[i], opcoes[j]] = [opcoes[j], opcoes[i]];
+  }
+  q.formato = "escolha";
+  q.numerica = true;   // a tela mantém a calculadora e a tabela
+  q.opcoes = opcoes;
   return q;
 }
 
