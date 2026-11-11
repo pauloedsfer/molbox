@@ -1,19 +1,20 @@
-/* ORIGEM: dados/compartilhar.js (Super Organic Box), convertido por ferramentas/converter_modulo.cjs.
+/* ORIGEM: dados/compartilhar.js (Super Organic Box) (Super Organic Box), convertido por ferramentas/converter_modulo.cjs.
    Mude lá e converta de novo: os dois aplicativos usam a mesma lógica. */
 (function () {
   "use strict";
-  /* Textos de compartilhar pelo WhatsApp (ou por qualquer app do aparelho). Funções puras, para os
-     dois aplicativos (Super Organic Box e SUPER MOLBOX).
+  /* Textos de compartilhar pelo WhatsApp (ou por qualquer app do aparelho). Funções puras, para as
+     três caixas (Super Atomic Box, SUPER MOLBOX e Super Organic Box).
 
      - Divulgação: a imagem do crachá ou do avatar vai com um convite e o link do app, para o colega
        ver onde o avatar foi feito.
      - Professor: a imagem vai como figurinha, com um resumo legível do progresso e a linha de dados
-       completa (SOBOX1;... ou MOLBOX1;...), que o professor pode juntar e analisar (até com uma IA).
+       completa (SOBOX1;..., MOLBOX1;... ou ABOX1;...), que o professor pode juntar e analisar (até com uma IA).
        O texto não leva nome: só o código que o aluno inventou e o apelido do crachá, se ele quiser. */
 
   const APPS = {
     organic: { nome: "Super Organic Box", url: "https://superorganico.vercel.app/", assunto: "Química Orgânica" },
     molbox: { nome: "SUPER MOLBOX", url: "https://supermolbox.vercel.app/", assunto: "o mol e as contas da bancada de Química" },
+    atomic: { nome: "Super Atomic Box", url: "https://atomicbox.vercel.app/", assunto: "as bases da Química, da matéria ao átomo" },
   };
 
   function appDe(id) { return APPS[id] || APPS.organic; }
