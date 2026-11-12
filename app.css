@@ -1787,3 +1787,16 @@ main { padding-bottom: 72px; }
 .balao-gato { flex-wrap: wrap; }
 .gato-movimento { flex: 1 0 100%; appearance: none; cursor: pointer; font: inherit; font-size: 0.8rem; text-align: left; padding: 6px 0 0; margin-top: 2px; border: 0; border-top: 1px solid var(--mb-borda); background: none; color: var(--mb-interacao); }
 .gato-movimento:hover { text-decoration: underline; }
+
+/* ---------- a apresentação do gato na primeira tela ---------- */
+.boas-vindas-gato { display: grid; grid-template-columns: auto 1fr; gap: var(--mb-e5, 24px); align-items: center; margin-bottom: var(--mb-e4, 16px); }
+.gato-na-caixa { width: 170px; filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3)); }
+.balao-boas-vindas { position: relative; background: var(--mb-superficie-2); border: 1px solid var(--mb-borda); border-radius: 18px; padding: 16px 22px; font-size: 1.05rem; }
+.balao-boas-vindas::before { content: ""; position: absolute; left: -9px; top: 34px; width: 16px; height: 16px; background: inherit; border-left: 1px solid var(--mb-borda); border-bottom: 1px solid var(--mb-borda); transform: rotate(45deg); }
+.balao-boas-vindas p { margin: 0 0 10px; }
+.balao-boas-vindas p:last-child { margin: 0; }
+@media (max-width: 560px) {
+  .boas-vindas-gato { grid-template-columns: 1fr; justify-items: center; }
+  .gato-na-caixa { width: 140px; }
+  .balao-boas-vindas::before { left: calc(50% - 8px); top: -9px; transform: rotate(135deg); }
+}

@@ -218,17 +218,13 @@ const POSES = {
     s("g", { transform: "translate(8 -20) scale(0.86)" }, [pata(c, 51, 113), pata(c, 69, 113)]),
   ],
 
-  // Início: espiando de dentro da caixa de metal da Atomic Box.
+  // Início: espiando de dentro da caixa azul do Molbox, com o "mol".
   caixa: (c) => [
-    s("defs", {}, [s("linearGradient", { id: "metal-caixa", x1: "0", y1: "0", x2: "1", y2: "1" }, [
-      s("stop", { offset: "0", "stop-color": "#4A4D55" }), s("stop", { offset: "0.5", "stop-color": "#17181C" }), s("stop", { offset: "1", "stop-color": "#30323A" })])]),
-    s("g", { transform: "translate(0 4)" }, [
-      s("g", { class: "gato-cabeca" }, cabeca(c, { olhar: [0, 1] })),
-    ]),
-    s("rect", { x: 14, y: 70, width: 92, height: 46, rx: 8, fill: "url(#metal-caixa)", stroke: "#9AA0AA", "stroke-width": 2 }),
-    s("path", { d: "M14 79 H106", stroke: "#FFFFFF", "stroke-opacity": 0.18, "stroke-width": 1.5 }),
-    s("g", { fill: "none", stroke: "#FFFFFF", "stroke-width": 1.6 }, [0, 60, -60].map((r) => s("ellipse", { cx: 60, cy: 97, rx: 15, ry: 6, transform: `rotate(${r} 60 97)` }))),
-    s("circle", { cx: 60, cy: 97, r: 3.8, fill: "#E3262E" }),
+    s("g", { transform: "translate(0 4)" }, [s("g", { class: "gato-cabeca" }, cabeca(c, { olhar: [0, 1] }))]),
+    s("rect", { x: 14, y: 70, width: 92, height: 46, rx: 8, fill: "#0F2F6E", stroke: "#FFFFFF", "stroke-width": 2 }),
+    s("path", { d: "M14 79 H106", stroke: "#FFFFFF", "stroke-opacity": 0.25, "stroke-width": 1.5 }),
+    s("text", { x: 60, y: 106, "text-anchor": "middle", fill: "#FFFFFF", "font-size": 22, "font-weight": 700, "font-style": "italic", "font-family": "'Exo 2', Inter, Arial, sans-serif" }, [document.createTextNode("mol")]),
+    s("circle", { cx: 92, cy: 88, r: 3.4, fill: "#E84910" }),
     pata(c, 36, 71), pata(c, 84, 71),
   ],
 };

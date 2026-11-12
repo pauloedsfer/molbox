@@ -252,6 +252,19 @@
     const alvo = $("#painel-mol");
     alvo.innerHTML = "";
 
+    /* --- o Avogato se apresenta, espiando da caixa azul --- */
+    if (window.Gatos) {
+      const boasVindas = criar("div", { className: "cartao boas-vindas-gato" });
+      const lugarDoGato = criar("div", { className: "gato-na-caixa" });
+      lugarDoGato.appendChild(window.Gatos.desenhoDoGato("caixa", "Avogato, o gato laranja, espiando de dentro da caixa do Molbox"));
+      const balao = criar("div", { className: "balao-boas-vindas" });
+      balao.appendChild(criar("p", { textContent: "Oi, eu sou o Avogato! Moro nesta caixa e vou com você do átomo, que ninguém consegue contar, até a balança da bancada, onde tudo se pesa." }));
+      balao.appendChild(criar("p", { textContent: "O segredo é um pacote chamado mol. Comece por esta pergunta, logo abaixo: quantos grãos de sal cabem numa colher?" }));
+      boasVindas.appendChild(lugarDoGato);
+      boasVindas.appendChild(balao);
+      alvo.appendChild(boasVindas);
+    }
+
     /* --- abertura: a chave --- */
     const capa = criar("div", { className: "cartao capa-mol" });
     capa.innerHTML =
