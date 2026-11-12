@@ -60,7 +60,7 @@ const PORQUE_EXISTE = [
     titulo: "Por que é gratuito e funciona sem internet",
     texto: "Porque a rede da escola cai, o laboratório costuma ser um ponto cego de sinal e " +
       "nem todo aluno tem dados móveis sobrando. Nada aqui exige cadastro, e o progresso " +
-      "fica guardado no próprio aparelho — não há servidor, não há coleta de dados.",
+      "fica guardado no próprio aparelho — não há conta, não há coleta de dados pessoais.",
   },
 ];
 

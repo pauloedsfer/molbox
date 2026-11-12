@@ -230,8 +230,7 @@
     const ficha = criar("div", { className: "cartao" });
     ficha.innerHTML =
       `<h2 style="margin-top:0">Ficha técnica</h2>` +
-      `<p class="ajuda">Aplicativo web instalável, sem cadastro e sem servidor. Todo o progresso ` +
-      `fica guardado apenas neste aparelho, e nenhum dado é enviado para lugar nenhum. ` +
+      `<p class="ajuda">Aplicativo web instalável, sem cadastro. Todo o progresso fica guardado apenas neste aparelho. O site só conta as visitas, de forma anônima: sem cookies e sem identificar ninguém. O progresso sai daqui apenas quando você toca em Enviar ao professor. ` +
       `Depois da primeira visita, funciona sem internet.</p>` +
       `<p class="ajuda">As massas atômicas seguem a tabela IUPAC 2021. As orientações de segurança ` +
       `vêm de fichas de segurança e manuais de boas práticas, e não substituem a FISPQ do lote ` +
