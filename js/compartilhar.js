@@ -12,9 +12,9 @@
        O texto não leva nome: só o código que o aluno inventou e o apelido do crachá, se ele quiser. */
 
   const APPS = {
-    organic: { nome: "Super Organic Box", url: "https://superorganico.vercel.app/", assunto: "Química Orgânica" },
-    molbox: { nome: "SUPER MOLBOX", url: "https://supermolbox.vercel.app/", assunto: "o mol e as contas da bancada de Química" },
-    atomic: { nome: "Super Atomic Box", url: "https://atomicbox.vercel.app/", assunto: "as bases da Química, da matéria ao átomo" },
+    organic: { nome: "Super Organic Box", url: "https://caixaquimica.com.br/organicbox/", assunto: "Química Orgânica" },
+    molbox: { nome: "SUPER MOLBOX", url: "https://caixaquimica.com.br/molbox/", assunto: "o mol e as contas da bancada de Química" },
+    atomic: { nome: "Super Atomic Box", url: "https://caixaquimica.com.br/atomicbox/", assunto: "as bases da Química, da matéria ao átomo" },
   };
 
   function appDe(id) { return APPS[id] || APPS.organic; }
