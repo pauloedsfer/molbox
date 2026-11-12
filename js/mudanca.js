@@ -39,6 +39,7 @@
   function aviso(texto, botoes) {
     function montar() {
       var barra = document.createElement("div");
+      barra.className = "aviso-mudanca";
       barra.setAttribute("role", "status");
       barra.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:1000;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:12px 16px;background:#17181C;color:#FFFFFF;font:500 15px/1.4 Inter,system-ui,sans-serif;box-shadow:0 -4px 20px rgba(0,0,0,.35)";
       var p = document.createElement("span");

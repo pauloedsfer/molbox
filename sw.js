@@ -16,10 +16,10 @@
    conexão de escola lenta deixaria a tela branca esperando.
 */
 
-const VERSAO = "molbox-v0.30.1";
+const VERSAO = "molbox-v0.30.2";
 
 const ARQUIVOS = [
-  "./", "./index.html", "./js/mudanca.js", "./app.css", "./tokens.css", "./fontes.css",
+  "./", "./index.html", "./js/mudanca.js", "./js/video.js", "./app.css", "./tokens.css", "./fontes.css",
   "./manifest.webmanifest",
   "./js/elementos.js", "./js/parser.js", "./js/converter.js",
   "./js/balanceador.js", "./js/estequiometria.js",
