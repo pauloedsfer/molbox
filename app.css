@@ -1784,3 +1784,6 @@ header.barra { background: var(--mb-barra); }
 main { padding-bottom: 72px; }
 @media (min-width: 900px) { .surpresa-gato { left: calc(var(--largura-menu, 272px) + 16px); } }
 @media print { .gato-da-tela, .surpresa-gato { display: none; } }
+.balao-gato { flex-wrap: wrap; }
+.gato-movimento { flex: 1 0 100%; appearance: none; cursor: pointer; font: inherit; font-size: 0.8rem; text-align: left; padding: 6px 0 0; margin-top: 2px; border: 0; border-top: 1px solid var(--mb-borda); background: none; color: var(--mb-interacao); }
+.gato-movimento:hover { text-decoration: underline; }

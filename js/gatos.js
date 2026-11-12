@@ -239,6 +239,20 @@ function desenhoDoGato(pose = "sentado", rotulo = "", pelagem = "avogato") {
   return s("svg", atributos, (POSES[pose] || POSES.sentado)(PELAGENS[pelagem] || PELAGENS.avogato));
 }
 
+/* As animações vêm ligadas para todo mundo. Quem prefere tudo parado desliga no balão do gato, e
+   a escolha fica guardada neste aparelho. */
+const CHAVE_MOVIMENTO = "molbox.movimento";
+function movimentoLigado() {
+  try { return localStorage.getItem(CHAVE_MOVIMENTO) !== "nao"; } catch (e) { return true; }
+}
+function aplicarMovimento() {
+  document.documentElement.classList.toggle("com-movimento", movimentoLigado());
+}
+function escolherMovimento(ligado) {
+  try { localStorage.setItem(CHAVE_MOVIMENTO, ligado ? "sim" : "nao"); } catch (e) { /* sem armazenamento: vale só agora */ }
+  aplicarMovimento();
+}
+
 /* O gato escondido: um botão no canto do cartão, com só as orelhas à mostra. Cada toque mostra a
    próxima curiosidade num balão. */
 function gatoEscondido({ pose = "sentado", falas = [], onde = "direita" }) {
@@ -247,7 +261,10 @@ function gatoEscondido({ pose = "sentado", falas = [], onde = "direita" }) {
   frase.setAttribute("aria-live", "polite");
   const voltar = criar("button", { type: "button", className: "gato-voltar", textContent: "▼" });
   voltar.setAttribute("aria-label", "Esconder o gato de novo");
-  const balao = criar("div", { className: "balao-gato", hidden: true }, [frase, voltar]);
+  const movimento = criar("button", { type: "button", className: "gato-movimento" });
+  const rotuloDoMovimento = () => { movimento.textContent = movimentoLigado() ? "⏸ Parar as animações" : "▶ Ligar as animações"; };
+  movimento.addEventListener("click", () => { escolherMovimento(!movimentoLigado()); rotuloDoMovimento(); });
+  const balao = criar("div", { className: "balao-gato", hidden: true }, [frase, voltar, movimento]);
   const botao = criar("button", { type: "button", className: `gato-escondido ${onde} pose-${pose}` }, [desenhoDoGato(pose)]);
   botao.setAttribute("aria-label", "Avogato, o gato: toque para uma dica desta tela");
   botao.setAttribute("aria-expanded", "false");
@@ -272,6 +289,7 @@ function gatoEscondido({ pose = "sentado", falas = [], onde = "direita" }) {
     botao.setAttribute("aria-expanded", "true");
     balao.hidden = false;
     frase.textContent = falas[i];
+    rotuloDoMovimento();
     document.addEventListener("pointerdown", foraDoGato, true);
     document.addEventListener("keydown", teclaEsc, true);
     // O balão também some sozinho (o tempo cresce com o tamanho da frase).
@@ -463,10 +481,7 @@ function reagirAoTreino(certo) {
   }
 }
 
-// As animações seguem o aparelho: paradas para quem pediu menos movimento.
-if (typeof window.matchMedia === "function") {
-  document.documentElement.classList.toggle("com-movimento", !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-}
+aplicarMovimento();
 
 window.Gatos = { desenhoDoGato, gatoEscondido, surpresaDoGato, gatoDaTela, reagirAoTreino };
 })();
