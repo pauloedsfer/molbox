@@ -4954,7 +4954,7 @@
     caixaEnvio.appendChild(criar("p", { className: "ajuda", style: "margin:0", textContent: "Mande no grupo da turma: vai a imagem e o seu progresso, com o código e sem o seu nome." }));
     caixaEnvio.appendChild(statusEnvio);
     figura.appendChild(caixaEnvio);
-    const CABECA = "14 2 112 112";   // o recorte das miniaturas: só a cabeça
+    const CABECA = "14 10 112 112";   // o recorte das miniaturas: só a cabeça
     const ABAS = [
       ["pele", "🎨", "Pele"], ["rosto", "🙂", "Rosto"], ["olhos", "👀", "Olhos"], ["cabelo", "💇", "Cabelo"],
       ["barba", "🧔", "Barba"], ["oculos", "👓", "Óculos"], ["cabeca", "🧢", "Chapéus"], ["detalhe", "✨", "Detalhes"],
@@ -5072,7 +5072,7 @@
       partes.push(cores("Cor dos olhos", "olhos", A.CORES_OLHOS, av.olhos), grade("Sobrancelhas", umDe("sobrancelha", A.SOBRANCELHAS)));
     } else if (abaDoAvatar === "cabelo") {
       if (av.cabelo !== "raspado") partes.push(cores("Cor do cabelo", "corCabelo", A.CORES_CABELO, av.corCabelo));
-      partes.push(grade("Corte", umDe("cabelo", A.CABELOS), "8 0 124 124"));
+      partes.push(grade("Corte", umDe("cabelo", A.CABELOS), "8 6 124 124"));
     } else if (abaDoAvatar === "barba") {
       partes.push(cores("Cor (a mesma do cabelo)", "corCabelo", A.CORES_CABELO, av.corCabelo), grade("Barba e bigode: dá para combinar", enfeitesDe("barba", "Sem barba")));
     } else if (abaDoAvatar === "oculos") {

@@ -20,6 +20,7 @@
 
   const VIEWBOX_AVATAR = "0 0 140 160";
   const CONTORNO = "#2B2A33";
+  const DESCE_CABECA = 9;   // o pescoço aparecia com 18 de altura; agora, com 9
 
   const PELES = [
     { id: "p1", nome: "Clara", cor: "#F8DCC8" },
@@ -125,6 +126,7 @@
     { id: "quadrado", nome: "Óculos quadrados", grupo: "oculos" },
     { id: "escuros", nome: "Óculos escuros", grupo: "oculos" },
     { id: "sardas", nome: "Sardas", grupo: "detalhe" },
+    { id: "blush", nome: "Bochechas rosadas", grupo: "detalhe" },
     { id: "bigode", nome: "Bigode", grupo: "barba" },
     { id: "cavanhaque", nome: "Cavanhaque", grupo: "barba" },
     { id: "barba", nome: "Barba", grupo: "barba" },
@@ -412,7 +414,9 @@
 
     const fundo = achar(FUNDOS, a.fundo).cor;
     if (fundo) formas.push(f("rect", { x: 0, y: 0, width: 140, height: 160, rx: 20, fill: fundo }));
+    const iCabeloAtras = formas.length;
     formas.push(...cabelo(a.cabelo, corCabelo, true));
+    const iCorpo = formas.length;
     // jaleco, camisa na cor da gola, lapelas, bolso
     formas.push(f("path", comContorno({ d: "M20 160 C20 134 38 120 70 118 C102 120 120 134 120 160 Z", fill: "#FAFAF7" })));
     formas.push(f("path", comContorno({ d: "M57 119 L70 140 L83 119 C79 117 61 117 57 119 Z", fill: gola })));
@@ -425,6 +429,7 @@
     formas.push(f("path", { d: "M60.5 121 L66 130", fill: "none", stroke: "#FFFFFF", "stroke-width": 2, "stroke-linecap": "round", opacity: 0.45 }));
     // pescoço, orelhas e cabeça
     formas.push(f("rect", comContorno({ x: 62, y: 94, width: 16, height: 26, rx: 6, fill: pele })));
+    const iCabeca = formas.length;
     formas.push(f("path", { d: "M63 97 H77 V104 Q70 109 63 104 Z", fill: "#000000", opacity: 0.16 }));
     const caveira = a.pele === "caveira";
     if (!caveira) formas.push(f("circle", comContorno({ cx: 34, cy: 68, r: 7, fill: pele })), f("circle", comContorno({ cx: 106, cy: 68, r: 7, fill: pele })));
@@ -445,8 +450,8 @@
     if (caveira) {
       formas.push(...rostoCaveira(a.emocao, achar(CORES_OLHOS, a.olhos).cor));
     } else {
-      // bochechas, sardas, nariz e rosto
-      formas.push(f("ellipse", { cx: 49, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }), f("ellipse", { cx: 91, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }));
+      // bochechas rosadas (opcional), sardas, nariz e rosto
+      if (usa("blush")) formas.push(f("ellipse", { cx: 49, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }), f("ellipse", { cx: 91, cy: 79, rx: 7, ry: 4.5, fill: "#FF7A8A", opacity: 0.35 }));
       if (usa("sardas")) {
         for (const [x, y] of [[46, 76], [50, 80], [53, 76], [87, 76], [90, 80], [94, 76]]) formas.push(f("circle", { cx: x, cy: y, r: 1.1, fill: "#8A5A3C" }));
       }
@@ -499,6 +504,7 @@
       formas.push(f("path", comContorno({ d: "M43 41 C41 10 99 10 97 41 C84 45 56 45 43 41 Z", fill: "#EBC773" })));
       formas.push(f("path", { d: "M43.5 35 C56 40 84 40 96.5 35 L97 41 C84 45 56 45 43 41 Z", fill: gola, stroke: CONTORNO, "stroke-width": 1.6, "stroke-linejoin": "round" }));
     }
+    const iMaos = formas.length;
     // nas mãos e no bolso
     if (usa("caneta")) formas.push(f("rect", comContorno({ x: 89, y: 133, width: 3.5, height: 14, rx: 1.5, fill: "#3F51B5" }, 1.2)), f("rect", comContorno({ x: 95, y: 135, width: 3.5, height: 12, rx: 1.5, fill: "#C62828" }, 1.2)));
     if (usa("tubo")) {
@@ -514,12 +520,20 @@
       ? f("circle", comContorno({ cx: x, cy: 150, r: 8.5, fill: "#7FC4E8" }, 2))
       : f("circle", comContorno({ cx: x, cy: 150, r: 8, fill: pele }, 2)));
     formas.push(mao(22), mao(118), traco("M19 146 Q22 150 26 147", CONTORNO, 1.3), traco("M121 146 Q118 150 114 147", CONTORNO, 1.3));
+    const iCapelo = formas.length;
     if (usa("capelo")) {
       formas.push(f("path", comContorno({ d: "M50 30 L50 40 C60 46 80 46 90 40 L90 30 Z", fill: "#1F2A33" })));
       formas.push(f("path", comContorno({ d: "M26 26 L70 9 L114 26 L70 43 Z", fill: "#1F2A33" })));
       formas.push(traco("M104 30 L108 50", "#E0B53A", 2.2), f("circle", { cx: 108, cy: 52, r: 3, fill: "#E0B53A" }));
     }
-    return formas;
+    // A cabeça (com o cabelo, o rosto e o que vai nela) desce DESCE_CABECA: o pescoço fica curto, como
+    // pediram as turmas. O corpo, o jaleco e as mãos ficam onde estão.
+    const desce = (lista) => (lista.length ? [f("g", { transform: `translate(0 ${DESCE_CABECA})` }, { filhos: lista })] : []);
+    return [
+      ...formas.slice(0, iCabeloAtras), ...desce(formas.slice(iCabeloAtras, iCorpo)),
+      ...formas.slice(iCorpo, iCabeca), ...desce(formas.slice(iCabeca, iMaos)),
+      ...formas.slice(iMaos, iCapelo), ...desce(formas.slice(iCapelo)),
+    ];
   }
 
   /* Frase para o leitor de tela (o desenho só reforça). */
